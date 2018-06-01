@@ -1,13 +1,12 @@
 # looper project definition. Instructions at http://looper.readthedocs.io
 
 metadata:
-  output_dir: ${PROCESSED}project
-  pipeline_interfaces: ${CODEBASE}pipelines/pipeline_interface.yaml
+  output_dir: ${PROCESSED}pcrsa_method_paper
+  pipeline_interfaces: ${CODE}pipelines/pipeline_interface.yaml
   sample_annotation: psa.csv
 
 implied_columns:
   organism:
     human:
       genome: hg38
-    mouse:
-      genome: mm10
+
