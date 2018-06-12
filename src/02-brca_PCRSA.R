@@ -1,7 +1,7 @@
 # library(projectInit)
-library(ComplexHeatmap)
+
 # project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "brca_PCA/"))
-source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/00-init.R"))
+source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/R/00-init.R"))
 # library(fastICA)
 
 # 
@@ -14,6 +14,11 @@ set.seed(1234)
 
 # DNA methylation data
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "brca_PCA/RCache/"))
+
+#############################################################################
+
+
+
 simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
 
 
