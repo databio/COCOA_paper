@@ -2,7 +2,7 @@
 library(ComplexHeatmap)
 # project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "brca_PCA/"))
 source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/00-init.R"))
-library(fastICA)
+# library(fastICA)
 
 # 
 setwd(paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/"))
@@ -344,31 +344,6 @@ RGenomeUtils::writeBed(pc1Reg, filename = "fos_PC1.bed")
 RGenomeUtils::writeBed(pc2Reg, filename = "fos_PC2.bed")
 RGenomeUtils::writeBed(pc3Reg, filename = "fos_PC3.bed")
 # findOverlaps(dtToGr(pc1RegEsr), dtToGr(pc1RegFos))
-    
-##################################################################################
-# visualization of enrichment score results across PCs
-# see if region set high in one PC is also high in others
-simpleCache("rsEnrichment_657", assignToVariable = "rsEnrichment")
-simpleCache("rsEnrichmentTop10_657", assignToVariable = "rsEnrichmentTop10")
-
-# TODO: filter out low coverage region sets
-# for rsEnrichment
-comparePCHeatmap(rsEnrichment=rsEnrichment, 
-                 PCsToRankBy=c("PC1m4", "PC1p3", paste0("PC", 1:10)), 
-                 PCsToInclude=c("PC1m4", "PC1p3", paste0("PC", 1:10)),
-                 fileName=paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap_657.pdf"))
-
-# for rsEnrichmentTop10
-comparePCHeatmap(rsEnrichment=rsEnrichmentTop10, 
-                 PCsToRankBy=c("PC1m4", "PC1p3", paste0("PC", 1:10)), 
-                 PCsToInclude=c("PC1m4", "PC1p3", paste0("PC", 1:10)),
-                fileName=paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmapTop10Variable_657.pdf"))
-
-
-
-
-
-
 
 #############################################################################
 # generate plots of methylation distribution across patients
@@ -396,118 +371,6 @@ Heatmap(countMat2, cluster_columns = FALSE, cluster_rows = TRUE)
 dev.off()
 
 
-##################################################################################
-# looking at methylation level data at individual cytosines ordered by PC 
-# only looking at regions with high average loading scores
-# still individual cytosine methylation
-# centeredPCAMeth = t(apply(t(brcaMList$methylProp), 1, function(x) x - mPCATop10$center)) 
-# reducedValsPCA = centeredPCAMeth %*% mPCATop10$rotation
-# https://stackoverflow.com/questions/8048984/plot-as-bitmap-in-pdf
-rsEnrichment[, rsIndex := 1:nrow(rsEnrichment)]
-# getting appropriate region
-pc1 = rsEnrichment[order(PC1, decreasing = TRUE), ]
-
-
-PCsToAnnotate = paste0("PC", c(1, 4))
-for (j in seq_along(PCsToAnnotate)) {
-    topRegionToPlotNum = 10
-    grDevices::pdf(paste0(Sys.getenv("PLOTS"), "regionMethylHeatmapsTest", PCsToAnnotate[j], ".pdf"), width = 11, height = 8.5 * topRegionToPlotNum)
-    for (i in 1:topRegionToPlotNum) { # loop through top region sets
-        regionSet = GRList[[pc1$rsIndex[i]]] 
-        regionSetName = paste0(pc1$rsName[i], " : ", pc1$rsDescription[i])
-        # regionSet = GRList[[pc1$rsIndex[4]]]
-        length(regionSet)
-        regionLoadAv =averageByRegion(loadingMat = allMPCA$rotation, coordinateDT = brcaMList$coordinates, GRList = regionSet, PCsToAnnotate = PCsToAnnotate[j])
-        # hist(regionLoadAv$PC1)
-        # pdf("test.pdf")
-        # PCsToAnnotate = paste0("PC", 1:10)
-        # for (i in seq_along(PCsToAnnotate)) {
-        #     hist(regionLoadAv[, get(PCsToAnnotate[i])], main = PCsToAnnotate[i])
-        # }
-        # dev.off()
-        
-        # finding a suitable threshold for "high" average loading score
-        # loadingMeans = apply(X = abs(mPCATop10$rotation[, PCsToAnnotate]), 2, mean)
-        # getting 95th percentile for each PC
-        # loading95Perc = apply(abs(mPCA$rotation[, PCsToAnnotate]), 2, function(x) quantile(x, 0.95))
-        loading95Perc = quantile(abs(allMPCA$rotation[, PCsToAnnotate]), 0.95)
-        
-        # hist(mPCATop10$rotation[, "PC1"])
-        highVariable = regionLoadAv[get(PCsToAnnotate[j]) > loading95Perc, .(chr, start, end, score=get(PCsToAnnotate[j]))]
-        
-        if (nrow(highVariable) > 50) {
-            highVariable[, rowIndex :=  1:nrow(highVariable)]
-            tmp = highVariable[order(score, decreasing = TRUE), ]
-            tmp = tmp[1:50,]
-            tmp = tmp[order(rowIndex, decreasing = FALSE), ]
-            highVariable = highVariable[tmp$rowIndex, ]
-        }
-        
-        nrow(regionLoadAv)
-        if (nrow(highVariable) > 0) {
-            regionSet = MIRA:::dtToGr(highVariable)
-            
-            
-            # text(paste0(pc1$rsDescription[i], ":", pc1$rsName[i]))
-            multiHM = grid.grabExpr(draw(rsMethylHeatmap(methylData = brcaMList[["methylProp"]], 
-                                                         coordGR = MIRA:::dtToGr(brcaMList[["coordinates"]]), 
-                                                         regionSet = regionSet, 
-                                                         pcaData = allMPCA$x, 
-                                                         pc = PCsToAnnotate[j], column_title= regionSetName))) # use_raster=TRUE, raster_device="jpeg")
-            pushViewport(viewport(y = unit((8.5*topRegionToPlotNum)-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
-            grid.draw(multiHM)
-            popViewport()
-            # ,
-            #                 name = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]), 
-            #                 column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]),
-            #                 column_title_side = "top",
-            #                 column_title_gp = gpar(fontsize = 14))
-            #                 # column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]))
-        }
-        
-    }
-    dev.off()
-}
-
-
-###################################################################################
-# comparing loading scores/percentiles for individual regions among PCs
-# need region sets and PCA loadings
-simpleCache("rsEnrichment_657", assignToVariable = "rsEnrichment")
-simpleCache("rsEnrichmentTop10_657", assignToVariable = "rsEnrichmentTop10")
-
-PCsToAnnotate = c("PC1m4", "PC1p3", paste0("PC", 1:10))
-rsIndex = sort.int(rsEnrichment$PC1, index.return = TRUE, decreasing = TRUE)$ix[3]
-regionSet = GRList[[rsIndex]] 
-regionSetName = paste0(rsEnrichment$rsName[rsIndex], " : ", rsEnrichment$rsDescription[rsIndex])
-rsRegionAverage = averageByRegion(loadingMat = allMPCA$rotation, coordinateDT = brcaMList$coordinates, 
-                                  GRList = regionSet, PCsToAnnotate = PCsToAnnotate)
-                                  # returnQuantile = TRUE)
-# ranking in terms of percentiles in case there were different distributions of loading scores for each PC
-
-Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), 
-        column_title = regionSetName, cluster_columns = FALSE, name = "Quantile of Loading Scores")
-
-##################################################################################
-# seeing whether a subset of cytosines (ie a single region set) can
-# recapitulate PC score from all cytosines
-rsIndex = sort.int(rsEnrichment$PC2, index.return = TRUE, decreasing = TRUE)$ix[1:10]
-regionSetList = GRList[rsIndex] 
-regionSetName = paste0(rsEnrichment$rsName[rsIndex], " : ", rsEnrichment$rsDescription[rsIndex])
-names(regionSetList) <-  regionSetName
-subsetCorList = lapply(X = as.list(regionSetList), FUN = function(x) pcFromSubset(regionSet = x, 
-                                                                         pca = allMPCA, 
-                                                                         methylData = trainingMData, 
-                                                                         coordinateDT = brcaMList$coordinates, 
-                                                                         PCofInterest = paste0("PC", 1:10),
-                                                                         returnCor = TRUE))
-i=5
-Heatmap(subsetCorList[[i]], cluster_rows = FALSE, cluster_columns = FALSE, 
-        column_title = names(subsetCorList)[i])
-subsetCorList[[i]]
-#cell_fun = function(j, i, x, y, width, height, fill) {
-# grid.text(sprintf("%.1f", mat[i, j]), x, y, gp = gpar(fontsize = 10))
-# })
 
 ###################################################################################
 
