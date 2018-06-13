@@ -14,6 +14,14 @@ ewsFiles = list.files(pattern = "RRBS_cpgMethylation_EWS.+bed", recursive = TRUE
 mDTList = lapply(ewsFiles, BSreadBiSeq)
 mDTList = addMethPropCol(mDTList)
 
+###############################################################################
+# creating annotation table
+file_name = basename(ewsFiles)
+subject_ID = regmatches(file_name, regexpr("EWS_.[0-9]+", file_name))
+annoTable = data.table(file_name = file_name, subject_ID=subject_ID)
+write.csv(x = annoTable, file = paste0(Sys.getenv("CODE"), "pcrsa_method_paper/metadata/ews_DNA_methylation_anno.csv"),quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+
 ########## preprocessing and finding out Cs that all samples share ############
 # creating object with x and y chromosomes excluded because this is something 
 # that I will want to have for several analyses
