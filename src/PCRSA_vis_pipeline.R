@@ -1,5 +1,8 @@
 
 
+# TODO make script do plots for top10 or just take that out and run script twice
+# once for rsEnrichment and once for rsEnrichmentTop10
+
 ###############################################################################
 # loading data, assigning data to generic names for below script (so below 
 # script can be kept the same regardless of the data)
@@ -25,13 +28,23 @@
 ## "comparePCHeatmap"
 # PCsToAnnotate_cPCH
 ## "methylAlongPC"
+# topRSToPlotNum
 # PCsToAnnotate_mAPC = PCSTOANNOTATE[1:5]
 ## "regionQuantileByPC"
 # PCsToAnnotate_rQBPC = c("PC1m4", "PC1p3", PCSTOANNOTATE)
 # topRSInd_rQBPC = unique(unlist(rsEnSortedInd[1:10, ])) # get top 10 region sets from each PC
 ## "pcFromSubset Correlation Heatmap"
-# PCsToAnnotate_pcFSCHM
-# topRSInd_pcFSCHM = unique(unlist(rsEnSortedInd[1:10, ])) # get top region sets from each PC
+# PCsToAnnotate_pcFSCH
+# topRSInd_pcFSCH = unique(unlist(rsEnSortedInd[1:10, ])) # get top region sets from each PC
+#################################################################################
+# place to save plots
+plotSubdir = paste0(plotSubdir, "/")
+if (!dir.exists(paste0(Sys.getenv("PLOTS"), plotSubdir))) {
+    dir.create(paste0(Sys.getenv("PLOTS"), plotSubdir), recursive = TRUE)
+}
+
+library(grid)
+library(ComplexHeatmap)
 
 ##################################################################################
 # comparePCHeatmap
@@ -45,13 +58,13 @@
 comparePCHeatmap(rsEnrichment=rsEnrichment, 
                  PCsToRankBy=PCsToAnnotate_cPCH, 
                  PCsToInclude=PCsToAnnotate_cPCH,
-                 fileName=paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"))
+                 fileName=paste0(Sys.getenv("PLOTS"), plotSubdir, "rsEnrichHeatmap.pdf"))
 
 # for rsEnrichmentTop10
 comparePCHeatmap(rsEnrichment=rsEnrichmentTop10, 
                  PCsToRankBy=PCsToAnnotate_cPCH, 
                  PCsToInclude=PCsToAnnotate_cPCH,
-                 fileName=paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmapTop10Variable.pdf"))
+                 fileName=paste0(Sys.getenv("PLOTS"), plotSubdir, "rsEnrichHeatmapTop10Variable.pdf"))
 
 
 ##################################################################################
@@ -64,7 +77,7 @@ comparePCHeatmap(rsEnrichment=rsEnrichmentTop10,
 for (i in seq_along(PCsToAnnotate_mAPC)) {
     
     # top region sets for this PC
-    rsInd = as.numeric(rsEnSortedInd[seq_along(topRSToPlotNum), PCsToAnnotate_mAPC[i], with=FALSE]) # original index
+    rsInd = as.numeric(as.matrix(rsEnSortedInd[1:topRSToPlotNum, PCsToAnnotate_mAPC[i], with=FALSE])) # original index
     
     grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "regionMethylHeatmaps", PCsToAnnotate_mAPC[i], ".pdf"), width = 11, height = 8.5 * topRSToPlotNum)
     

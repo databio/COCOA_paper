@@ -30,6 +30,16 @@ coordinates = bigSharedC[["coordinates"]]
 # in PC4 one was very high the other very low
 ol1Ind = which.max(allMPCA$x[,c("PC4")]) # EWS_T127 (48)
 ol2Ind = which.min(allMPCA$x[,c("PC4")]) # EWS_T126 (47)
+olNames = colnames(bigSharedC$methylProp)[c(ol1Ind, ol2Ind)]
+
+# post QC version
+simpleCache("bigSharedC_pQC", {
+    bigSharedC_pQC = bigSharedC
+    #methylData = bigSharedC_pQC$methlyProp
+    bigSharedC_pQC$methylProp = bigSharedC$methylProp[, !colnames(bigSharedC$methylProp) %in% olNames]
+    bigSharedC_pQC$coverage = bigSharedC_pQC$coverage[, !colnames(bigSharedC$coverage) %in% olNames]
+    bigSharedC_pQC
+})
 
 
 # then run PCA again
@@ -53,6 +63,7 @@ top10PCWeights = as.data.table(top10MPCA$rotation)
 allMPCAString="allMPCA2"
 top10MPCAString="top10MPCA"
 rm("allMPCA")
+PCsToAnnotate = paste0("PC", 1:10)
 
 # using anno objects from the LOLA script
 rsName = c("GSM2305313_MCF7_E2_peaks_hg38.bed", 
@@ -62,13 +73,13 @@ rsName = c("GSM2305313_MCF7_E2_peaks_hg38.bed",
 rsDescription = c("ER ChIPseq, MCF7 cell line, estradiol stimulation",
                   lolaCoreRegionAnno$description,
                   roadmapRegionAnno$description,
-                  motifRegionAnno$filename)
+                  motifRegionAnno$description)
 
 source(paste0(Sys.getenv("CODE"),"/aml_e3999/src/PCRSA_pipeline.R"))
 # rows of mData are cytosines, cols are samples
-PCRSA_pipeline(mData = mData[, -c(ol2Ind, ol1Ind)], coordinates = coordinates, 
+rsEnrichResults = PCRSA_pipeline(mData = mData[, -c(ol2Ind, ol1Ind)], coordinates = coordinates, 
                GRList = GRList, 
-               PCsToAnnotate=paste0("PC", 1:10),
+               PCsToAnnotate=PCsToAnnotate,
                pcaCache=TRUE,
                allMPCACacheName=allMPCAString, 
                top10MPCACacheName=top10MPCAString,
@@ -80,14 +91,19 @@ PCRSA_pipeline(mData = mData[, -c(ol2Ind, ol1Ind)], coordinates = coordinates,
                rsEnCacheName="rsEnrichment", rsEnTop10CacheName="rsEnrichmentTop10",
                overwriteResultsCaches = TRUE) 
 
+rsEnrichment = rsEnrichResults[[1]]
+rsEnrichmentTop10 = rsEnrichResults[[2]]
+
+write.csv(x = rsEnrichment,
+          file = dirData("analysis/sheets/PC_Enrichment_All_Shared_Cs_EWS.csv"),
+          quote = FALSE, row.names = FALSE)
+write.csv(x = rsEnrichmentTop10,
+          file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_EWS.csv"),
+          quote = FALSE, row.names = FALSE)
 
 
-# write.csv(x = rsEnrichment, 
-#           file = dirData("analysis/sheets/PC_Enrichment_All_Shared_Cs.csv"),
-#           quote = FALSE, row.names = FALSE)
-# write.csv(x = rsEnrichmentTop10, 
-#           file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs.csv"),
-#           quote = FALSE, row.names = FALSE)
+# rsRankingIndex(rsEnrichment=rsEnrichment, PCsToAnnotate=PCsToAnnotate)
+
 
 ###################################
 

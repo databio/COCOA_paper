@@ -1,5 +1,8 @@
 
-
+library(LOLA)
+library(GenomicRanges)
+library(data.table)
+source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R"))
 
 # reading in the region sets
 # load LOLA database
@@ -49,4 +52,8 @@ GRList = c(GRangesList(MIRA:::dtToGr(erSet)), GRList)
 
 #################################################################
 # cleaning up since there were many large objects
-rm(list = c("GRList1", "GRList2", "GRList3", "regionSetDB", "regionSetDB2"))
+if (exists("GRList")) {
+    rm(list = c("GRList1", "GRList2", "GRList3", "regionSetDB", "regionSetDB2"))
+} else {
+    warning("Loading regions was not successful.")
+}
