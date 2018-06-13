@@ -38,7 +38,8 @@ patientMetadata = patientMetadata[patientMetadata$subject_ID %in%
 # testMData = brcaMList[["methylProp"]][, 
 #                 colnames(brcaMList[["methylProp"]]) %in% testIDs]
 
-# include all samples
+# patientMetadata should have already screened out patients without ER/PGR status
+# resulting in 657 patients
 trainingIDs = patientMetadata[, subject_ID]
 trainingMData = brcaMList[["methylProp"]][, 
                                           colnames(brcaMList[["methylProp"]]) %in% trainingIDs] 
@@ -59,7 +60,7 @@ rsName = c("GSM2305313_MCF7_E2_peaks_hg38.bed",
 rsDescription = c("ER ChIPseq, MCF7 cell line, estradiol stimulation",
                   lolaCoreRegionAnno$description,
                   roadmapRegionAnno$description,
-                  motifRegionAnno$filename)
+                  motifRegionAnno$description)
            
 # loading PCA and combining components that could separate ER=/-
 # for rsEnrichment, PCs 1 and 4 could separate ER+/-
