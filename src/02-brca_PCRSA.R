@@ -1,7 +1,9 @@
 # library(projectInit)
+rsEnrichmentTop10$rsDescription = rsDescription
+simpleCache("rsEnrichmentTop10_657", {rsEnrichmentTop10}, recreate = TRUE)
 
 # project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "brca_PCA/"))
-source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/R/00-init.R"))
+source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/00-init.R"))
 # library(fastICA)
 
 # 
