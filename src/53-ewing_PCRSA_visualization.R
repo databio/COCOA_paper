@@ -1,6 +1,7 @@
 # Plots for ewing_PCRSA_visualization
 
 source(paste0(Sys.getenv("CODE"),"pcrsa_method_paper/src/00-init.R"))
+Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "ews_patients/analysis/plots/"))
 ########################################
 source(paste0(Sys.getenv("CODE"), "/pcrsa_method_paper/src/load_process_regions_brca.R"))
 
@@ -26,7 +27,8 @@ names(GRList) <- paste0(rsEnrichment$rsName, " : ", rsEnrichment$rsDescription)
 GRList = GRList[!is.na(rsEnrichment$PC1)]
 rsEnrichment=rsEnrichment[!is.na(rsEnrichment$PC1), ]
 rsEnSortedInd= rsRankingIndex(rsEnrichment = rsEnrichment, PCsToAnnotate = paste0("PC", 1:10))
-
+## "region set Overlapping Cytosine Proportion" (rsOLCP)
+## proportion of cytosines from region set that are shared with other region set
 rsEnrichmentTop10 = rsEnrichmentTop10[!is.na(rsEnrichmentTop10$PC1), ]
 PCSTOANNOTATE = paste0("PC", 1:10)
 
@@ -43,6 +45,9 @@ topRSInd_rQBPC = unique(unlist(rsEnSortedInd[1:15, ])) # get top region sets fro
 # pcFromSubset Correlation Heatmap
 PCsToAnnotate_pcFSCH = PCSTOANNOTATE
 topRSInd_pcFSCH = unique(unlist(rsEnSortedInd[1:15, ])) # get top region sets from each PC
+## "region set Overlapping Cytosine Proportion" (rsOLCP)
+## proportion of cytosines from region set that are shared with other region set
+topRSInd_rsOLCP = unique(unlist(rsEnSortedInd[1:15, ]))
 
 # the pipeline
 source("PCRSA_vis_pipeline.R") 

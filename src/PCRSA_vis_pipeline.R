@@ -36,6 +36,11 @@
 ## "pcFromSubset Correlation Heatmap"
 # PCsToAnnotate_pcFSCH
 # topRSInd_pcFSCH = unique(unlist(rsEnSortedInd[1:10, ])) # get top region sets from each PC
+## "region set Overlapping Cytosine Proportion" (rsOLCP)
+## proportion of cytosines from region set that are shared with other region set
+# topRSInd_rsOLCP = unique(unlist(rsEnSortedInd[1:10, ]))
+
+
 #################################################################################
 # place to save plots
 plotSubdir = paste0(plotSubdir, "/")
@@ -82,12 +87,16 @@ for (i in seq_along(PCsToAnnotate_mAPC)) {
     grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "regionMethylHeatmaps", PCsToAnnotate_mAPC[i], ".pdf"), width = 11, height = 8.5 * topRSToPlotNum)
     
     # heatmap
-    methylAlongPC(loadingMat=loadingMat, loadingThreshold=0.95, 
-                  pcScores=mPCA$x, 
-                  coordinateDT=coordinateDT, 
-                  methylData=methylData, 
-                  GRList=GRList[rsInd], orderByPC=PCsToAnnotate_mAPC[i], 
+    methylAlongPC(loadingMat=loadingMat, loadingThreshold=0.95,
+                  pcScores=mPCA$x,
+                  coordinateDT=coordinateDT,
+                  methylData=methylData,
+                  GRList=GRList[rsInd], orderByPC=PCsToAnnotate_mAPC[i],
                   topXRegions=50)
+
+    # draw(Heatmap(matrix = methylData[1:1000, 1:10]))
+    # plot(methylData[1:1000, 1])
+    
     dev.off()
 }
 
@@ -136,6 +145,24 @@ grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "subsetCorRSbyPC", ".pdf"
 # don't use i for index since it is defined as something else in cell_fun
 Heatmap(matrix = subsetCorMat, cluster_rows = FALSE, cluster_columns = FALSE, 
         column_title = , cell_fun = function(j, i, x, y, width, height, fill, mat=subsetCorMat) {
+            grid.text(sprintf("%.2f", mat[i, j]), x, y, gp = gpar(fontsize = 10))
+        })
+dev.off()
+
+################################################################################
+# seeing how much overlap there is between region sets
+# based on overlap of covered cytosines, not the regions themselves
+
+
+# total regions in column region sets are the denominator for the proportion
+regionSetList = GRList[topRSInd_rsOLCP] 
+pOL = percentCOverlap(coordGR = MIRA:::dtToGr(coordinateDT), 
+                      GRList = regionSetList) 
+
+grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "topRSOverlap", ".pdf"), width = 25, height = 25)
+
+Heatmap(matrix = pOL[[1]], cluster_rows = FALSE, cluster_columns = FALSE, 
+        column_title = , cell_fun = function(j, i, x, y, width, height, fill, mat=pOL[[1]]) {
             grid.text(sprintf("%.2f", mat[i, j]), x, y, gp = gpar(fontsize = 10))
         })
 dev.off()

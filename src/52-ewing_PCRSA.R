@@ -1,7 +1,7 @@
 
 
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "ews_patients/RCache/"))
-
+Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "ews_patients/analysis/plots/"))
 
 ########################################
 

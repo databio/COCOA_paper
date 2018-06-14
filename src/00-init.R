@@ -4,7 +4,7 @@ library(LOLA)
 library(simpleCache)
 library(data.table)
 library(GenomicRanges) # GRangesList, resize
-library(caret)
+# library(caret)
 library(RGenomeUtils)
 library(MIRA)
 library(ComplexHeatmap)
