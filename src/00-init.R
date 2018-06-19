@@ -26,3 +26,7 @@ brcaMetadata = brcaMetadata[brcaMetadata$ER_status %in%
 brcaMetadata = brcaMetadata[brcaMetadata$PGR_status %in% 
                                 c("Positive", "Negative"), ]
 patientMetadata = brcaMetadata
+
+process_brca_expr = function(exprDF) {
+    
+}
