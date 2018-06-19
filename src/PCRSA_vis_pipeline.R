@@ -18,6 +18,7 @@
 # mPCA
 # plotSubdir # one directory per PCA. This script generates plots for one PCA.
 # methylData
+# inputID # since a cache is saved, this marks what the methylation data source was
 # Sys.getenv("PLOTS") should be set
 
 # CAPS variables should not be changed later in the script 
@@ -39,7 +40,9 @@
 ## "region set Overlapping Cytosine Proportion" (rsOLCP)
 ## proportion of cytosines from region set that are shared with other region set
 # topRSInd_rsOLCP = unique(unlist(rsEnSortedInd[1:10, ]))
-
+## "meta region loading profiles" (mrLP)
+# topRSInd_mrLP
+# PCsToAnnotate_mrLP = PCSTOANNOTATE
 
 #################################################################################
 # place to save plots
@@ -126,10 +129,10 @@ dev.off()
 # seeing whether a subset of cytosines (ie a single region set) can
 # recapitulate PC score from all cytosines
 
-regionSetList = GRList[topRSInd_pcFSCH] 
+.regionSetList = GRList[topRSInd_pcFSCH] 
 regionSetName = paste0(rsEnrichment$rsName[topRSInd_pcFSCH], " : ", rsEnrichment$rsDescription[topRSInd_pcFSCH])
-names(regionSetList) <-  regionSetName
-subsetCorList = lapply(X = as.list(regionSetList), FUN = function(x) pcFromSubset(regionSet = x, 
+names(.regionSetList) <-  regionSetName
+subsetCorList = lapply(X = as.list(.regionSetList), FUN = function(x) pcFromSubset(regionSet = x, 
                                                                                   pca = mPCA, 
                                                                                   methylData = methylData, 
                                                                                   coordinateDT = coordinateDT, 
@@ -155,9 +158,9 @@ dev.off()
 
 
 # total regions in column region sets are the denominator for the proportion
-regionSetList = GRList[topRSInd_rsOLCP] 
+.regionSetList = GRList[topRSInd_rsOLCP] 
 pOL = percentCOverlap(coordGR = MIRA:::dtToGr(coordinateDT), 
-                      GRList = regionSetList) 
+                      GRList = .regionSetList) 
 
 grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "topRSOverlap", ".pdf"), width = 25, height = 25)
 
@@ -166,3 +169,58 @@ Heatmap(matrix = pOL[[1]], cluster_rows = FALSE, cluster_columns = FALSE,
             grid.text(sprintf("%.2f", mat[i, j]), x, y, gp = gpar(fontsize = 10))
         })
 dev.off()
+
+
+####################################################################
+# "meta region loading profiles" (mrLP)
+# meta-region plots of region surrounding regions in region set
+# check whether enrichment is specific to this region set by
+# seeing if loading values have a spike in the center of these region sets
+# compared to surrounding genome 
+.regionSetList = GRList[topRSInd_mrLP]
+.regionSetList = lapply(.regionSetList, resize, width = 14000, fix="center")
+
+simpleCache(paste0("pcProf14k", addUnderscore(inputID, side="left")), {
+    pcProf = pcEnrichmentProfile(loadingMat = mPCA$rotation, coordinateDT = coordinateDT,
+                                 GRList=.regionSetList, PCsToAnnotate = PCsToAnnotate_mrLP,
+                                 binNum = 21)
+    # set names by reference
+    #setattr(pcProf, "names", names(.regionSetList))
+    pcProf
+})
+pcP = pcProf14k
+
+rsNames = paste0(rsEnrichment$rsName, " : ", rsEnrichment$rsDescription)
+
+grDevices::pdf(paste0(Sys.getenv("PLOTS"), 
+                      "metaRegionLoadingProfiles", 
+                      addUnderscore(inputID, side="left"), ".pdf"))
+for (i in seq_along(pcProf)) {
+    plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
+    plot(pcP[[i]]$PC2, type="l") + title(rsNames[i])
+    plot(pcP[[i]]$PC3, type="l") + title(rsNames[i])
+    plot(pcP[[i]]$PC4, type="l") + title(rsNames[i])
+    plot(pcP[[i]]$PC5, type="l") + title(rsNames[i])
+}
+dev.off()
+
+
+# # top 10% mofst variable
+# pcProf10 = pcEnrichmentProfile(loadingMat = top10PCWeights, coordinateDT = top10Coord,
+#                                GRList=GRList, PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"),
+#                                binNum = 21)
+# pcP = pcProf10
+# grDevices::pdf(paste0(Sys.getenv("PLOTS"), "top10MPCProfiles.pdf"))
+# for (i in 1:length(pcProf)) {
+#     plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
+#     plot(pcP[[i]]$PC2, type="l") + title(rsNames[i])
+#     plot(pcP[[i]]$PC3, type="l") + title(rsNames[i])
+#     plot(pcP[[i]]$PC4, type="l") + title(rsNames[i])
+#     plot(pcP[[i]]$PC5, type="l") + title(rsNames[i])
+# }
+# dev.off()
+
+
+
+
+

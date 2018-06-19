@@ -117,69 +117,6 @@ write.csv(x = rsEnrichmentTop10,
 
 
 
-####################################################################
-# check whether is enrichment is specific to this region set by
-# seeing if loading values have a spike in the center of these region sets
-# compared to surrounding genome 
-GRList = lapply(GRList, resize, width = 14000, fix="center")
-
-simpleCache("pcProf14k",{
-    pcProf = pcEnrichmentProfile(loadingMat = allMPCAWeights, coordinateDT = coordinates,
-                                 GRList=GRList, PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"),
-                                 binNum = 21)
-    # set names by reference
-    setattr(pcProf, "names", names(GRList))
-    pcProf
-})
-pcP = pcProf14k
-# plot(pcP$PC1, type="l")
-# plot(pcP$PC2, type="l")
-# plot(pcP$PC3, type="l")
-# plot(pcP$PC4, type="l")
-# plot(pcP$PC5, type="l")
-
-rsNames = c("Estrogen_Receptor", loRegionAnno$filename[c(a549Ind, mcf7Ind)])
-
-grDevices::pdf(paste0(Sys.getenv("PLOTS"), "allMPCProfilesDNase300.pdf"))
-for (i in 1:length(pcProf)) {
-    plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
-    plot(pcP[[i]]$PC2, type="l") + title(rsNames[i])
-    plot(pcP[[i]]$PC3, type="l") + title(rsNames[i])
-    plot(pcP[[i]]$PC4, type="l") + title(rsNames[i])
-    plot(pcP[[i]]$PC5, type="l") + title(rsNames[i])
-}
-dev.off()
-
-
-# top 10% mofst variable
-pcProf10 = pcEnrichmentProfile(loadingMat = top10PCWeights, coordinateDT = top10Coord,
-                    GRList=GRList, PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"),
-                    binNum = 21)
-pcP = pcProf10
-grDevices::pdf(paste0(Sys.getenv("PLOTS"), "top10MPCProfiles.pdf"))
-for (i in 1:length(pcProf)) {
-    plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
-    plot(pcP[[i]]$PC2, type="l") + title(rsNames[i])
-    plot(pcP[[i]]$PC3, type="l") + title(rsNames[i])
-    plot(pcP[[i]]$PC4, type="l") + title(rsNames[i])
-    plot(pcP[[i]]$PC5, type="l") + title(rsNames[i])
-}
-dev.off()
-
-# initResults = list(rsEnrichment, rsEnrichment2, pcProf, ret[c(46:72, 623:634)])
-# save(initResults, file=paste0(Sys.getenv("PROCESSED"), "brca_PCA/", "initialPRAresults.RData"))
-
-
-
-
-
-
-
-# confirm that results make sense
-# PCs that are enriched for ATACseq from a certain cell type should be 
-# able to separate that cell type from the others
-# visualize
-
 
 ######################################################
 # visualizing PCA
