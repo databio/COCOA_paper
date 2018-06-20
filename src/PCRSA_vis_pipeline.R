@@ -197,6 +197,7 @@ rsNames = paste0(rsEnrichment$rsName, " : ", rsEnrichment$rsDescription)
 profilePList = list()
 for (i in seq_along(pcProf)) {
     # make everthing same window size (y axis for comparability)
+    # switch gather  to lapply() outside loop
     thisRS = tidyr::gather(data = pcP[[i]], key = "PC", value="loading_value")
     # add index column to keep region in order? 
     profilePList[[i]] = ggplot(data = thisRS, mapping = aes(x ="index" , y = "loading_value")) + 
