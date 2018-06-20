@@ -179,32 +179,50 @@ dev.off()
 .regionSetList = GRList[topRSInd_mrLP]
 .regionSetList = lapply(.regionSetList, resize, width = 14000, fix="center")
 
-simpleCache(paste0("pcProf14k", addUnderscore(inputID, side="left")), {
+simpleCache(paste0("pcProf14k", inputID), {
     pcProf = pcEnrichmentProfile(loadingMat = mPCA$rotation, coordinateDT = coordinateDT,
                                  GRList=.regionSetList, PCsToAnnotate = PCsToAnnotate_mrLP,
                                  binNum = 21)
     # set names by reference
     #setattr(pcProf, "names", names(.regionSetList))
     pcProf
-})
-pcP = pcProf14k
+}, recreate = TRUE)
+pcP = copy(get(paste0("pcProf14k", inputID)))
 
-rsNames = paste0(rsEnrichment$rsName, " : ", rsEnrichment$rsDescription)
+rsNames = paste0(rsEnrichment$rsName[topRSInd_mrLP], " : ", rsEnrichment$rsDescription[topRSInd_mrLP])
 
-# grDevices::pdf(paste0(Sys.getenv("PLOTS"), 
-#                       "metaRegionLoadingProfiles", 
-#                       inputID, ".pdf"))
+
+
+# average loading value from each PC to normalize so PCs can be compared with each other
+avLoad = apply(X = loadingMat[, PCsToAnnotate_mrLP], MARGIN = 2, FUN = function(x) mean(abs(x)))
+
+# normalize
+# pcP = lapply(pcP, FUN = function(x) t(apply(X = x, MARGIN = 1, FUN = function(y) y - c(0, avLoad))))
+pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=PCsToAnnotate_mrLP, z = avLoad)])
+pcP = lapply(pcP, FUN = function(x) data.table(regionGroupID=1:nrow(x), x))
+
+# for the plot scale
+maxVal = max(sapply(pcP, FUN = function(x) max(x[, get(PCsToAnnotate_mrLP)])))
+minVal = min(sapply(pcP, FUN = function(x) min(x[, get(PCsToAnnotate_mrLP)])))
+
+# convert to long format for plots
+pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", PCsToAnnotate_mrLP))
+pcP = lapply(X = pcP, as.data.table)
+pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = PCsToAnnotate_mrLP)])
+
 profilePList = list()
-for (i in seq_along(pcProf)) {
-    # make everthing same window size (y axis for comparability)
-    # switch gather  to lapply() outside loop
-    thisRS = tidyr::gather(data = pcP[[i]], key = "PC", value="loading_value")
-    # add index column to keep region in order? 
-    profilePList[[i]] = ggplot(data = thisRS, mapping = aes(x ="index" , y = "loading_value")) + 
-        facet_wrap(facets = "PC") + ggtitle(label = rsNames[i])
+for (i in seq_along(pcP)) {
+    
+    thisRS = pcP[[i]]
+    
+    profilePList[[i]] = ggplot(data = thisRS, mapping = aes(x =regionGroupID , y = loading_value)) + 
+        geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets = "PC") + ggtitle(label = rsNames[i]) 
     # plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
     # 
 }
-marrangeGrob
-ggsave()
-# dev.off()
+multiProfileP = marrangeGrob(profilePList, ncol = 2, nrow = 2)
+ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir,
+                        "/metaRegionLoadingProfiles", 
+                         inputID, ".pdf"), plot = multiProfileP, device = "pdf", limitsize = FALSE)
+
+# check PPARG.bed, Jaspar motifs (had 18 rows instead of 21)
