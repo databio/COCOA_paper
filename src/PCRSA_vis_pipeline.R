@@ -51,7 +51,12 @@ if (!dir.exists(paste0(Sys.getenv("PLOTS"), plotSubdir))) {
     dir.create(paste0(Sys.getenv("PLOTS"), plotSubdir), recursive = TRUE)
 }
 
+source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R"))
+
+inputID = addUnderscore(inputID, side = "left")
+
 library(grid)
+library(ggplot2)
 library(ComplexHeatmap)
 
 ##################################################################################
@@ -66,14 +71,8 @@ library(ComplexHeatmap)
 comparePCHeatmap(rsEnrichment=rsEnrichment, 
                  PCsToRankBy=PCsToAnnotate_cPCH, 
                  PCsToInclude=PCsToAnnotate_cPCH,
-                 fileName=paste0(Sys.getenv("PLOTS"), plotSubdir, "rsEnrichHeatmap.pdf"))
-
-# for rsEnrichmentTop10
-comparePCHeatmap(rsEnrichment=rsEnrichmentTop10, 
-                 PCsToRankBy=PCsToAnnotate_cPCH, 
-                 PCsToInclude=PCsToAnnotate_cPCH,
-                 fileName=paste0(Sys.getenv("PLOTS"), plotSubdir, "rsEnrichHeatmapTop10Variable.pdf"))
-
+                 fileName=paste0(Sys.getenv("PLOTS"), plotSubdir, 
+                                 "rsEnrichHeatmap", inputID, ".pdf"))
 
 ##################################################################################
 # methylAlongPC
@@ -87,7 +86,7 @@ for (i in seq_along(PCsToAnnotate_mAPC)) {
     # top region sets for this PC
     rsInd = as.numeric(as.matrix(rsEnSortedInd[1:topRSToPlotNum, PCsToAnnotate_mAPC[i], with=FALSE])) # original index
     
-    grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "regionMethylHeatmaps", PCsToAnnotate_mAPC[i], ".pdf"), width = 11, height = 8.5 * topRSToPlotNum)
+    grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "regionMethylHeatmaps", PCsToAnnotate_mAPC[i], inputID, ".pdf"), width = 11, height = 8.5 * topRSToPlotNum)
     
     # heatmap
     methylAlongPC(loadingMat=loadingMat, loadingThreshold=0.95,
@@ -114,7 +113,7 @@ if (!dir.exists(paste0(Sys.getenv("PLOTS"), plotSubdir, "regionByPC/"))) {
 }
 
 grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, 
-                      "regionByPC/regionPercentileByPC", ".pdf"), 
+                      "regionByPC/regionPercentileByPC", inputID, ".pdf"), 
                width = 11, height = 8.5 * length(topRSInd_rQBPC))
 
 # ranking in terms of percentiles in case there were different distributions of loading scores for each PC
@@ -143,7 +142,7 @@ colnames(subsetCorMat) <- PCsToAnnotate_pcFSCHM
 
 simpleCache("subsetCorMat", {subsetCorMat}, recreate=TRUE)
 
-grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "subsetCorRSbyPC", ".pdf"), width = 8.5, 11)
+grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "subsetCorRSbyPC", inputID, ".pdf"), width = 8.5, 11)
 
 # don't use i for index since it is defined as something else in cell_fun
 Heatmap(matrix = subsetCorMat, cluster_rows = FALSE, cluster_columns = FALSE, 
@@ -162,7 +161,7 @@ dev.off()
 pOL = percentCOverlap(coordGR = MIRA:::dtToGr(coordinateDT), 
                       GRList = .regionSetList) 
 
-grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "topRSOverlap", ".pdf"), width = 25, height = 25)
+grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "topRSOverlap", inputID, ".pdf"), width = 25, height = 25)
 
 Heatmap(matrix = pOL[[1]], cluster_rows = FALSE, cluster_columns = FALSE, 
         column_title = , cell_fun = function(j, i, x, y, width, height, fill, mat=pOL[[1]]) {
@@ -192,35 +191,19 @@ pcP = pcProf14k
 
 rsNames = paste0(rsEnrichment$rsName, " : ", rsEnrichment$rsDescription)
 
-grDevices::pdf(paste0(Sys.getenv("PLOTS"), 
-                      "metaRegionLoadingProfiles", 
-                      addUnderscore(inputID, side="left"), ".pdf"))
+# grDevices::pdf(paste0(Sys.getenv("PLOTS"), 
+#                       "metaRegionLoadingProfiles", 
+#                       inputID, ".pdf"))
+profilePList = list()
 for (i in seq_along(pcProf)) {
-    plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
-    plot(pcP[[i]]$PC2, type="l") + title(rsNames[i])
-    plot(pcP[[i]]$PC3, type="l") + title(rsNames[i])
-    plot(pcP[[i]]$PC4, type="l") + title(rsNames[i])
-    plot(pcP[[i]]$PC5, type="l") + title(rsNames[i])
+    # make everthing same window size (y axis for comparability)
+    thisRS = tidyr::gather(data = pcP[[i]], key = "PC", value="loading_value")
+    # add index column to keep region in order? 
+    profilePList[[i]] = ggplot(data = thisRS, mapping = aes(x ="index" , y = "loading_value")) + 
+        facet_wrap(facets = "PC") + ggtitle(label = rsNames[i])
+    # plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
+    # 
 }
-dev.off()
-
-
-# # top 10% mofst variable
-# pcProf10 = pcEnrichmentProfile(loadingMat = top10PCWeights, coordinateDT = top10Coord,
-#                                GRList=GRList, PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"),
-#                                binNum = 21)
-# pcP = pcProf10
-# grDevices::pdf(paste0(Sys.getenv("PLOTS"), "top10MPCProfiles.pdf"))
-# for (i in 1:length(pcProf)) {
-#     plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
-#     plot(pcP[[i]]$PC2, type="l") + title(rsNames[i])
-#     plot(pcP[[i]]$PC3, type="l") + title(rsNames[i])
-#     plot(pcP[[i]]$PC4, type="l") + title(rsNames[i])
-#     plot(pcP[[i]]$PC5, type="l") + title(rsNames[i])
-# }
+marrangeGrob
+ggsave()
 # dev.off()
-
-
-
-
-
