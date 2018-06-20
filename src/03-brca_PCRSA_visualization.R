@@ -16,6 +16,7 @@ simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "bigSharedC", reload =
 # screen out patients without ER/PGR status
 methylData = bigSharedC[["methylProp"]][, 
                                           colnames(bigSharedC[["methylProp"]]) %in% patientMetadata[, subject_ID]] 
+inputID = "sharedC"
 
 # GRList # from load_process_regions pipeline
 coordinateDT = bigSharedC$coordinates

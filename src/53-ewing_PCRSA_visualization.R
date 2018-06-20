@@ -16,6 +16,7 @@ simpleCache("bigSharedC_pQC", assignToVariable = "bigSharedC", reload = TRUE)
 # GRList # from load_process_regions pipeline
 coordinateDT = bigSharedC$coordinates
 methylData = bigSharedC$methylProp
+inputID = "sharedC"
 allMPCAString = "allMPCA2"
 simpleCache(allMPCAString, assignToVariable = "mPCA", reload = TRUE)
 loadingMat = mPCA$rotation
