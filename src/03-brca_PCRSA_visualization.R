@@ -46,7 +46,10 @@ PCsToAnnotate_rQBPC = PCSTOANNOTATE
 topRSInd_rQBPC = unique(unlist(rsEnSortedInd[1:15, ])) # get top region sets from each PC
 # pcFromSubset Correlation Heatmap
 PCsToAnnotate_pcFSCH = PCSTOANNOTATE
-topRSInd_pcFSCH = unique(unlist(rsEnSortedInd[1:15, ])) # get top region sets from each PC
+topRSInd_pcFSCH = unique(unlist(rsEnSortedInd[1:15, ])) # get top region sets from each 
+## "meta region loading profiles" (mrLP)
+topRSInd_mrLP = unique(unlist(rsEnSortedInd[1:10, ]))
+PCsToAnnotate_mrLP = PCSTOANNOTATE
 
 # the pipeline
 source("PCRSA_vis_pipeline.R") 

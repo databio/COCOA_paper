@@ -48,6 +48,9 @@ topRSInd_pcFSCH = unique(unlist(rsEnSortedInd[1:15, ])) # get top region sets fr
 ## "region set Overlapping Cytosine Proportion" (rsOLCP)
 ## proportion of cytosines from region set that are shared with other region set
 topRSInd_rsOLCP = unique(unlist(rsEnSortedInd[1:15, ]))
+## "meta region loading profiles" (mrLP)
+topRSInd_mrLP = unique(unlist(rsEnSortedInd[1:10, ]))
+PCsToAnnotate_mrLP = PCSTOANNOTATE
 
 # the pipeline
 source("PCRSA_vis_pipeline.R") 
