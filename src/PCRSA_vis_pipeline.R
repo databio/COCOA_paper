@@ -210,15 +210,33 @@ pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", valu
 pcP = lapply(X = pcP, as.data.table)
 pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = PCsToAnnotate_mrLP)])
 
+# xLabels = rep("", 21)
+# xLabels[1] = "-14"
+# xLabels[11] = "0"
+# xLabels[21] = "14"
+
+# stack overflow for wrapping plot title
+wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n") 
+
+
 profilePList = list()
 for (i in seq_along(pcP)) {
     
     thisRS = pcP[[i]]
     
+
+    
     profilePList[[i]] = ggplot(data = thisRS, mapping = aes(x =regionGroupID , y = loading_value)) + 
-        geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets = "PC") + ggtitle(label = rsNames[i]) 
+        geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets = "PC") + 
+        ggtitle(label = wrapper(rsNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
+        ylab("Normalized Loading Value") + 
+        theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+    profilePList[[i]]
     # plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
     # 
+    
+    #xLabels = xAxisForRegionPlots2()
+    
 }
 multiProfileP = marrangeGrob(profilePList, ncol = 2, nrow = 2)
 ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir,
