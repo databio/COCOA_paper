@@ -1,6 +1,4 @@
 # library(projectInit)
-rsEnrichmentTop10$rsDescription = rsDescription
-simpleCache("rsEnrichmentTop10_657", {rsEnrichmentTop10}, recreate = TRUE)
 
 # project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "brca_PCA/"))
 source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/00-init.R"))
@@ -49,7 +47,7 @@ trainingMData = brcaMList[["methylProp"]][,
 ###########################################################
 # reading in the region sets
 # load LOLA database
-source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/R/load_process_regions_brca.R"))
+source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/load_process_regions_brca.R"))
 
 #################################################################
 
@@ -193,46 +191,46 @@ for (i in c(2, 4:6)) {
 
 
 ###################################################################################
-# visualizing ICA
-# treating cytosines as observations and patients as dimensions 
-allMICA = fastICA(X = brcaMList$methylProp, n.comp = 5)#, alg.typ = "deflation")
-
-i=2
-cpgToPlotNum=20000
-pdf(paste0(Sys.getenv("PLOTS"), "ICA_cpg_plots.pdf"))
-for (i in 1:ncol(allMICA$S)) {
-    for (j in 1:ncol(allMICA$S)) {
-        cpgToPlot = sample(1:nrow(allMICA$S), cpgToPlotNum)
-        plot(allMICA$S[cpgToPlot, i], allMICA$S[cpgToPlot, j])
-    }
-}
-dev.off()
-plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 2])
-plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 3])
-plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 4])
-plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 5])
-
-# # add annotation information
-# icaWithAnno = cbind(as.data.table(allMICA$x), patientMetadata[dataSplit, ])
+# # visualizing ICA
+# # treating cytosines as observations and patients as dimensions 
+# allMICA = fastICA(X = brcaMList$methylProp, n.comp = 5)#, alg.typ = "deflation")
 # 
-# colorByCols = colnames(patientMetadata)[!(colnames(patientMetadata) %in% "subject_ID")]
-# for (i in 2:6) {
-#     multiColorICAPlots = colorClusterPlots(icaWithAnno, 
-#                                            plotCols = c("PC1", paste0("PC", i)), 
-#                                            colorByCols=colorByCols)
-#     ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorICAPlots1", i), 
-#                                     ".pdf"), plot = multiColorICAPlots, device = "pdf",
-#                     limitsize=FALSE)
+# i=2
+# cpgToPlotNum=20000
+# pdf(paste0(Sys.getenv("PLOTS"), "ICA_cpg_plots.pdf"))
+# for (i in 1:ncol(allMICA$S)) {
+#     for (j in 1:ncol(allMICA$S)) {
+#         cpgToPlot = sample(1:nrow(allMICA$S), cpgToPlotNum)
+#         plot(allMICA$S[cpgToPlot, i], allMICA$S[cpgToPlot, j])
+#     }
 # }
-# for (i in c(2, 4:6)) {
-#     multiColorICAPlots = colorClusterPlots(icaWithAnno, 
-#                                            plotCols = c("PC3", paste0("PC", i)), 
-#                                            colorByCols=colorByCols)
-#     ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorICAPlots3", i), 
-#                                     ".pdf"), plot = multiColorICAPlots, device = "pdf",
-#                     limitsize=FALSE)
-# }
-
+# dev.off()
+# plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 2])
+# plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 3])
+# plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 4])
+# plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 5])
+# 
+# # # add annotation information
+# # icaWithAnno = cbind(as.data.table(allMICA$x), patientMetadata[dataSplit, ])
+# # 
+# # colorByCols = colnames(patientMetadata)[!(colnames(patientMetadata) %in% "subject_ID")]
+# # for (i in 2:6) {
+# #     multiColorICAPlots = colorClusterPlots(icaWithAnno, 
+# #                                            plotCols = c("PC1", paste0("PC", i)), 
+# #                                            colorByCols=colorByCols)
+# #     ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorICAPlots1", i), 
+# #                                     ".pdf"), plot = multiColorICAPlots, device = "pdf",
+# #                     limitsize=FALSE)
+# # }
+# # for (i in c(2, 4:6)) {
+# #     multiColorICAPlots = colorClusterPlots(icaWithAnno, 
+# #                                            plotCols = c("PC3", paste0("PC", i)), 
+# #                                            colorByCols=colorByCols)
+# #     ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorICAPlots3", i), 
+# #                                     ".pdf"), plot = multiColorICAPlots, device = "pdf",
+# #                     limitsize=FALSE)
+# # }
+# 
 
 
 
@@ -338,3 +336,11 @@ sum(as.numeric(myExprDT[PGRInd, 2:ncol(myExprDT)]) < 2) / (ncol(myExprDT)-1)
 
 # References
 # https://www.ncbi.nlm.nih.gov/pubmed/17616709/: ER transcriptional network
+
+
+## 
+# for (i in 1:30) {
+#     
+# 
+# t = apply(X = allMPCA$rotation[, 1:10], 2, FUN = sd)
+# }
