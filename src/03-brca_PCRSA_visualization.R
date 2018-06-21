@@ -48,6 +48,9 @@ topRSInd_rQBPC = unique(unlist(rsEnSortedInd[1:15, ])) # get top region sets fro
 # pcFromSubset Correlation Heatmap
 PCsToAnnotate_pcFSCH = PCSTOANNOTATE
 topRSInd_pcFSCH = unique(unlist(rsEnSortedInd[1:15, ])) # get top region sets from each 
+## "region set Overlapping Cytosine Proportion" (rsOLCP)
+## proportion of cytosines from region set that are shared with other region set
+topRSInd_rsOLCP = unique(unlist(rsEnSortedInd[1:10, ]))
 ## "meta region loading profiles" (mrLP)
 topRSInd_mrLP = unique(unlist(rsEnSortedInd[1:10, ]))
 PCsToAnnotate_mrLP = PCSTOANNOTATE
