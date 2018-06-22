@@ -135,17 +135,17 @@ subsetCorList = lapply(X = as.list(.regionSetList), FUN = function(x) pcFromSubs
                                                                                   pca = mPCA, 
                                                                                   methylData = methylData, 
                                                                                   coordinateDT = coordinateDT, 
-                                                                                  PCofInterest = PCsToAnnotate_pcFSCHM,
+                                                                                  PCofInterest = PCsToAnnotate_pcFSCH,
                                                                                   returnCor = TRUE))
 subsetCorMat = do.call(rbind, subsetCorList)
-colnames(subsetCorMat) <- PCsToAnnotate_pcFSCHM
+colnames(subsetCorMat) <- PCsToAnnotate_pcFSCH
 
-simpleCache("subsetCorMat", {subsetCorMat}, recreate=TRUE)
+simpleCache(paste0("subsetCorMat", inputID), {subsetCorMat}, recreate=TRUE)
 
 grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "subsetCorRSbyPC", inputID, ".pdf"), width = 8.5, 11)
 
 # don't use i for index since it is defined as something else in cell_fun
-Heatmap(matrix = subsetCorMat, cluster_rows = FALSE, cluster_columns = FALSE, 
+Heatmap(matrix = subsetCorMat, col = c("black", "orange"), cluster_rows = FALSE, cluster_columns = FALSE, 
         column_title = , cell_fun = function(j, i, x, y, width, height, fill, mat=subsetCorMat) {
             grid.text(sprintf("%.2f", mat[i, j]), x, y, gp = gpar(fontsize = 10))
         })
@@ -163,7 +163,7 @@ pOL = percentCOverlap(coordGR = MIRA:::dtToGr(coordinateDT),
 
 grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "topRSOverlap", inputID, ".pdf"), width = 25, height = 25)
 
-Heatmap(matrix = pOL[[1]], cluster_rows = FALSE, cluster_columns = FALSE, 
+Heatmap(matrix = pOL[[1]], col = c("black", "yellow"), cluster_rows = FALSE, cluster_columns = FALSE, 
         column_title = , cell_fun = function(j, i, x, y, width, height, fill, mat=pOL[[1]]) {
             grid.text(sprintf("%.2f", mat[i, j]), x, y, gp = gpar(fontsize = 10))
         })
@@ -202,8 +202,8 @@ pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, 
 pcP = lapply(pcP, FUN = function(x) data.table(regionGroupID=1:nrow(x), x))
 
 # for the plot scale
-maxVal = max(sapply(pcP, FUN = function(x) max(x[, get(PCsToAnnotate_mrLP)])))
-minVal = min(sapply(pcP, FUN = function(x) min(x[, get(PCsToAnnotate_mrLP)])))
+maxVal = max(sapply(pcP, FUN = function(x) max(x[, .SD, .SDcols=PCsToAnnotate_mrLP])))
+minVal = min(sapply(pcP, FUN = function(x) min(x[, .SD, .SDcols=PCsToAnnotate_mrLP])))
 
 # convert to long format for plots
 pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", PCsToAnnotate_mrLP))
