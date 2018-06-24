@@ -93,6 +93,7 @@ source(paste0(Sys.getenv("CODE"),"/aml_e3999/src/PCRSA_pipeline.R"))
 enrichResults = PCRSA_pipeline(mData=trainingMData, coordinates=brcaMList[["coordinates"]], 
                GRList=GRList, 
                PCsToAnnotate = c("PC1m4", "PC1p3", paste0("PC", 1:10)), 
+               scoringMetric = "meanDiff",
                pcaCache=FALSE, 
                allMPCACacheName=allMPCAString, top10MPCACacheName = top10MPCAString, 
                overwritePCACaches = FALSE, 
