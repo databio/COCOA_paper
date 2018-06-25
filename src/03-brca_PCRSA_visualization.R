@@ -56,7 +56,7 @@ topRSInd_mrLP = unique(unlist(rsEnSortedInd[1:10, ]))
 PCsToAnnotate_mrLP = PCSTOANNOTATE
 
 # the pipeline
-source("PCRSA_vis_pipeline.R") 
+source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/PCRSA_vis_pipeline.R")) 
 
 
 # creating figures for presentation that only include a few PCs
@@ -84,3 +84,4 @@ topRSInd_rsOLCP = unique(unlist(rsEnSortedInd[1:15, c("PC1", "PC2", "PC3", "PC4"
 topRSInd_mrLP = unique(unlist(rsEnSortedInd[1:15, c("PC1", "PC4"), with=FALSE]))
 PCsToAnnotate_mrLP = PCSTOANNOTATE
 
+source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/PCRSA_vis_pipeline.R"))

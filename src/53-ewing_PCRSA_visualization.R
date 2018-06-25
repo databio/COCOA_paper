@@ -54,4 +54,4 @@ topRSInd_mrLP = unique(unlist(rsEnSortedInd[1:10, ]))
 PCsToAnnotate_mrLP = PCSTOANNOTATE
 
 # the pipeline
-source("PCRSA_vis_pipeline.R") 
+source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/PCRSA_vis_pipeline.R"))
