@@ -1,0 +1,55 @@
+# test/visualize different scoring metrics and normalizers
+
+
+############################# testing out various scoring methods
+# not unit tests, just exploratory analysis
+
+# testing out scoring metric
+totalCpGs = 350000
+cytosine_coverage = 1:(floor(totalCpGs/2))
+sizeNormalizer = 1 / sqrt((1 / cytosine_coverage) - (1 / (totalCpGs - cytosine_coverage)))
+plot(sizeNormalizer)
+test = sizeNormalizer[2:(length(sizeNormalizer))] - sizeNormalizer[1:(length(sizeNormalizer)-1)]
+plot(test)
+plot(test[50000:100000])
+
+# rank sum test
+n = 1:100
+mDist = lapply(n, function(x) rnorm(350000 - x))
+wTest = mapply(FUN = function(x, y) wilcox.test(x = rep(0.67, x), y = y), x = n, y=mDist)
+length(wTest)
+# plot the test statistic
+plot(unlist(wTest[(n * 7) - 6]))
+# plot the p value
+plot(unlist(wTest[(n * 7) - 4])[ 40:100])
+
+n = 1:10
+mDist = lapply(n, function(x) rnorm(1600000 - x)) # 1.6 million CpGs
+mDist2 = lapply(n, function(x) rnorm(x, mean = 0.5))
+wTest = mapply(FUN = function(x, y) wilcox.test(x = x, y = y), x = mDist2, y=mDist)
+# plot the test statistic
+plot(unlist(wTest[(n * 7) - 6]))
+# plot the p value
+plot(unlist(wTest[(n * 7) - 4])[ 40:100])
+
+# combining raw score and test statistic approach
+rsEn_old[, rsIndex := 1:nrow(rsEn_old)]
+rsEn_new[, rsIndex := 1:nrow(rsEn_new)]
+oldEn = rsEn_old
+oldEn = oldEn[order(PC1, decreasing = TRUE)]
+oldEn[, PC1 := 1:nrow(oldEn)]
+oldEn = oldEn[order(rsIndex), ]
+
+newEn = rsEn_new
+newEn = newEn[order(PC1, decreasing = TRUE)]
+newEn[, PC1 := 1:nrow(newEn)]
+newEn = newEn[order(rsIndex), ]
+
+newEn[, newOrder := PC1 + oldEn$PC1]
+View(newEn[order(newOrder), ])
+
+# pooled standard deviation
+SD1 = 50
+SD2 = 1:100
+poolSD = sqrt((SD1^2 + SD2^2)/ 2)
+plot(poolSD)
