@@ -121,6 +121,7 @@ regionQuantileByPC(loadingMat=loadingMat, coordinateDT=coordinateDT,
                    GRList=GRList[topRSInd_rQBPC], 
                    rsNames=paste0(rsEnrichment$rsName[topRSInd_rQBPC], " : ", rsEnrichment$rsDescription[topRSInd_rQBPC]), 
                    PCsToAnnotate=PCsToAnnotate_rQBPC)
+# TODO fix error: cannot allocate vector of size 7.5 Gb, (might have related to making distance matrix for clustering)
 dev.off()
 
 ##################################################################################
