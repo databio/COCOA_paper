@@ -53,3 +53,47 @@ SD1 = 50
 SD2 = 1:100
 poolSD = sqrt((SD1^2 + SD2^2)/ 2)
 plot(poolSD)
+
+
+regionGR = GRList[[as.numeric(rsEnSortedInd[1,1])]]
+
+# magnitude of a single vector (distance from zero)
+vecDist = function(dataVec) {
+    zVec = rep(0, length(dataVec))
+    return(as.numeric(dist(rbind(zVec, dataVec))))
+}
+
+# get angle between PC and only loading vals for CpGs in a given region set
+subsetPCAngle <- function(regionGR, loadingMat, coordinateDT, PCofInterest=paste0("PC", 1:3)) {
+    #  subsetInd = 
+    # newColNames <- paste0(PCofInterest, "_subset")
+    
+    coordGR = MIRA:::dtToGr(coordinateDT)
+    olList = findOverlaps(query = regionGR, subject = coordGR)
+    # regionHitInd = sort(unique(queryHits(olList)))
+    cytosineHitInd = sort(unique(subjectHits(olList)))
+    subsetLoad = loadingMat[, PCofInterest]
+    subsetLoad[-cytosineHitInd, ] = 0
+    # angle between two vector = (A * B) / ()
+    subMag = apply(subsetLoad, 2, FUN = vecDist)
+    dotProd = mapply(FUN = function(x, y) loadingMat[, x] * subsetLoad[, y], x = seq_along(PCofInterest), y=seq_along(PCofInterest))
+    # sqrt(apply(dotProd, 2, sum)), could just take sqrt of subMag for dotProd
+    dotProd = apply(dotProd, 2, sum)
+    subAngle = acos(dotProd/ (apply(loadingMat[, PCofInterest], 2, vecDist) * subMag))
+    # answer is same as taking acos(subMag)
+    degAngle = subAngle * 180 / pi
+}
+
+subsetDist = function(dataVec, subsetInd) {
+    
+    pairMat = rbind(dataVec, dataVec)
+    # set everything not in the subset to 0
+    pairMat[2, -subsetInd] = 0
+    return(as.numeric(dist(pairMat)))
+}
+
+
+
+nC = nrow(loadingMat)
+lengthMat = t(cbind(loadingMat[, "PC1"], rep(0, nC)))
+dist(lengthMat)
