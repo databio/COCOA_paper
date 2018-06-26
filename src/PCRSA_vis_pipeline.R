@@ -116,12 +116,16 @@ grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir,
                       "regionByPC/regionPercentileByPC", inputID, ".pdf"), 
                width = 11, height = 8.5 * length(topRSInd_rQBPC))
 
-# ranking in terms of percentiles in case there were different distributions of loading scores for each PC
+## ranking in terms of percentiles in case there were different distributions of loading scores for each PC
+# if there are too many regions, will try to cluster and cause memory error:
+# cannot allocate vector of size X Gb,
+# fix this by decreasing maxRegionsToPlot or use cluster_rows=FALSE
 regionQuantileByPC(loadingMat=loadingMat, coordinateDT=coordinateDT, 
                    GRList=GRList[topRSInd_rQBPC], 
                    rsNames=paste0(rsEnrichment$rsName[topRSInd_rQBPC], " : ", rsEnrichment$rsDescription[topRSInd_rQBPC]), 
-                   PCsToAnnotate=PCsToAnnotate_rQBPC)
-# TODO fix error: cannot allocate vector of size 7.5 Gb, (might have related to making distance matrix for clustering)
+                   PCsToAnnotate=PCsToAnnotate_rQBPC, maxRegionsToPlot = 5000,
+                   cluster_rows = TRUE)
+
 dev.off()
 
 ##################################################################################
