@@ -85,3 +85,26 @@ topRSInd_mrLP = unique(unlist(rsEnSortedInd[1:15, c("PC1", "PC4"), with=FALSE]))
 PCsToAnnotate_mrLP = PCSTOANNOTATE
 
 source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/PCRSA_vis_pipeline.R"))
+
+# plotting correlation between a PC and the "PC-subset" score 
+# derived from only loading values of CpGs within a certain region set 
+# do this for top few region sets for PC1
+PCofInterest = "PC1"
+grDevices::pdf(paste0(Sys.getenv("PLOTS"), 
+                      plotSubdir, "subsetPC_PC_Scatter_", 
+                      PCofInterest, addUnderscore(inputID, side="left"), ".pdf"))
+for (i in 1:5) {
+    # returns a "PC-subset" score for each sample
+    subScores = pcFromSubset(regionSet = GRList[rsEnSortedInd[i]], 
+                    pca = mPCA, 
+                    methylData = methylData, 
+                    coordinateDT = coordinateDT, 
+                    PCofInterest = PCofInterest,
+                    returnCor = FALSE)    
+    
+    plot(x = subScores, y = PCofInterest, xlab= "Scores from only CpGs in this region set",
+         ylab = PCofInterest, main = paste0(rsEnrichment$rsName[rsEnSortedInd[i]], 
+                                            " : ", rsEnrichment$rsDescription[rsEnSortedInd[i]]))   
+
+}
+dev.off()
