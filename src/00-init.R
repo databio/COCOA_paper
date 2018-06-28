@@ -14,8 +14,8 @@ source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R" ))
 # the AML init script will set a different plots directory
 # Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/plots/"))
 
-source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/PRA.R"))
-source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/visualization.R"))
+source(paste0(Sys.getenv("CODE"), "PCRSA/R/PCRSA.R"))
+source(paste0(Sys.getenv("CODE"), "PCRSA/R/visualization.R"))
 
 
 brcaMetadata = fread(paste0(Sys.getenv("CODE"), 
