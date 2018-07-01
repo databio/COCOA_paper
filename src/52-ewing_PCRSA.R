@@ -77,7 +77,7 @@ rsDescription = c("ER ChIPseq, MCF7 cell line, estradiol stimulation",
 
 source(paste0(Sys.getenv("CODE"),"/aml_e3999/src/PCRSA_pipeline.R"))
 # rows of mData are cytosines, cols are samples
-rsEnrichResults = PCRSA_pipeline(mData = mData[, -c(ol2Ind, ol1Ind)], coordinates = coordinates, 
+rsEnrichResults = PCRSA_pipeline(mData = bigSharedC$methylProp, coordinates = bigSharedC$coordinates, 
                GRList = GRList, 
                PCsToAnnotate=PCsToAnnotate,
                pcaCache=TRUE,
@@ -89,16 +89,21 @@ rsEnrichResults = PCRSA_pipeline(mData = mData[, -c(ol2Ind, ol1Ind)], coordinate
                rsName=rsName, rsDescription=rsDescription, 
                rsEnCache = TRUE,
                rsEnCacheName="rsEnrichment", rsEnTop10CacheName="rsEnrichmentTop10",
-               overwriteResultsCaches = TRUE) 
+               overwriteResultsCaches = TRUE,
+               scoringMetric = "raw") 
 
 rsEnrichment = rsEnrichResults[[1]]
 rsEnrichmentTop10 = rsEnrichResults[[2]]
 
+if (!dir.exists(paste0(Sys.getenv("PROCESSED"),"ews_patients/analysis/sheets/"))) {
+    dir.create(paste0(Sys.getenv("PROCESSED"),"ews_patients/analysis/sheets/"))
+}
+
 write.csv(x = rsEnrichment,
-          file = dirData("analysis/sheets/PC_Enrichment_All_Shared_Cs_EWS.csv"),
+          file = paste0(Sys.getenv("PROCESSED"),"ews_patients/analysis/sheets/PC_Enrichment_All_Shared_Cs_EWS.csv"),
           quote = FALSE, row.names = FALSE)
 write.csv(x = rsEnrichmentTop10,
-          file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_EWS.csv"),
+          file = paste0(Sys.getenv("PROCESSED"),"ews_patients/analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_EWS.csv"),
           quote = FALSE, row.names = FALSE)
 
 

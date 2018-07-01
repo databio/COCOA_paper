@@ -55,3 +55,32 @@ PCsToAnnotate_mrLP = PCSTOANNOTATE
 
 # the pipeline
 source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/PCRSA_vis_pipeline.R"))
+
+##############################################################################
+
+# creating figures for presentation that only include a few PCs
+plotSubdir = "53_Ewing_PCRSA_Vis_pres_figures"
+inputID = "sharedC_figures"
+
+PCSTOANNOTATE = paste0("PC", 1:4)
+
+### plots that will be created and script specific parameters for them 
+# "comparePCHeatmap"
+PCsToAnnotate_cPCH = PCSTOANNOTATE
+# "methylAlongPC"
+topRSToPlotNum = 15
+PCsToAnnotate_mAPC = PCSTOANNOTATE
+# "regionQuantileByPC"
+PCsToAnnotate_rQBPC = PCSTOANNOTATE
+topRSInd_rQBPC = unique(unlist(rsEnSortedInd[1:15, ])) # get top region sets from each PC
+# pcFromSubset Correlation Heatmap
+PCsToAnnotate_pcFSCH = PCSTOANNOTATE
+topRSInd_pcFSCH = unique(unlist(rsEnSortedInd[1:10, c("PC1", "PC4"), with=FALSE])) # get top region sets from each 
+## "region set Overlapping Cytosine Proportion" (rsOLCP)
+## proportion of cytosines from region set that are shared with other region set
+topRSInd_rsOLCP = unique(unlist(rsEnSortedInd[1:15, c("PC1", "PC2", "PC3", "PC4"), with=FALSE]))
+## "meta region loading profiles" (mrLP)
+topRSInd_mrLP = unique(unlist(rsEnSortedInd[1:15, c(paste0("PC", 1:4)), with=FALSE]))
+PCsToAnnotate_mrLP = PCSTOANNOTATE
+
+source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/PCRSA_vis_pipeline.R"))

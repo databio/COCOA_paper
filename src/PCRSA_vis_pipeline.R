@@ -169,9 +169,12 @@ pOL = percentCOverlap(coordGR = MIRA:::dtToGr(coordinateDT),
 grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "topRSOverlap", inputID, ".pdf"), width = 25, height = 25)
 
 Heatmap(matrix = pOL[[1]], col = c("black", "yellow"), cluster_rows = FALSE, cluster_columns = FALSE, 
-        column_title = , cell_fun = function(j, i, x, y, width, height, fill, mat=pOL[[1]]) {
+        cell_fun = function(j, i, x, y, width, height, fill, mat=pOL[[1]]) {
             grid.text(sprintf("%.2f", mat[i, j]), x, y, gp = gpar(fontsize = 10))
         })
+
+# numbers not included on plot squares
+# Heatmap(matrix = pOL[[1]], col = c("gray14", "gold"), cluster_rows = FALSE, cluster_columns = FALSE)
 dev.off()
 
 
