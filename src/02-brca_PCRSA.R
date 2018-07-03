@@ -118,48 +118,11 @@ write.csv(x = rsEnrichmentTop10,
 #################################################################
 # run PCRSA again but with wilcoxon rank sum scoring method
 
-allMPCAString = "allMPCA_657"
-top10MPCAString = "top10MPCA_657"
-rsName = c("GSM2305313_MCF7_E2_peaks_hg38.bed", 
-           lolaCoreRegionAnno$filename,
-           roadmapRegionAnno$filename,
-           motifRegionAnno$filename)
-rsDescription = c("ER ChIPseq, MCF7 cell line, estradiol stimulation",
-                  lolaCoreRegionAnno$description,
-                  roadmapRegionAnno$description,
-                  motifRegionAnno$description)
-
-# loading PCA and combining components that could separate ER=/-
-# for rsEnrichment, PCs 1 and 4 could separate ER+/-
-simpleCache(allMPCAString, assignToVariable = "allMPCA")
-simpleCache(top10MPCAString, assignToVariable = "top10MPCA")
-# getting new axis in direction that separates, normalizing to length one
-PC1m4 = (1/sqrt(2)) * allMPCA$rotation[, "PC1"] - (1/sqrt(2)) * allMPCA$rotation[, "PC4"]
-allMPCA$rotation = cbind(allMPCA$rotation, PC1m4)
-# also adding combination that could separate ER+/- in top10MPCA which should not here
-PC1p3 = (1/sqrt(2)) * allMPCA$rotation[, "PC1"] + (1/sqrt(2)) * allMPCA$rotation[, "PC3"]
-allMPCA$rotation = cbind(allMPCA$rotation, PC1p3)
-
-# for rsEnrichmentTop10, PCs 1 and 3 could separate ER+/-
-PC1p3 = (1/sqrt(2)) * top10MPCA$rotation[, "PC1"] + (1/sqrt(2)) * top10MPCA$rotation[, "PC3"]
-top10MPCA$rotation = cbind(top10MPCA$rotation, PC1p3)
-# also adding combination that could separate ER+/- in allMPCA which should not here
-PC1m4 = (1/sqrt(2)) * top10MPCA$rotation[, "PC1"] - (1/sqrt(2)) * top10MPCA$rotation[, "PC4"]
-top10MPCA$rotation = cbind(top10MPCA$rotation, PC1m4)
-# make PCRSA_pipeline be able to take PCA object? otherwise create new cache with PC values
-# specialPCEnr = PCRSA_pipeline(mData=trainingMData, coordinates=brcaMList[["coordinates"]], 
-#                               GRList=GRList, useCache=TRUE, 
-#                               allMPCAString=allMPCAString, top10MPCAString = top10MPCAString, 
-#                               rsName = rsName, rsDescription = rsDescription)
-
-
-
 # gives output of rsEnrichment from PCA of all shared cytosines
 # and rsEnrichmentTop10 from PCA of 10% most variable shared cytosines
-source(paste0(Sys.getenv("CODE"),"/aml_e3999/src/PCRSA_pipeline.R"))
 enrichResults = PCRSA_pipeline(mData=trainingMData, coordinates=brcaMList[["coordinates"]], 
                                GRList=GRList, 
-                               PCsToAnnotate = c("PC1m4", "PC1p3", paste0("PC", 1:10)), 
+                               PCsToAnnotate = c(paste0("PC", 1:4)), 
                                scoringMetric = "rankSum",
                                pcaCache=FALSE, 
                                allMPCACacheName=allMPCAString, top10MPCACacheName = top10MPCAString, 
@@ -409,3 +372,4 @@ dev.off()
 # 
 # t = apply(X = allMPCA$rotation[, 1:10], 2, FUN = sd)
 # }
+
