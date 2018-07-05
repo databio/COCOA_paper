@@ -138,10 +138,39 @@ rsEnrichmentTop10 = enrichResults[[2]]
 
 
 write.csv(x = rsEnrichment, 
-          file = dirData("analysis/sheets/PC_Enrichment_All_Shared_Cs_657.csv"),
+          file = dirData("analysis/sheets/PC_Enrichment_All_Shared_Cs_ranksum_657.csv"),
           quote = FALSE, row.names = FALSE)
 write.csv(x = rsEnrichmentTop10, 
-          file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_657.csv"),
+          file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_ranksum_657.csv"),
+          quote = FALSE, row.names = FALSE)
+
+#################################################################
+# run PCRSA again but with mean of individual CpGs instead of mean of regions
+
+# gives output of rsEnrichment from PCA of all shared cytosines
+# and rsEnrichmentTop10 from PCA of 10% most variable shared cytosines
+enrichResults = PCRSA_pipeline(mData=trainingMData, coordinates=brcaMList[["coordinates"]], 
+                               GRList=GRList, 
+                               PCsToAnnotate = c(paste0("PC", 1:6)), 
+                               scoringMetric = "raw_CpG",
+                               pcaCache=FALSE, 
+                               allMPCACacheName=allMPCAString, top10MPCACacheName = top10MPCAString, 
+                               overwritePCACaches = FALSE, 
+                               allMPCA = allMPCA, top10MPCA = top10MPCA,
+                               rsName = rsName, rsDescription = rsDescription,
+                               rsEnCache = TRUE, rsEnCacheName = "rsEnrichment_rawCpG",
+                               rsEnTop10CacheName = "rsEnrichmentTop10_rawCpG",
+                               overwriteResultsCaches = TRUE) 
+
+rsEnrichment = enrichResults[[1]]
+rsEnrichmentTop10 = enrichResults[[2]]
+
+
+write.csv(x = rsEnrichment, 
+          file = paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/sheets/PC_Enrichment_All_Shared_Cs_rawCpG_657.csv"),
+          quote = FALSE, row.names = FALSE)
+write.csv(x = rsEnrichmentTop10, 
+          file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_rawCpG_657.csv"),
           quote = FALSE, row.names = FALSE)
 
 ######################################################
