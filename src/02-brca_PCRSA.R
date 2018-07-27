@@ -31,18 +31,18 @@ patientMetadata = patientMetadata[patientMetadata$subject_ID %in%
 # # and test sets
 # dataSplit = createDataPartition(y=factor(paste0(patientMetadata$ER_status,"_", patientMetadata$PGR_status)),
 #                                 p = .5, list=FALSE)
-# trainingIDs = patientMetadata[dataSplit, subject_ID]
+# hasER_PGR_IDs = patientMetadata[dataSplit, subject_ID]
 # testIDs = patientMetadata[-dataSplit, subject_ID]
-# trainingMData = brcaMList[["methylProp"]][, 
-#                 colnames(brcaMList[["methylProp"]]) %in% trainingIDs] 
+# filteredMData = brcaMList[["methylProp"]][, 
+#                 colnames(brcaMList[["methylProp"]]) %in% hasER_PGR_IDs] 
 # testMData = brcaMList[["methylProp"]][, 
 #                 colnames(brcaMList[["methylProp"]]) %in% testIDs]
 
 # patientMetadata should have already screened out patients without ER/PGR status
 # resulting in 657 patients
-trainingIDs = patientMetadata[, subject_ID]
-trainingMData = brcaMList[["methylProp"]][, 
-                                          colnames(brcaMList[["methylProp"]]) %in% trainingIDs] 
+hasER_PGR_IDs = patientMetadata[, subject_ID]
+filteredMData = brcaMList[["methylProp"]][, 
+                                          colnames(brcaMList[["methylProp"]]) %in% hasER_PGR_IDs] 
 
 ###########################################################
 # reading in the region sets
@@ -80,7 +80,7 @@ top10MPCA$rotation = cbind(top10MPCA$rotation, PC1p3)
 PC1m4 = (1/sqrt(2)) * top10MPCA$rotation[, "PC1"] - (1/sqrt(2)) * top10MPCA$rotation[, "PC4"]
 top10MPCA$rotation = cbind(top10MPCA$rotation, PC1m4)
 # make PCRSA_pipeline be able to take PCA object? otherwise create new cache with PC values
-# specialPCEnr = PCRSA_pipeline(mData=trainingMData, coordinates=brcaMList[["coordinates"]], 
+# specialPCEnr = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
 #                               GRList=GRList, useCache=TRUE, 
 #                               allMPCAString=allMPCAString, top10MPCAString = top10MPCAString, 
 #                               rsName = rsName, rsDescription = rsDescription)
@@ -90,7 +90,7 @@ top10MPCA$rotation = cbind(top10MPCA$rotation, PC1m4)
 # gives output of rsEnrichment from PCA of all shared cytosines
 # and rsEnrichmentTop10 from PCA of 10% most variable shared cytosines
 source(paste0(Sys.getenv("CODE"),"/aml_e3999/src/PCRSA_pipeline.R"))
-enrichResults = PCRSA_pipeline(mData=trainingMData, coordinates=brcaMList[["coordinates"]], 
+enrichResults = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
                GRList=GRList, 
                PCsToAnnotate = c("PC1m4", "PC1p3", paste0("PC", 1:10)), 
                scoringMetric = "meanDiff",
@@ -120,7 +120,7 @@ write.csv(x = rsEnrichmentTop10,
 
 # gives output of rsEnrichment from PCA of all shared cytosines
 # and rsEnrichmentTop10 from PCA of 10% most variable shared cytosines
-enrichResults = PCRSA_pipeline(mData=trainingMData, coordinates=brcaMList[["coordinates"]], 
+enrichResults = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
                                GRList=GRList, 
                                PCsToAnnotate = c(paste0("PC", 1:4)), 
                                scoringMetric = "rankSum",
@@ -149,7 +149,7 @@ write.csv(x = rsEnrichmentTop10,
 
 # gives output of rsEnrichment from PCA of all shared cytosines
 # and rsEnrichmentTop10 from PCA of 10% most variable shared cytosines
-enrichResults = PCRSA_pipeline(mData=trainingMData, coordinates=brcaMList[["coordinates"]], 
+enrichResults = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
                                GRList=GRList, 
                                PCsToAnnotate = c(paste0("PC", 1:6)), 
                                scoringMetric = "raw_CpG",
@@ -195,7 +195,7 @@ patientMetadata$race = sub(pattern = "AMERICAN INDIAN OR ALASKA NATIVE",
                            "NATIVE AM. OR ALASKAN", x = patientMetadata$race, fixed = TRUE)
 
 # getting PC scores manually so artificial PCs will be included (PC1m4 and PC1p3)
-centeredPCAMeth = t(apply(trainingMData, 2, function(x) x - allMPCA$center)) # center first 
+centeredPCAMeth = t(apply(filteredMData, 2, function(x) x - allMPCA$center)) # center first 
 reducedValsPCA = centeredPCAMeth %*% allMPCA$rotation
 pcaValDF = as.data.frame(reducedValsPCA)
 
