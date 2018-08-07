@@ -68,11 +68,12 @@ library(ComplexHeatmap)
 # number of plots = length(PCsToRankBy). one plot for each
 # TODO: filter out low coverage region sets
 # for rsEnrichment
-comparePCHeatmap(rsEnrichment=rsEnrichment, 
+comparePCHeatmap(rsScores=rsEnrichment, 
                  PCsToRankBy=PCsToAnnotate_cPCH, 
                  PCsToInclude=PCsToAnnotate_cPCH,
                  fileName=paste0(Sys.getenv("PLOTS"), plotSubdir, 
                                  "rsEnrichHeatmap", inputID, ".pdf"))
+
 
 ##################################################################################
 # methylAlongPC
@@ -91,7 +92,7 @@ for (i in seq_along(PCsToAnnotate_mAPC)) {
     # heatmap
     methylAlongPC(loadingMat=loadingMat, loadingThreshold=0.95,
                   pcScores=mPCA$x,
-                  coordinateDT=coordinateDT,
+                  mCoord=coordinateDT,
                   methylData=methylData,
                   GRList=GRList[rsInd], orderByPC=PCsToAnnotate_mAPC[i],
                   topXRegions=50)
@@ -120,7 +121,7 @@ grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir,
 # if there are too many regions, will try to cluster and cause memory error:
 # cannot allocate vector of size X Gb,
 # fix this by decreasing maxRegionsToPlot or use cluster_rows=FALSE
-regionQuantileByPC(loadingMat=loadingMat, coordinateDT=coordinateDT, 
+regionQuantileByPC(loadingMat=loadingMat, mCoord=coordinateDT, 
                    GRList=GRList[topRSInd_rQBPC], 
                    rsNames=paste0(rsEnrichment$rsName[topRSInd_rQBPC], " : ", rsEnrichment$rsDescription[topRSInd_rQBPC]), 
                    PCsToAnnotate=PCsToAnnotate_rQBPC, maxRegionsToPlot = 5000,
@@ -188,7 +189,7 @@ dev.off()
 .regionSetList = lapply(.regionSetList, resize, width = 14000, fix="center")
 
 simpleCache(paste0("pcProf14k", inputID), {
-    pcProf = pcEnrichmentProfile(loadingMat = mPCA$rotation, coordinateDT = coordinateDT,
+    pcProf = pcEnrichmentProfile(loadingMat = mPCA$rotation, mCoord = coordinateDT,
                                  GRList=.regionSetList, PCsToAnnotate = PCsToAnnotate_mrLP,
                                  binNum = 21)
     # set names by reference
