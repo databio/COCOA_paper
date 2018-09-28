@@ -21,6 +21,15 @@ setCacheDir(paste0(Sys.getenv("PROCESSED"), "brca_PCA/RCache/"))
 
 simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
 
+# simpleCache("mPCA_692", {
+#     mPCA_all_samples = prcomp(t(brcaMList$methylProp))
+# })
+
+
+#####
+
+
+
 
 # reading in the metadata, will be used to split data 
 # into training and test set with balanced ER and PGR status
@@ -51,7 +60,8 @@ source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/load_process_regions_b
 
 #################################################################
 
-allMPCAString = "allMPCA_657"
+dataID = "657" # 657 patients with both ER and PGR info in metadata, 692 total
+allMPCAString = "allMPCA_657" #  "allMPCA_657"
 top10MPCAString = "top10MPCA_657"
 rsName = c("GSM2305313_MCF7_E2_peaks_hg38.bed", 
            lolaCoreRegionAnno$filename,
@@ -90,28 +100,41 @@ top10MPCA$rotation = cbind(top10MPCA$rotation, PC1m4)
 # gives output of rsEnrichment from PCA of all shared cytosines
 # and rsEnrichmentTop10 from PCA of 10% most variable shared cytosines
 source(paste0(Sys.getenv("CODE"),"/aml_e3999/src/PCRSA_pipeline.R"))
-enrichResults = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
+# brcaMList = filteredMData
+enrichResults = PCRSA_pipeline(mData=NULL, coordinates=brcaMList[["coordinates"]], 
                GRList=GRList, 
-               PCsToAnnotate = c("PC1m4", "PC1p3", paste0("PC", 1:10)), 
-               scoringMetric = "meanDiff",
+               PCsToAnnotate =paste0("PC", 1:10), #  c("PC1m4", "PC1p3", 
+               scoringMetric = "rsMean",
                pcaCache=FALSE, 
-               allMPCACacheName=allMPCAString, top10MPCACacheName = top10MPCAString, 
+               allMPCACacheName=allMPCAString,  
                overwritePCACaches = FALSE, 
-               allMPCA = allMPCA, top10MPCA = top10MPCA,
+               allMPCA = mPCA_all_samples, 
                rsName = rsName, rsDescription = rsDescription,
-               rsEnCache = TRUE, rsEnCacheName = "rsEnrichment_657",
-               rsEnTop10CacheName = "rsEnrichmentTop10_657",
+               rsEnCache = TRUE, rsEnCacheName = "rsEnrichment_692",
+               
                overwriteResultsCaches = TRUE) 
 
 rsEnrichment = enrichResults[[1]]
-rsEnrichmentTop10 = enrichResults[[2]]
-
-
 write.csv(x = rsEnrichment, 
-              file = dirData("analysis/sheets/PC_Enrichment_All_Shared_Cs_657.csv"),
+              file = paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/sheets/PC_Enrichment_All_Shared_Cs_692_rsMean.csv"),
               quote = FALSE, row.names = FALSE)
+
+# running again for top 10 most variable CpGs
+enrichResults = PCRSA_pipeline(mData=NULL, coordinates=NULL, 
+                               GRList=GRList, 
+                               PCsToAnnotate =paste0("PC", 1:10), #  c("PC1m4", "PC1p3", 
+                               scoringMetric = "rsMean",
+                               pcaCache=FALSE, 
+                               allMPCACacheName=top10MPCAString, 
+                               overwritePCACaches = FALSE, 
+                               allMPCA = top10MPCA,
+                               rsName = rsName, rsDescription = rsDescription,
+                               rsEnCache = TRUE, rsEnCacheName = "rsEnrichmentTop10_657",
+                               overwriteResultsCaches = TRUE) 
+
+rsEnrichmentTop10 = enrichResults[[2]]
 write.csv(x = rsEnrichmentTop10, 
-          file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_657.csv"),
+          file = paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_657.csv"),
           quote = FALSE, row.names = FALSE)
 
 
@@ -125,23 +148,33 @@ enrichResults = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coor
                                PCsToAnnotate = c(paste0("PC", 1:4)), 
                                scoringMetric = "rankSum",
                                pcaCache=FALSE, 
-                               allMPCACacheName=allMPCAString, top10MPCACacheName = top10MPCAString, 
+                               allMPCACacheName=allMPCAString,  
                                overwritePCACaches = FALSE, 
-                               allMPCA = allMPCA, top10MPCA = top10MPCA,
+                               allMPCA = allMPCA, 
                                rsName = rsName, rsDescription = rsDescription,
                                rsEnCache = TRUE, rsEnCacheName = "rsEnrichment_ranksum_657",
-                               rsEnTop10CacheName = "rsEnrichmentTop10_ranksum_657",
                                overwriteResultsCaches = TRUE) 
 
-rsEnrichment = enrichResults[[1]]
-rsEnrichmentTop10 = enrichResults[[2]]
-
-
+rsEnrichment = enrichResults
 write.csv(x = rsEnrichment, 
-          file = dirData("analysis/sheets/PC_Enrichment_All_Shared_Cs_ranksum_657.csv"),
+          file = paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/sheets/PC_Enrichment_All_Shared_Cs_ranksum_657.csv"),
           quote = FALSE, row.names = FALSE)
+
+# for top 10% variable CpGs
+enrichResults = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
+                               GRList=GRList, 
+                               PCsToAnnotate = c(paste0("PC", 1:4)), 
+                               scoringMetric = "rankSum",
+                               pcaCache=FALSE, 
+                               allMPCACacheName=top10MPCAString,  
+                               overwritePCACaches = FALSE, 
+                               allMPCA = top10MPCA,
+                               rsName = rsName, rsDescription = rsDescription,
+                               rsEnCache = TRUE, rsEnCacheName = "rsEnrichmentTop10_ranksum_657",
+                               overwriteResultsCaches = TRUE) 
+rsEnrichmentTop10 = enrichResults
 write.csv(x = rsEnrichmentTop10, 
-          file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_ranksum_657.csv"),
+          file = paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_ranksum_657.csv"),
           quote = FALSE, row.names = FALSE)
 
 #################################################################
@@ -152,25 +185,37 @@ write.csv(x = rsEnrichmentTop10,
 enrichResults = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
                                GRList=GRList, 
                                PCsToAnnotate = c(paste0("PC", 1:6)), 
-                               scoringMetric = "raw_CpG",
+                               scoringMetric = "cpgMean",
                                pcaCache=FALSE, 
-                               allMPCACacheName=allMPCAString, top10MPCACacheName = top10MPCAString, 
+                               allMPCACacheName=allMPCAString,  
                                overwritePCACaches = FALSE, 
-                               allMPCA = allMPCA, top10MPCA = top10MPCA,
+                               allMPCA = allMPCA, 
                                rsName = rsName, rsDescription = rsDescription,
-                               rsEnCache = TRUE, rsEnCacheName = "rsEnrichment_rawCpG",
-                               rsEnTop10CacheName = "rsEnrichmentTop10_rawCpG",
+                               rsEnCache = TRUE, rsEnCacheName = "rsEnrichment_cpgMean",
                                overwriteResultsCaches = TRUE) 
 
-rsEnrichment = enrichResults[[1]]
-rsEnrichmentTop10 = enrichResults[[2]]
+rsEnrichment = enrichResults
+
 
 
 write.csv(x = rsEnrichment, 
           file = paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/sheets/PC_Enrichment_All_Shared_Cs_rawCpG_657.csv"),
           quote = FALSE, row.names = FALSE)
+
+enrichResults = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
+                               GRList=GRList, 
+                               PCsToAnnotate = c(paste0("PC", 1:6)), 
+                               scoringMetric = "cpgMean",
+                               pcaCache=FALSE, 
+                               allMPCACacheName=top10MPCAString,  
+                               overwritePCACaches = FALSE, 
+                               allMPCA = top10MPCA, 
+                               rsName = rsName, rsDescription = rsDescription,
+                               rsEnCache = TRUE, rsEnCacheName = "rsEnrichmentTop10_cpgMean",
+                               overwriteResultsCaches = TRUE) 
+rsEnrichmentTop10 = enrichResults
 write.csv(x = rsEnrichmentTop10, 
-          file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_rawCpG_657.csv"),
+          file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_cpgMean_657.csv"),
           quote = FALSE, row.names = FALSE)
 
 ######################################################

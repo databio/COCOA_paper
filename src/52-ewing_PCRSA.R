@@ -1,5 +1,5 @@
 
-
+source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/00-init.R"))
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "ews_patients/RCache/"))
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "ews_patients/analysis/plots/"))
 
@@ -77,7 +77,7 @@ rsDescription = c("ER ChIPseq, MCF7 cell line, estradiol stimulation",
 
 source(paste0(Sys.getenv("CODE"),"/aml_e3999/src/PCRSA_pipeline.R"))
 # rows of mData are cytosines, cols are samples
-rsEnrichResults = PCRSA_pipeline(mData = bigSharedC$methylProp, coordinates = bigSharedC$coordinates, 
+rsEnrichResults = PCRSA_pipeline(mData = bigSharedC_pQC$methylProp, coordinates = bigSharedC_pQC$coordinates, 
                GRList = GRList, 
                PCsToAnnotate=PCsToAnnotate,
                pcaCache=TRUE,
@@ -90,7 +90,7 @@ rsEnrichResults = PCRSA_pipeline(mData = bigSharedC$methylProp, coordinates = bi
                rsEnCache = TRUE,
                rsEnCacheName="rsEnrichment", rsEnTop10CacheName="rsEnrichmentTop10",
                overwriteResultsCaches = TRUE,
-               scoringMetric = "raw") 
+               scoringMetric = "rsMean") 
 
 rsEnrichment = rsEnrichResults[[1]]
 rsEnrichmentTop10 = rsEnrichResults[[2]]
