@@ -74,7 +74,7 @@ rsDescription = c("ER ChIPseq, MCF7 cell line, estradiol stimulation",
            
 # loading PCA and combining components that could separate ER=/-
 # for rsEnrichment, PCs 1 and 4 could separate ER+/-
-simpleCache(allMPCAString, assignToVariable = "allMPCA")
+simpleCache(allMPCAString, assignToVariable = allMPCAString)
 simpleCache(top10MPCAString, assignToVariable = "top10MPCA")
 # getting new axis in direction that separates, normalizing to length one
 PC1m4 = (1/sqrt(2)) * allMPCA$rotation[, "PC1"] - (1/sqrt(2)) * allMPCA$rotation[, "PC4"]
@@ -108,9 +108,9 @@ enrichResults = PCRSA_pipeline(mData=NULL, coordinates=brcaMList[["coordinates"]
                pcaCache=FALSE, 
                allMPCACacheName=allMPCAString,  
                overwritePCACaches = FALSE, 
-               allMPCA = mPCA_all_samples, 
+               allMPCA = get(allMPCAString), 
                rsName = rsName, rsDescription = rsDescription,
-               rsEnCache = TRUE, rsEnCacheName = "rsEnrichment_692",
+               rsEnCache = TRUE, rsEnCacheName = ,
                
                overwriteResultsCaches = TRUE) 
 

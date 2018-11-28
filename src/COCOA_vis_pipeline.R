@@ -66,6 +66,7 @@ library(ComplexHeatmap)
 
 
 # number of plots = length(PCsToRankBy). one plot for each
+# multiple plots in one pdf
 # TODO: filter out low coverage region sets
 # for rsEnrichment
 comparePCHeatmap(rsScores=rsEnrichment, 
