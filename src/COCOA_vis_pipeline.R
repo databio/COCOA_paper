@@ -52,11 +52,13 @@ if (!dir.exists(paste0(Sys.getenv("PLOTS"), plotSubdir))) {
 }
 
 source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R"))
+source(paste0(Sys.getenv("CODE"), "PCRSA_extra/R/visualization.R"))
 
 inputID = addUnderscore(inputID, side = "left")
 
 library(grid)
 library(ggplot2)
+library(COCOA)
 library(ComplexHeatmap)
 
 ##################################################################################
@@ -86,15 +88,15 @@ comparePCHeatmap(rsScores=rsEnrichment,
 for (i in seq_along(PCsToAnnotate_mAPC)) {
     
     # top region sets for this PC
-    rsInd = as.numeric(as.matrix(rsEnSortedInd[1:topRSToPlotNum, PCsToAnnotate_mAPC[i], with=FALSE])) # original index
+    rsInd = as.numeric(as.matrix(rsEnSortedInd[1:topRSToPlotNum, PCsToAnnotate_mAPC[i]])) # original index
     
     grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "regionMethylHeatmaps", PCsToAnnotate_mAPC[i], inputID, ".pdf"), width = 11, height = 8.5 * topRSToPlotNum)
     
     # heatmap
     methylAlongPC(loadingMat=loadingMat, loadingThreshold=0.95,
                   pcScores=mPCA$x,
-                  mCoord=coordinateDT,
-                  methylData=methylData,
+                  signalCoord=coordinateDT,
+                  genomicSignal=methylData,
                   GRList=GRList[rsInd], orderByPC=PCsToAnnotate_mAPC[i],
                   topXRegions=50)
 
@@ -122,11 +124,14 @@ grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir,
 # if there are too many regions, will try to cluster and cause memory error:
 # cannot allocate vector of size X Gb,
 # fix this by decreasing maxRegionsToPlot or use cluster_rows=FALSE
-regionQuantileByPC(loadingMat=loadingMat, mCoord=coordinateDT, 
-                   GRList=GRList[topRSInd_rQBPC], 
-                   rsNames=paste0(rsEnrichment$rsName[topRSInd_rQBPC], " : ", rsEnrichment$rsDescription[topRSInd_rQBPC]), 
-                   PCsToAnnotate=PCsToAnnotate_rQBPC, maxRegionsToPlot = 5000,
-                   cluster_rows = TRUE)
+for (.i in seq_along(topRSInd_rQBPC)) {
+    regionQuantileByPC(loadingMat=loadingMat, signalCoord=coordinateDT, 
+                       regionSet=GRList[[topRSInd_rQBPC[.i]]], 
+                       rsNames=paste0(rsEnrichment$rsName[topRSInd_rQBPC[.i]], " : ", rsEnrichment$rsDescription[topRSInd_rQBPC[.i]]), 
+                       PCsToAnnotate=PCsToAnnotate_rQBPC, maxRegionsToPlot = 5000,
+                       cluster_rows = TRUE)
+}
+
 
 dev.off()
 
@@ -190,7 +195,7 @@ dev.off()
 .regionSetList = lapply(.regionSetList, resize, width = 14000, fix="center")
 
 simpleCache(paste0("pcProf14k", inputID), {
-    pcProf = pcEnrichmentProfile(loadingMat = mPCA$rotation, mCoord = coordinateDT,
+    pcProf = pcEnrichmentProfile(loadingMat = mPCA$rotation, signalCoord = coordinateDT,
                                  GRList=.regionSetList, PCsToAnnotate = PCsToAnnotate_mrLP,
                                  binNum = 21)
     # set names by reference
