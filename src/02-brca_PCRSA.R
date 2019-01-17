@@ -1,7 +1,7 @@
 # library(projectInit)
 
 # project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "brca_PCA/"))
-source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/00-init.R"))
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 # library(fastICA)
 
 # 
@@ -27,8 +27,36 @@ simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
 
 
 #####
-
-
+# 
+# foxa1 = GRList1[[grep(pattern = "FoxA1_E2-45min_Brown", 
+#                       x = lolaCoreRegionAnno$filename)]]
+# topFoxa1 = getTopRegions(loadingMat = allMPCA_657$rotation,
+#                          signalCoord = COCOA:::dtToGr(brcaMList$coordinates), 
+#                          regionSet = foxa1, 
+#                          PCsToAnnotate = c("PC1", "PC4"), returnQuantile = TRUE)
+# gata3 = GRList1[[grep(lolaCoreRegionAnno$filename, pattern = "SydhMcf7Gata3Ucd")]]
+# topGata3 = getTopRegions(loadingMat = allMPCA_657$rotation,
+#                          signalCoord = COCOA:::dtToGr(brcaMList$coordinates), 
+#                          regionSet = gata3, 
+#                          PCsToAnnotate = c("PC1", "PC4"), returnQuantile = TRUE)
+# er = GRList1[[grep(lolaCoreRegionAnno$filename, pattern = "ESR1_E2-45min_Brown")]]
+# topER = getTopRegions(loadingMat = allMPCA_657$rotation,
+#                          signalCoord = COCOA:::dtToGr(brcaMList$coordinates), 
+#                          regionSet = er, 
+#                          PCsToAnnotate = c("PC1", "PC4"), returnQuantile = TRUE)
+# h3r17 = GRList1[[grep(lolaCoreRegionAnno$filename, pattern = "H3R17me2_E2-45min_Brown")]]
+# topH3R17 = getTopRegions(loadingMat = allMPCA_657$rotation,
+#                       signalCoord = COCOA:::dtToGr(brcaMList$coordinates), 
+#                       regionSet = h3r17, 
+#                       PCsToAnnotate = c("PC1", "PC4"), returnQuantile = TRUE)
+# ezh2 = GRList1[[grep(lolaCoreRegionAnno$filename, pattern = "HmecEzh239875")]]
+# topEZH2 = getTopRegions(loadingMat = allMPCA_657$rotation,
+#                          signalCoord = COCOA:::dtToGr(brcaMList$coordinates), 
+#                          regionSet = ezh2, 
+#                          PCsToAnnotate = c("PC1", "PC4"), returnQuantile = TRUE)
+# topRS = c(topFoxa1, topGata3, topER, topH3R17, topEZH2)
+# topRSCombined = reduce(topRS)
+# save(topRSCombined, file="topRSCombined.RData")
 
 
 # reading in the metadata, will be used to split data 
@@ -56,7 +84,7 @@ filteredMData = brcaMList[["methylProp"]][,
 ###########################################################
 # reading in the region sets
 # load LOLA database
-source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/load_process_regions_brca.R"))
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regions_brca.R"))
 
 #################################################################
 
@@ -89,8 +117,8 @@ top10MPCA$rotation = cbind(top10MPCA$rotation, PC1p3)
 # also adding combination that could separate ER+/- in allMPCA which should not here
 PC1m4 = (1/sqrt(2)) * top10MPCA$rotation[, "PC1"] - (1/sqrt(2)) * top10MPCA$rotation[, "PC4"]
 top10MPCA$rotation = cbind(top10MPCA$rotation, PC1m4)
-# make PCRSA_pipeline be able to take PCA object? otherwise create new cache with PC values
-# specialPCEnr = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
+# make COCOA_pipeline be able to take PCA object? otherwise create new cache with PC values
+# specialPCEnr = COCOA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
 #                               GRList=GRList, useCache=TRUE, 
 #                               allMPCAString=allMPCAString, top10MPCAString = top10MPCAString, 
 #                               rsName = rsName, rsDescription = rsDescription)
@@ -99,9 +127,9 @@ top10MPCA$rotation = cbind(top10MPCA$rotation, PC1m4)
 
 # gives output of rsEnrichment from PCA of all shared cytosines
 # and rsEnrichmentTop10 from PCA of 10% most variable shared cytosines
-source(paste0(Sys.getenv("CODE"),"/aml_e3999/src/PCRSA_pipeline.R"))
+source(paste0(Sys.getenv("CODE"),"/aml_e3999/src/COCOA_pipeline.R"))
 # brcaMList = filteredMData
-enrichResults = PCRSA_pipeline(mData=NULL, coordinates=brcaMList[["coordinates"]], 
+enrichResults = COCOA_pipeline(mData=NULL, coordinates=brcaMList[["coordinates"]], 
                GRList=GRList, 
                PCsToAnnotate =paste0("PC", 1:10), #  c("PC1m4", "PC1p3", 
                scoringMetric = "rsMean",
@@ -120,7 +148,7 @@ write.csv(x = rsEnrichment,
               quote = FALSE, row.names = FALSE)
 
 # running again for top 10 most variable CpGs
-enrichResults = PCRSA_pipeline(mData=NULL, coordinates=NULL, 
+enrichResults = COCOA_pipeline(mData=NULL, coordinates=NULL, 
                                GRList=GRList, 
                                PCsToAnnotate =paste0("PC", 1:10), #  c("PC1m4", "PC1p3", 
                                scoringMetric = "rsMean",
@@ -139,11 +167,11 @@ write.csv(x = rsEnrichmentTop10,
 
 
 #################################################################
-# run PCRSA again but with wilcoxon rank sum scoring method
+# run COCOA again but with wilcoxon rank sum scoring method
 
 # gives output of rsEnrichment from PCA of all shared cytosines
 # and rsEnrichmentTop10 from PCA of 10% most variable shared cytosines
-enrichResults = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
+enrichResults = COCOA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
                                GRList=GRList, 
                                PCsToAnnotate = c(paste0("PC", 1:4)), 
                                scoringMetric = "rankSum",
@@ -161,7 +189,7 @@ write.csv(x = rsEnrichment,
           quote = FALSE, row.names = FALSE)
 
 # for top 10% variable CpGs
-enrichResults = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
+enrichResults = COCOA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
                                GRList=GRList, 
                                PCsToAnnotate = c(paste0("PC", 1:4)), 
                                scoringMetric = "rankSum",
@@ -178,11 +206,11 @@ write.csv(x = rsEnrichmentTop10,
           quote = FALSE, row.names = FALSE)
 
 #################################################################
-# run PCRSA again but with mean of individual CpGs instead of mean of regions
+# run COCOA again but with mean of individual CpGs instead of mean of regions
 
 # gives output of rsEnrichment from PCA of all shared cytosines
 # and rsEnrichmentTop10 from PCA of 10% most variable shared cytosines
-enrichResults = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
+enrichResults = COCOA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
                                GRList=GRList, 
                                PCsToAnnotate = c(paste0("PC", 1:6)), 
                                scoringMetric = "cpgMean",
@@ -202,7 +230,7 @@ write.csv(x = rsEnrichment,
           file = paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/sheets/PC_Enrichment_All_Shared_Cs_rawCpG_657.csv"),
           quote = FALSE, row.names = FALSE)
 
-enrichResults = PCRSA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
+enrichResults = COCOA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
                                GRList=GRList, 
                                PCsToAnnotate = c(paste0("PC", 1:6)), 
                                scoringMetric = "cpgMean",
