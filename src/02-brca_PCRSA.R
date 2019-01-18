@@ -475,3 +475,22 @@ dev.off()
 # t = apply(X = allMPCA$rotation[, 1:10], 2, FUN = sd)
 # }
 
+
+# testing whether loadings are really correlation of a given feature with that PC score for a given PC
+cpgMeans = rowMeans(filteredMData)
+# centering before calculating correlation
+centeredMData = apply(X = filteredMData, MARGIN = 2, function(x) x - cpgMeans)
+pcScores = allMPCA_657$x
+pcLoadings = allMPCA_657$rotation
+all(colnames(filteredMData) == row.names(pcScores))
+featureCorPC1 = apply(X = centeredMData, 1, FUN = function(x) cor(x = x, pcScores[, "PC1"]))
+loadCorRatioPC1 = pcLoadings[, "PC1"] / featureCorPC1^2
+hist(featureCorPC1)
+hist(loadCorRatioPC1[(loadCorRatioPC1 < 1) & (loadCorRatioPC1 > -1)])
+
+featureCorPC2 = apply(X = centeredMData, 1, FUN = function(x) cor(x = x, pcScores[, "PC2"]))
+loadCorRatioPC2 = pcLoadings[, "PC2"] / featureCorPC2
+hist(loadCorRatioPC2)
+
+
+
