@@ -44,11 +44,21 @@ GRList3 = GRangesList(regionSetDB2$regionGRL[loRegionAnno2$collection == "jaspar
 GRList = c(GRList1, GRList2, GRList3)
 
 #adding ER Chipseq dataset
-erSet = fread(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/inst/extdata/",
+erSet = fread(paste0(Sys.getenv("CODE"), "COCOA_paper/inst/extdata/",
                      "GSM2305313_MCF7_E2_peaks_hg38.bed"))
 setnames(erSet, c("V1", "V2", "V3"), c("chr", "start", "end"))
 GRList = c(GRangesList(MIRA:::dtToGr(erSet)), GRList)
 # names(GRList) = c("GSM2305313_MCF7_E2_peaks_hg38.bed", names(GRList))
+#######################################################################
+rsName = c("GSM2305313_MCF7_E2_peaks_hg38.bed", 
+           lolaCoreRegionAnno$filename,
+           roadmapRegionAnno$filename,
+           motifRegionAnno$filename)
+rsDescription = c("ER ChIPseq, MCF7 cell line, estradiol stimulation",
+                  lolaCoreRegionAnno$description,
+                  roadmapRegionAnno$description,
+                  motifRegionAnno$description)
+
 
 #################################################################
 # cleaning up since there were many large objects
