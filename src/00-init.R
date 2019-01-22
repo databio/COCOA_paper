@@ -14,9 +14,9 @@ source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R" ))
 # the AML init script will set a different plots directory
 # Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/plots/"))
 
-source(paste0(Sys.getenv("CODE"), "COCOA/R/COCOA.R"))
-source(paste0(Sys.getenv("CODE"), "COCOA/R/visualization.R"))
-
+# source(paste0(Sys.getenv("CODE"), "COCOA/R/COCOA.R"))
+# source(paste0(Sys.getenv("CODE"), "COCOA/R/visualization.R"))
+library(COCOA)
 
 brcaMetadata = fread(paste0(Sys.getenv("CODE"), 
                          "COCOA_paper/metadata/brca_metadata.csv"))
