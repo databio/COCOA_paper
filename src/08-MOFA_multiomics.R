@@ -195,7 +195,11 @@ simpleCache(rsScoreCacheName, {
 View(rsScore[order(rsScore$LF1, decreasing = TRUE), ])
 View(rsScore[order(rsScore$LF2, decreasing = TRUE), ])
 View(rsScore[order(rsScore$LF4, decreasing = TRUE), ])
-hist(rsScore$LF1)
+View(rsScore[order(rsScore$LF7, decreasing = TRUE), ])
+hist(rsScore$LF7)
 
+write.csv(x = rsScore, 
+          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/rsScore_methylCor_", dataID, ".csv"),
+          quote = FALSE, row.names = FALSE)
 
 
