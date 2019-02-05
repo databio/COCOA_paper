@@ -134,35 +134,6 @@ apply(X = latentFactors, MARGIN = 2, FUN = function(x) any(is.na(x)))
 
 #### convert DNA methylation matrix to correlation matrix
 
-# @param dataMat columns of dataMat should be samples/patients, rows should be genomic signal
-# (each row corresponds to one genomic coordinate/range)
-# @param featureMat Rows should be samples, columns should be "features" 
-# (whatever you want to get correlation with: eg PC scores),
-# all columns in featureMat will be used (subset when passing to function
-# in order to not use all columns)
-# @param center logical object. Should rows in dataMat be centered based on
-# their means? (subtracting row means from each row)
-#
-# returns a matrix where rows are the genomic signal (eg a CpG or region) and
-# columns are the columns of featureMat
-createCorFeatureMat = function(dataMat, featureMat, center=TRUE) {
-    if (center) {
-        cpgMeans = rowMeans(dataMat)
-        # centering before calculating correlation
-        dataMat = apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
-        
-    }
-
-    
-    # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
-    # how much do features correlate with each PC?
-    featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 1, FUN = function(x) cor(x = x, y)))
-    return(featurePCCor)
-    # corLoadRatio = loadingMat[, PCsToAnnotate] / featurePCCor 
-    # hist(corLoadRatio[, "PC10"])
-}
-
-
 # calculate correlation with each latent factor from MOFA
 featurePCCor = createCorFeatureMat(dataMat = methData, 
                                    featureMat = latentFactors, 

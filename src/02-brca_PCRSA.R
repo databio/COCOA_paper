@@ -57,23 +57,14 @@ simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
 # topRS = c(topFoxa1, topGata3, topER, topH3R17, topEZH2)
 # topRSCombined = reduce(topRS)
 # save(topRSCombined, file="topRSCombined.RData")
-
+########
 
 # reading in the metadata, will be used to split data 
 # into training and test set with balanced ER and PGR status
 #restrict patients included in this analysis
 patientMetadata = patientMetadata[patientMetadata$subject_ID %in% 
                                       colnames(brcaMList[["methylProp"]]), ]
-# # keep same proportion of patients with ER_status and PGR_status in training 
-# # and test sets
-# dataSplit = createDataPartition(y=factor(paste0(patientMetadata$ER_status,"_", patientMetadata$PGR_status)),
-#                                 p = .5, list=FALSE)
-# hasER_PGR_IDs = patientMetadata[dataSplit, subject_ID]
-# testIDs = patientMetadata[-dataSplit, subject_ID]
-# filteredMData = brcaMList[["methylProp"]][, 
-#                 colnames(brcaMList[["methylProp"]]) %in% hasER_PGR_IDs] 
-# testMData = brcaMList[["methylProp"]][, 
-#                 colnames(brcaMList[["methylProp"]]) %in% testIDs]
+
 
 # patientMetadata should have already screened out patients without ER/PGR status
 # resulting in 657 patients

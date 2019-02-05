@@ -15,7 +15,7 @@ simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsScores")
 # summary figure of COCOA BRCA results: ER set relative ranking among region sets
 rsScores$origInd = 1:nrow(rsScores)
 rsScores = rsScores[order(rsScores$PC1, decreasing = TRUE), ]
-erIndPC1 = grepl(pattern = "esr1|eralpha", x = rsScores$rsName, ignore.case = TRUE)
+erIndPC1 = grep(pattern = "suz12", x = rsScores$rsName, ignore.case = TRUE, value = TRUE)
 erIndPC1 = erIndPC1 | grepl(pattern = "esr1|eralpha", x = rsScores$rsDescription, ignore.case = TRUE)
 rsScores$rsDescription[erIndPC1]
 plot(erIndPC1)
@@ -41,7 +41,29 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
 
 plotRSConcentration(rsScores=rsScores, scoreColName = "PC5", pattern = "esr1|eralpha", breaks=seq(0, 2000, by=200))
 plotRSConcentration(rsScores=rsScores, 
-                    scoreColName = "PC5", 
-                    pattern = "esr1|eralpha", 
-                    breaks=seq(0, 2000, by=200))
+                    scoreColName = "PC1", 
+                    pattern = "stat", 
+                    breaks=seq(0, 2400, by=200))
 
+
+# ggplot version of rs concentration
+# 1 row per region set, column for rank in a given PC, 0/1 column for ER or not
+rsScores
+
+plotRSConcentration <- function(rsScores, scoreColName="PC1", 
+                                colsToSearch = c("rsName", "rsDescription"), 
+                                pattern, breaks) {
+    
+
+    rsRankInd = rsRankingIndex(rsScores=rsScores, PCsToAnnotate=scoreColName)
+
+    
+    rsInd = rep(FALSE, nrow(rsScores))
+    for (i in seq_along(colsToSearch)) {
+        rsInd = rsInd | grepl(pattern = pattern, x = rsScores[, colsToSearch[i]], ignore.case = TRUE)
+    }
+    
+    rsRankInd$ofInterest = rsInd
+    return(ggplot(rsRankInd, aes(x=rsRank) + geom_histogram() + ge)
+    
+}

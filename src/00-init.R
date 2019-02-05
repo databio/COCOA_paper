@@ -11,6 +11,7 @@ library(ComplexHeatmap)
 library(gridExtra) #marrangeGrob for colorClusterPlots()
 # some of the environmental variables from aml/.../00-init.R will need to be reset
 source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R" )) 
+library(MultiAssayExperiment)
 # the AML init script will set a different plots directory
 # Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/plots/"))
 
@@ -43,6 +44,38 @@ dirPlot = function(plotFile) {
         return(paste0(Sys.getenv("PLOTS"), plotFile))
     )
     
+}
+
+dirCode = function(.file="") {
+    return(paste0(Sys.getenv("CODE"), "COCOA_paper/", .file))
+}
+
+# @param dataMat columns of dataMat should be samples/patients, rows should be genomic signal
+# (each row corresponds to one genomic coordinate/range)
+# @param featureMat Rows should be samples, columns should be "features" 
+# (whatever you want to get correlation with: eg PC scores),
+# all columns in featureMat will be used (subset when passing to function
+# in order to not use all columns)
+# @param center logical object. Should rows in dataMat be centered based on
+# their means? (subtracting row means from each row)
+#
+# returns a matrix where rows are the genomic signal (eg a CpG or region) and
+# columns are the columns of featureMat
+createCorFeatureMat = function(dataMat, featureMat, center=TRUE) {
+    if (center) {
+        cpgMeans = rowMeans(dataMat)
+        # centering before calculating correlation
+        dataMat = apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
+        
+    }
+    
+    
+    # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
+    # how much do features correlate with each PC?
+    featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 1, FUN = function(x) cor(x = x, y)))
+    return(featurePCCor)
+    # corLoadRatio = loadingMat[, PCsToAnnotate] / featurePCCor 
+    # hist(corLoadRatio[, "PC10"])
 }
 
 
