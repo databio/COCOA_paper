@@ -33,7 +33,7 @@ trainingParams = trainControl(method = "none", summaryFunction = twoClassSummary
 # random forest
 simpleCache("erStatusRF", {
    erStatusRF = train(erStatus ~ ., data=methylData, 
-                    method = "ranger", trControl = trainingParams)
+                    method = "ranger", trControl = trainingParams, tuneGrid = 2)
    erStatusRF
 })
 

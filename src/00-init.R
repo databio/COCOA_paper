@@ -28,6 +28,18 @@ brcaMetadata = brcaMetadata[brcaMetadata$PGR_status %in%
                                 c("Positive", "Negative"), ]
 patientMetadata = brcaMetadata
 
+
+brcaMetadata2 = read.table(file = paste0(Sys.getenv("CODE"), 
+                                         "COCOA_paper/metadata/brca_clinical_metadata.tsv"), 
+                           sep = "\t", header = TRUE)
+
+patientMetadata = merge(brcaMetadata, brcaMetadata2[, c("bcr_patient_barcode", 
+                                                       "vital_status", 
+                                                       "days_to_death", 
+                                                       "days_to_last_follow_up")],
+                        by.x="subject_ID", 
+                        by.y="bcr_patient_barcode", all.x=TRUE)
+
 process_brca_expr = function(exprDF) {
     
 }
@@ -61,11 +73,19 @@ dirCode = function(.file="") {
 #
 # returns a matrix where rows are the genomic signal (eg a CpG or region) and
 # columns are the columns of featureMat
-createCorFeatureMat = function(dataMat, featureMat, center=TRUE) {
-    if (center) {
+createCorFeatureMat = function(dataMat, featureMat, 
+                               centerDataMat=TRUE, centerFeatureMat = TRUE) {
+    if (centerDataMat) {
         cpgMeans = rowMeans(dataMat)
         # centering before calculating correlation
         dataMat = apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
+        
+    }
+    
+    if (centerFeatureMat) {
+        featureMeans = colMeans(featureMat)
+        # centering before calculating correlation
+        featureMat = apply(X = featureMat, MARGIN = 1, function(x) x - featureMeans)
         
     }
     
