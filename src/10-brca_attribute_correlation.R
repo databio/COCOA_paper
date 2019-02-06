@@ -10,9 +10,7 @@ setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
 # script specific IDs
 
 plotSubdir = "10-brca_attr_cor/"
-dataID = "657" # 657 patients with both ER and PGR info in metadata, 692 total
-allMPCAString = "allMPCA_657" #  "allMPCA_657"
-top10MPCAString = "top10MPCA_657"
+dataID = "215" # 657 patients with both ER and PGR info in metadata, 692 total
 rsScoreCacheName = paste0("rsScore_Surv_Cor_", dataID)
 overwriteRSScoreResultsCaches = TRUE
 
@@ -22,11 +20,16 @@ simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
 #restrict patients included in this analysis
 patientMetadata = patientMetadata[patientMetadata$subject_ID %in% 
                                       colnames(brcaMList[["methylProp"]]), ]
+# getting rid of columns with no information on days of survival
+patientMetadata = patientMetadata[(patientMetadata$vital_status == "alive" & !is.na(patientMetadata$days_to_last_follow_up)) | 
+                                      (patientMetadata$vital_status == "dead" & !is.na(patientMetadata$days_to_death)), ]
+
 # patientMetadata should have already screened out patients without ER/PGR status
 # resulting in 657 patients
 hasER_PGR_IDs = patientMetadata[, subject_ID]
 filteredMData = brcaMList[["methylProp"]][, 
                                           colnames(brcaMList[["methylProp"]]) %in% hasER_PGR_IDs] 
+
 
 ###########################################################
 # reading in the region sets
@@ -47,7 +50,7 @@ sum(patientMetadata[patientMetadata$vital_status == "dead",]$days_to_death < 730
 nAlive = nrow(patientMetadata[patientMetadata$vital_status == "alive",])
 totalDead = nrow(patientMetadata[patientMetadata$vital_status == "dead",])
 numberDead = (ecdf(x = patientMetadata[patientMetadata$vital_status == "dead",]$days_to_death)(days) * totalDead)
-numberKnownAlive = (1- ecdf(x = patientMetadata[patientMetadata$vital_status == "alive",]$days_to_last_follow_up)(days)) * nAlive
+numberKnownAlive = (1- ecdf(x = patientMetadata[patientMetadata$vital_status == "alive",]$days_to_last_follow_up)(days-1)) * nAlive
 plot(days, 
      ecdf(x = patientMetadata[patientMetadata$vital_status == "dead",]$days_to_death )(days) * totalDead,  col = "red")
 lines(days, 
@@ -66,23 +69,29 @@ ratio[ratio <= 4][1]
 patientMetadata$keepCol = rep(0, nrow(patientMetadata))
 # keep rows labeled with 1
 patientMetadata$keepCol[patientMetadata$vital_status == "alive" & (patientMetadata$days_to_last_follow_up >= daysCutoff)] = 1
-patientMetadata$keepCol[patientMetadata$vital_status == "dead" & (patientMetadata$days_to_death <= daysCutoff)] = 1
+# some of these are known to be alive at daysCutoff and some are known to be dead, divide later
+patientMetadata$keepCol[patientMetadata$vital_status == "dead"] = 1
 patientMetadata = patientMetadata[patientMetadata$keepCol == 1, ]
-table(patientMetadata$vital_status)
+patientMetadata$surv_at_daysCutoff = rep(0, nrow(patientMetadata))
+patientMetadata$surv_at_daysCutoff[patientMetadata$vital_status == "alive"] = 1
+patientMetadata$surv_at_daysCutoff[(patientMetadata$vital_status == "dead") & (patientMetadata$days_to_death > daysCutoff)] = 1
+table(patientMetadata$surv_at_daysCutoff)
+filteredMData = filteredMData[, as.character(patientMetadata$subject_ID)]
+
 
 #### convert DNA methylation matrix to correlation matrix
 # calculate correlation
-featurePCCor = createCorFeatureMat(dataMat = methData, 
-                                   featureMat = as.matrix(brcaSurv), 
+featurePCCor = createCorFeatureMat(dataMat = filteredMData, 
+                                   featureMat = as.matrix(patientMetadata$surv_at_daysCutoff), 
                                    centerDataMat=TRUE, centerFeatureMat=TRUE)
+colnames(featurePCCor) <- "surv_at_daysCutoff"
 
 #############################################################################
 # run COCOA analysis
 
 scoringMetric = "regionMean"
-signalCoord = methCoord
-# only latent factors with no NA's
-PCsToAnnotate = paste0("LF", c(1:3, 5:7, 9))
+signalCoord = brcaMList$coordinates
+PCsToAnnotate = "surv_at_daysCutoff"
 
 simpleCache(rsScoreCacheName, {
     rsScore = runCOCOA(loadingMat=abs(featurePCCor), 
@@ -95,11 +104,8 @@ simpleCache(rsScoreCacheName, {
     rsScore
 }, recreate=overwriteRSScoreResultsCaches)
 
-View(rsScore[order(rsScore$LF1, decreasing = TRUE), ])
-View(rsScore[order(rsScore$LF2, decreasing = TRUE), ])
-View(rsScore[order(rsScore$LF4, decreasing = TRUE), ])
-View(rsScore[order(rsScore$LF7, decreasing = TRUE), ])
-hist(rsScore$LF7)
+View(rsScore[order(rsScore$surv_at_daysCutoff, decreasing = TRUE), ])
+hist(rsScore$surv_at_daysCutoff)
 
 write.csv(x = rsScore, 
           file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/rsScore_methylCor_", dataID, ".csv"),

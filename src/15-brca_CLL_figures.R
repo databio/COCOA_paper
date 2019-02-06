@@ -63,7 +63,12 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
         rsInd = rsInd | grepl(pattern = pattern, x = rsScores[, colsToSearch[i]], ignore.case = TRUE)
     }
     
-    rsRankInd$ofInterest = rsInd
-    return(ggplot(rsRankInd, aes(x=rsRank) + geom_histogram() + ge)
+    rsScores$ofInterest = rsInd
+    ofInterestDF = as.data.frame(rsInd[as.matrix(rsRankInd)])
+    colnames(ofInterestDF) <- colnames(rsRankInd)
+    ofInterestDF$rsRank = 1:nrow(ofInterestDF)
+    categoryDistPlot = ggplot(ofInterestDF, aes(x=rsRank, weight=get(scoreColName))) + 
+                              geom_histogram() #+ facet_wrap(~get(scoreColName))
+    return(categoryDistPlot)
     
 }

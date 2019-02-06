@@ -71,11 +71,17 @@ dirCode = function(.file="") {
 # @param center logical object. Should rows in dataMat be centered based on
 # their means? (subtracting row means from each row)
 #
+# If a row in dataMat has 0 stand. deviation, correlation will be set to 0
+# instead of NA as would be done by cor()
+#
 # returns a matrix where rows are the genomic signal (eg a CpG or region) and
 # columns are the columns of featureMat
 createCorFeatureMat = function(dataMat, featureMat, 
                                centerDataMat=TRUE, centerFeatureMat = TRUE) {
-    if (centerDataMat) {
+   
+    featureMat = as.matrix(featureMat)
+    
+     if (centerDataMat) {
         cpgMeans = rowMeans(dataMat)
         # centering before calculating correlation
         dataMat = apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
@@ -86,13 +92,19 @@ createCorFeatureMat = function(dataMat, featureMat,
         featureMeans = colMeans(featureMat)
         # centering before calculating correlation
         featureMat = apply(X = featureMat, MARGIN = 1, function(x) x - featureMeans)
-        
+        featureMat = as.matrix(featureMat)
     }
     
     
     # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
     # how much do features correlate with each PC?
     featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 1, FUN = function(x) cor(x = x, y)))
+    
+    # if standard deviation of the data was zero, NA will be produced
+    # set to 0 because no standard deviation means no correlation with attribute of interest
+    featurePCCor[is.na(featurePCCor)] = 0
+    colnames(featurePCCor) <- colnames(featureMat)
+    
     return(featurePCCor)
     # corLoadRatio = loadingMat[, PCsToAnnotate] / featurePCCor 
     # hist(corLoadRatio[, "PC10"])
