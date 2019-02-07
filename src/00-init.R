@@ -3,6 +3,7 @@
 library(LOLA)
 library(simpleCache)
 library(data.table)
+library(ggplot2)
 library(GenomicRanges) # GRangesList, resize
 # library(caret)
 library(RGenomeUtils)
@@ -91,7 +92,7 @@ createCorFeatureMat = function(dataMat, featureMat,
     if (centerFeatureMat) {
         featureMeans = colMeans(featureMat)
         # centering before calculating correlation
-        featureMat = apply(X = featureMat, MARGIN = 1, function(x) x - featureMeans)
+        featureMat = t(apply(X = featureMat, MARGIN = 1, function(x) x - featureMeans))
         featureMat = as.matrix(featureMat)
     }
     
@@ -114,3 +115,38 @@ createCorFeatureMat = function(dataMat, featureMat,
 # set environment
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
+
+
+########## MOFA/CLL analysis #########################
+# gets coordinates for CLL methyl
+# returns a list with methylProp that has methylation and "methylCoord"
+# that has corresponding genomic coordinates
+prepareCLLMethyl = function() {
+    
+    # get microarray data
+    eh = ExperimentHub()
+    meth = eh[[names(query(eh, "CLLmethylation"))]] # EH1071
+    # rows are cpgs, columns are samples
+    methData = assay(meth)
+    dataProbeNames = row.names(methData)
+    
+    
+    # match probe names with genomic coordinates
+    # ls('package:FDb.InfiniumMethylation.hg19')
+    m450kAnno = get450k()
+    length(m450kAnno)
+    
+    # get coordinates in same order as CLL data
+    methCoord = m450kAnno[dataProbeNames]
+    all(names(methCoord) == dataProbeNames)
+    methCoordDT = COCOA:::grToDt(methCoord)
+    # keep start coordinate as CpG site
+    methCoordDT = methCoordDT[, .(chr, start)]
+    methCoord = COCOA:::dtToGr(methCoordDT)
+    if (nrow(methCoordDT) != nrow(methData)) {
+        stop("error matching probes to coordinates")
+    }
+    
+    return(list(methylProp = methData, methylCoord = methCoord))
+    
+}

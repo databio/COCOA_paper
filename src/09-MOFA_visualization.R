@@ -3,37 +3,51 @@
 
 source(paste0(Sys.getenv("CODE"),"COCOA_paper/src/00-init.R"))
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
-########################################
-source(paste0(Sys.getenv("CODE"), "/COCOA_paper/src/load_process_regions_brca.R"))
+
+# a cache is created in the script
+setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/")) 
+#####################################################################
+
+# parameters for COCOA_vis_pipeline.R
+plotSubdir = "10_MOFA_Vis"
+dataID = "CLL196MOFA" # 657 patients with both ER and PGR info in metadata, 692 total
+rsScoreCacheName = paste0("rsScore_Cor_", dataID)
+
+#################################################################
+# load hg19 database
+source(paste0(Sys.getenv("CODE"), "aml_e3999/src/load_process_regionDB.R"))
 
 #################################################################
 
-# parameters for COCOA_vis_pipeline.R
-plotSubdir = "03_brca_COCOA_Vis"
-# a cache is created in the script
-setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/")) 
-simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "bigSharedC", reload = TRUE)
-# screen out patients without ER/PGR status
-methylData = bigSharedC[["methylProp"]][, 
-                                          colnames(bigSharedC[["methylProp"]]) %in% patientMetadata[, subject_ID]] 
-inputID = "sharedC"
+
+
+cllMethyl = prepareCLLMethyl()
+methylData = cllMethyl$methylProp
+methCoord = cllMethyl$methylCoord
+
+inputID = dataID
 
 # GRList # from load_process_regions pipeline
-coordinateDT = bigSharedC$coordinates
-allMPCAString = "allMPCA_657"
-simpleCache(allMPCAString, assignToVariable = "mPCA", reload = TRUE)
-loadingMat = mPCA$rotation
+coordinateDT = cllMethyl$methylCoord
+# allMPCAString = "allMPCA_657"
+# simpleCache(allMPCAString, assignToVariable = "mPCA", reload = TRUE)
+simpleCache("inferredMethylWeightsMOFA", assignToVariable = "loadingMat")
 # use rsEnString to specify?
-simpleCache("rsEnrichment_657", assignToVariable = "rsEnrichment", reload = TRUE)
-simpleCache("rsEnrichmentTop10_657", assignToVariable = "rsEnrichmentTop10", reload = TRUE)
+simpleCache(rsScoreCacheName, assignToVariable = "rsEnrichment", reload = TRUE)
+
+# screen out region sets with low coverage of the data
+lowCov = rsEnrichment$cytosine_coverage < 100
+rsEnrichment = rsEnrichment[!lowCov, ]
+GRList = GRList[!lowCov]
+
+
 # TODO make sure GRList and rsEnrichment are both in the same order/with same data
 names(GRList) <- paste0(rsEnrichment$rsName, " : ", rsEnrichment$rsDescription)
-GRList = GRList[!is.na(rsEnrichment$PC1)]
-rsEnrichment=rsEnrichment[!is.na(rsEnrichment$PC1), ]
-rsEnSortedInd= rsRankingIndex(rsEnrichment = rsEnrichment, PCsToAnnotate = paste0("PC", 1:10))
+GRList = GRList[!is.na(rsEnrichment$LF1)]
+rsEnrichment=rsEnrichment[!is.na(rsEnrichment$LF1), ]
+rsEnSortedInd= rsRankingIndex(rsScores = rsEnrichment, PCsToAnnotate = paste0("LF", c(1:3, 5:7, 9)))
 
-rsEnrichmentTop10 = rsEnrichmentTop10[!is.na(rsEnrichmentTop10$PC1), ]
-PCSTOANNOTATE = paste0("PC", 1:10)
+PCSTOANNOTATE = paste0("LF", c(1:3, 5:7, 9))
 
 
 ### plots that will be created and script specific parameters for them 

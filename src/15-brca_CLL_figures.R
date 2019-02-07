@@ -10,6 +10,12 @@ set.seed(1234)
 
 
 #############################################################################
+# PCA plots
+
+
+############################################################################
+# region set results distribution plot
+
 simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsScores")
 
 # summary figure of COCOA BRCA results: ER set relative ranking among region sets
@@ -52,8 +58,8 @@ rsScores
 
 plotRSConcentration <- function(rsScores, scoreColName="PC1", 
                                 colsToSearch = c("rsName", "rsDescription"), 
-                                pattern, breaks) {
-    
+                                pattern, percent = FALSE) {
+    # breaks
 
     rsRankInd = rsRankingIndex(rsScores=rsScores, PCsToAnnotate=scoreColName)
 
@@ -68,7 +74,33 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
     colnames(ofInterestDF) <- colnames(rsRankInd)
     ofInterestDF$rsRank = 1:nrow(ofInterestDF)
     categoryDistPlot = ggplot(ofInterestDF, aes(x=rsRank, weight=get(scoreColName))) + 
-                              geom_histogram() #+ facet_wrap(~get(scoreColName))
+                              geom_histogram() + theme_classic()#+ facet_wrap(~get(scoreColName))
     return(categoryDistPlot)
     
 }
+##########################
+# BRCA DNA methylation 
+
+#############################
+# BRCA ATAC
+
+############################
+# MOFA CLL
+simpleCache("rsScore_Cor_CLL196", assignToVariable = "rsScores")
+plotRSConcentration(rsScores, scoreColName="LF2", 
+                                colsToSearch = c("rsName", "rsDescription"), 
+                                pattern= "K562")
+plotRSConcentration(rsScores, scoreColName="LF9", 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "esr|era|gata3|foxa1|h3r17")
+plotRSConcentration(rsScores, scoreColName="LF6", 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "GM12878|GM18526|GM12891|GM10847|K562|leukemia|leukaemia|lymphoma")
+
+################################################################################
+# meta region loading profile plots
+
+
+
+################################################################################
+

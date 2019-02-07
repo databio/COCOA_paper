@@ -195,14 +195,16 @@ dev.off()
 .regionSetList = lapply(.regionSetList, resize, width = 14000, fix="center")
 
 simpleCache(paste0("pcProf14k", inputID), {
-    pcProf = pcEnrichmentProfile(loadingMat = mPCA$rotation, signalCoord = coordinateDT,
-                                 GRList=.regionSetList, PCsToAnnotate = PCsToAnnotate_mrLP,
-                                 binNum = 21)
+    pcProf = lapply(X = .regionSetList, function(x) getLoadingProfile(loadingMat = loadingMat, 
+                                                          signalCoord = coordinateDT, 
+                                                          regionSet = x, PCsToAnnotate = PCsToAnnotate_mrLP,
+                                 binNum = 21))
     # set names by reference
     #setattr(pcProf, "names", names(.regionSetList))
     pcProf
 }, recreate = TRUE)
 pcP = copy(get(paste0("pcProf14k", inputID)))
+pcP = lapply(pcP,FUN = as.data.table)
 
 rsNames = paste0(rsEnrichment$rsName[topRSInd_mrLP], " : ", rsEnrichment$rsDescription[topRSInd_mrLP])
 
