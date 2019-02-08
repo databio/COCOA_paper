@@ -28,56 +28,31 @@ plot(erIndPC1)
 erIndPC1 = which(erIndPC1)
 hist(erIndPC1, breaks = seq(0, 2000, by=200))
 
-plotRSConcentration <- function(rsScores, scoreColName="PC1", 
-                                colsToSearch = c("rsName", "rsDescription"), 
-                                pattern, breaks) {
-    
-    rsScores = as.data.frame(rsScores)
-    rsScores = rsScores[order(rsScores[, scoreColName], decreasing = TRUE), ]
-    
-    rsInd = rep(FALSE, nrow(rsScores))
-    for (i in seq_along(colsToSearch)) {
-        rsInd = rsInd | grepl(pattern = pattern, x = rsScores[, colsToSearch[i]], ignore.case = TRUE)
-    }
-    
-    rsInd = which(rsInd)
-    hist(rsInd, breaks = breaks)
-    
-}
+# plotRSConcentration <- function(rsScores, scoreColName="PC1", 
+#                                 colsToSearch = c("rsName", "rsDescription"), 
+#                                 pattern, breaks) {
+#     
+#     rsScores = as.data.frame(rsScores)
+#     rsScores = rsScores[order(rsScores[, scoreColName], decreasing = TRUE), ]
+#     
+#     rsInd = rep(FALSE, nrow(rsScores))
+#     for (i in seq_along(colsToSearch)) {
+#         rsInd = rsInd | grepl(pattern = pattern, x = rsScores[, colsToSearch[i]], ignore.case = TRUE)
+#     }
+#     
+#     rsInd = which(rsInd)
+#     hist(rsInd, breaks = breaks)
+#     
+# }
+# 
+# plotRSConcentration(rsScores=rsScores, scoreColName = "PC5", pattern = "esr1|eralpha", breaks=seq(0, 2000, by=200))
+# plotRSConcentration(rsScores=rsScores, 
+#                     scoreColName = "PC1", 
+#                     pattern = "stat", 
+#                     breaks=seq(0, 2400, by=200))
 
-plotRSConcentration(rsScores=rsScores, scoreColName = "PC5", pattern = "esr1|eralpha", breaks=seq(0, 2000, by=200))
-plotRSConcentration(rsScores=rsScores, 
-                    scoreColName = "PC1", 
-                    pattern = "stat", 
-                    breaks=seq(0, 2400, by=200))
 
 
-# ggplot version of rs concentration
-# 1 row per region set, column for rank in a given PC, 0/1 column for ER or not
-rsScores
-
-plotRSConcentration <- function(rsScores, scoreColName="PC1", 
-                                colsToSearch = c("rsName", "rsDescription"), 
-                                pattern, percent = FALSE) {
-    # breaks
-
-    rsRankInd = rsRankingIndex(rsScores=rsScores, PCsToAnnotate=scoreColName)
-
-    
-    rsInd = rep(FALSE, nrow(rsScores))
-    for (i in seq_along(colsToSearch)) {
-        rsInd = rsInd | grepl(pattern = pattern, x = rsScores[, colsToSearch[i]], ignore.case = TRUE)
-    }
-    
-    rsScores$ofInterest = rsInd
-    ofInterestDF = as.data.frame(rsInd[as.matrix(rsRankInd)])
-    colnames(ofInterestDF) <- colnames(rsRankInd)
-    ofInterestDF$rsRank = 1:nrow(ofInterestDF)
-    categoryDistPlot = ggplot(ofInterestDF, aes(x=rsRank, weight=get(scoreColName))) + 
-                              geom_histogram() + theme_classic()#+ facet_wrap(~get(scoreColName))
-    return(categoryDistPlot)
-    
-}
 ##########################
 # BRCA DNA methylation 
 

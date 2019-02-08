@@ -63,6 +63,39 @@ dirCode = function(.file="") {
     return(paste0(Sys.getenv("CODE"), "COCOA_paper/", .file))
 }
 
+
+
+# set environment
+Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
+setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
+
+############ functions to add to COCOA ##############################
+# ggplot version of rs concentration
+# 1 row per region set, column for rank in a given PC, 0/1 column for ER or not
+
+plotRSConcentration <- function(rsScores, scoreColName="PC1", 
+                                colsToSearch = c("rsName", "rsDescription"), 
+                                pattern, percent = FALSE) {
+    # breaks
+    
+    rsRankInd = rsRankingIndex(rsScores=rsScores, PCsToAnnotate=scoreColName)
+    
+    
+    rsInd = rep(FALSE, nrow(rsScores))
+    for (i in seq_along(colsToSearch)) {
+        rsInd = rsInd | grepl(pattern = pattern, x = rsScores[, colsToSearch[i]], ignore.case = TRUE)
+    }
+    
+    rsScores$ofInterest = rsInd
+    ofInterestDF = as.data.frame(rsInd[as.matrix(rsRankInd)])
+    colnames(ofInterestDF) <- colnames(rsRankInd)
+    ofInterestDF$rsRank = 1:nrow(ofInterestDF)
+    categoryDistPlot = ggplot(ofInterestDF, aes(x=rsRank, weight=get(scoreColName))) + 
+        geom_histogram() + theme_classic()#+ facet_wrap(~get(scoreColName))
+    return(categoryDistPlot)
+    
+}
+
 # @param dataMat columns of dataMat should be samples/patients, rows should be genomic signal
 # (each row corresponds to one genomic coordinate/range)
 # @param featureMat Rows should be samples, columns should be "features" 
@@ -79,10 +112,10 @@ dirCode = function(.file="") {
 # columns are the columns of featureMat
 createCorFeatureMat = function(dataMat, featureMat, 
                                centerDataMat=TRUE, centerFeatureMat = TRUE) {
-   
+    
     featureMat = as.matrix(featureMat)
     
-     if (centerDataMat) {
+    if (centerDataMat) {
         cpgMeans = rowMeans(dataMat)
         # centering before calculating correlation
         dataMat = apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
@@ -110,11 +143,6 @@ createCorFeatureMat = function(dataMat, featureMat,
     # corLoadRatio = loadingMat[, PCsToAnnotate] / featurePCCor 
     # hist(corLoadRatio[, "PC10"])
 }
-
-
-# set environment
-Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
-setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 
 
 ########## MOFA/CLL analysis #########################
