@@ -16,17 +16,7 @@ set.seed(1234)
 ############################################################################
 # region set results distribution plot
 
-simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsScores")
 
-# summary figure of COCOA BRCA results: ER set relative ranking among region sets
-rsScores$origInd = 1:nrow(rsScores)
-rsScores = rsScores[order(rsScores$PC1, decreasing = TRUE), ]
-erIndPC1 = grep(pattern = "suz12", x = rsScores$rsName, ignore.case = TRUE, value = TRUE)
-erIndPC1 = erIndPC1 | grepl(pattern = "esr1|eralpha", x = rsScores$rsDescription, ignore.case = TRUE)
-rsScores$rsDescription[erIndPC1]
-plot(erIndPC1)
-erIndPC1 = which(erIndPC1)
-hist(erIndPC1, breaks = seq(0, 2000, by=200))
 
 # plotRSConcentration <- function(rsScores, scoreColName="PC1", 
 #                                 colsToSearch = c("rsName", "rsDescription"), 
@@ -55,6 +45,19 @@ hist(erIndPC1, breaks = seq(0, 2000, by=200))
 
 ##########################
 # BRCA DNA methylation 
+simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsScores")
+
+# summary figure of COCOA BRCA results: ER set relative ranking among region sets
+plotRSConcentration(rsScores, scoreColName="PC1", 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "esr|eralpha|gata3|foxa1|h3r17")
+plotRSConcentration(rsScores, scoreColName="PC4", 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "esr|eralpha|gata3|foxa1|h3r17")
+plotRSConcentration(rsScores, scoreColName="PC4", 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "esr|eralpha|gata3|foxa1|h3r17")
+
 
 #############################
 # BRCA ATAC

@@ -75,9 +75,10 @@ setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 
 plotRSConcentration <- function(rsScores, scoreColName="PC1", 
                                 colsToSearch = c("rsName", "rsDescription"), 
-                                pattern, percent = FALSE) {
+                                pattern, percent = FALSE, 
+                                binwidth=50) {
     # breaks
-    
+    rsScore = as.data.frame(rsScores)
     rsRankInd = rsRankingIndex(rsScores=rsScores, PCsToAnnotate=scoreColName)
     
     
@@ -91,7 +92,8 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
     colnames(ofInterestDF) <- colnames(rsRankInd)
     ofInterestDF$rsRank = 1:nrow(ofInterestDF)
     categoryDistPlot = ggplot(ofInterestDF, aes(x=rsRank, weight=get(scoreColName))) + 
-        geom_histogram() + theme_classic()#+ facet_wrap(~get(scoreColName))
+        geom_histogram(binwidth = binwidth) + theme_classic() + xlab("Region set rank") +
+        ylab("Number of region sets")#+ facet_wrap(~get(scoreColName))
     return(categoryDistPlot)
     
 }
