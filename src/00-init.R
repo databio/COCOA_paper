@@ -73,12 +73,13 @@ setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 # ggplot version of rs concentration
 # 1 row per region set, column for rank in a given PC, 0/1 column for ER or not
 
+# TODO: add check that scoreColNames are present as columns of rsScores
 plotRSConcentration <- function(rsScores, scoreColName="PC1", 
                                 colsToSearch = c("rsName", "rsDescription"), 
                                 pattern, percent = FALSE, 
                                 binwidth=50) {
     # breaks
-    rsScore = as.data.frame(rsScores)
+    rsScores = as.data.frame(rsScores)
     rsRankInd = rsRankingIndex(rsScores=rsScores, PCsToAnnotate=scoreColName)
     
     
@@ -88,13 +89,18 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
     }
     
     rsScores$ofInterest = rsInd
-    ofInterestDF = as.data.frame(rsInd[as.matrix(rsRankInd)])
+    # reorder logical vector for each PC
+    ofInterestDF = as.data.frame(mapply(FUN = function(ind) rsInd[as.matrix(rsRankInd)[, ind]], 
+                          ind=seq_along(scoreColName))) 
     colnames(ofInterestDF) <- colnames(rsRankInd)
     ofInterestDF$rsRank = 1:nrow(ofInterestDF)
-    categoryDistPlot = ggplot(ofInterestDF, aes(x=rsRank, weight=get(scoreColName))) + 
+    # reshaping to long format
+    ofInterestDF = tidyr::gather(ofInterestDF, key="PC", value="of_interest", scoreColName)
+    categoryDistPlot = ggplot(ofInterestDF, aes(x=rsRank, weight=of_interest)) + 
         geom_histogram(binwidth = binwidth) + theme_classic() + xlab("Region set rank") +
-        ylab("Number of region sets")#+ facet_wrap(~get(scoreColName))
+        ylab(paste0("Number of region sets (binwidth=", binwidth, ")")) + facet_wrap(~PC)
     return(categoryDistPlot)
+    
     
 }
 

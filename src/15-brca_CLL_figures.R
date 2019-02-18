@@ -48,33 +48,63 @@ set.seed(1234)
 simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsScores")
 
 # summary figure of COCOA BRCA results: ER set relative ranking among region sets
-plotRSConcentration(rsScores, scoreColName="PC1", 
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "esr|eralpha") + ggtitle("Estrogen receptor region sets")
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "esr|eralpha|gata3|foxa1|h3r17") + ggtitle("Estrogen receptor-related region sets")
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "esr|eralpha|gata3|foxa1|h3r17")
-plotRSConcentration(rsScores, scoreColName="PC4", 
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
                     colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "esr|eralpha|gata3|foxa1|h3r17")
-plotRSConcentration(rsScores, scoreColName="PC4", 
+                    pattern= "ezh2|suz12")
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
                     colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "esr|eralpha|gata3|foxa1|h3r17")
-
-
+                    pattern= "pol2")
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k9")
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k4me3")
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k36")
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "k562")
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "mcf7|mcf-7")
 #############################
 # BRCA ATAC
 
 ############################
 # MOFA CLL
 simpleCache("rsScore_Cor_CLL196", assignToVariable = "rsScores")
-plotRSConcentration(rsScores, scoreColName="LF2", 
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
                                 colsToSearch = c("rsName", "rsDescription"), 
                                 pattern= "K562")
-plotRSConcentration(rsScores, scoreColName="LF9", 
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "esr|era|gata3|foxa1|h3r17")
-plotRSConcentration(rsScores, scoreColName="LF6", 
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "GM12878|GM18526|GM12891|GM10847|K562|leukemia|leukaemia|lymphoma")
-
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k9")
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k4me1")
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k4me3")
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k36")
 ################################################################################
 # meta region loading profile plots
 
