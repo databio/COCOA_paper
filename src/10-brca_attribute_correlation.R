@@ -1,5 +1,5 @@
 # correlate a sample attribute (like survival) with DNA methylation the run COCOA
-
+library(pls)
 
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 
@@ -12,6 +12,8 @@ setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
 plotSubdir = "10-brca_attr_cor/"
 dataID = "215" # 657 patients with both ER and PGR info in metadata, 692 total
 rsScoreCacheName = paste0("rsScore_Surv_Cor_", dataID)
+rsScoreCacheName2 = paste0("rsScore_Surv_PCR_", dataID)
+
 overwriteRSScoreResultsCaches = TRUE
 
 ###############################################################################
@@ -111,5 +113,56 @@ write.csv(x = rsScore,
           file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/rsScore_methylCor_", dataID, ".csv"),
           quote = FALSE, row.names = FALSE)
 
+##################################################################################
+# now doing principal component regression and comparing with simple correlation
 
-#
+nPCs = 150
+survSubsetPCA = prcomp(x = t(filteredMData), center = TRUE, scale. = FALSE)
+varExpl = (survSubsetPCA$sdev^2 / sum(survSubsetPCA$sdev^2))
+plot(varExpl[1:10])
+sum(varExpl > 0.01)
+survSubX = survSubsetPCA$x
+survSubX = as.data.frame(cbind(survSubX[, 1:nPCs], surv_at_daysCutoff = patientMetadata$surv_at_daysCutoff))
+a= lm(formula = surv_at_daysCutoff ~ ., data = survSubX)
+pVals = summary(a)$pvals
+
+# don't include intercept
+weightedCor = abs(survSubsetPCA$rotation[, 1:nPCs]) %*% abs(coefficients(a)[-1]) 
+weightedCor2 = (survSubsetPCA$rotation[, 1:nPCs]) %*% (coefficients(a)[-1]) 
+hist(weightedCor2)
+colnames(weightedCor) = "surv_at_daysCutoff"
+
+#############################################################################
+# run COCOA analysis
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regions_brca.R"))
+
+scoringMetric = "regionMean"
+signalCoord = brcaMList$coordinates
+PCsToAnnotate = "surv_at_daysCutoff"
+
+simpleCache(rsScoreCacheName2, {
+    rsScore = runCOCOA(loadingMat=weightedCor, 
+                       signalCoord = signalCoord, 
+                       GRList, 
+                       PCsToAnnotate = PCsToAnnotate, 
+                       scoringMetric=scoringMetric)
+    rsScore$rsName = rsName
+    rsScore$rsDescription= rsDescription
+    rsScore
+}, recreate=overwriteRSScoreResultsCaches)
+
+View(rsScore[order(rsScore$surv_at_daysCutoff, decreasing = TRUE), ])
+hist(rsScore$surv_at_daysCutoff)
+
+write.csv(x = rsScore, 
+          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/rsScore_brcaMethylPCR_", dataID, ".csv"),
+          quote = FALSE, row.names = FALSE)
+
+plotRSConcentration(rsScores = rsScore, scoreColName = "surv_at_daysCutoff", pattern = "esr|eralpha|eraalpha")
+plotRSConcentration(rsScores = rsScore, scoreColName = "surv_at_daysCutoff", pattern = "suz12|ezh2|h3k27me|h3k9me")
+plotRSConcentration(rsScores = rsScore, scoreColName = "surv_at_daysCutoff", pattern = "h3k27ac")
+
+cor.test(as.numeric(as.factor(patientMetadata$ER_status)), patientMetadata$surv_at_daysCutoff)
+
+
+##################################################################################
