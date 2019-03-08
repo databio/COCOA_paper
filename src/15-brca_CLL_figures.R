@@ -4,13 +4,50 @@
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 
 setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
-patientMetadata = brcaMetadata # already screened out patients with incomplete ER or PGR mutation status
+#patientMetadata = brcaMetadata # already screened out patients with incomplete ER or PGR mutation status
 # there should be 657 such patients
 set.seed(1234)
+plotSubdir = "15_brca_CLL_figures/"
 
+###########################################################
+# reading in the region sets
+# load LOLA database
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regions_brca.R"))
+names(GRList) = rsName
+
+#################################################################
+
+dataID = "657" # 657 patients with both ER and PGR info in metadata, 692 total
+allMPCAString = "allMPCA_657" #  "allMPCA_657"
+top10MPCAString = "top10MPCA_657"
+
+simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaSharedC", reload = TRUE)
+
+
+simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsScores")
+
+# get top region sets for DNA methylation results
+topScoreResultsInd = rsRankingIndex(rsScores, "PC1")$PC1[1:20]
+topGRList = GRList[rsScores$rsName[topScoreResultsInd]]
+
+# loading PCA and combining components that could separate ER=/-
+# for rsEnrichment, PCs 1 and 4 could separate ER+/-
+simpleCache(allMPCAString, assignToVariable = "mPCA")
+brcaLoadings = mPCA$rotation
+brcaCoord = brcaSharedC[["coordinates"]]
 
 #############################################################################
 # PCA plots
+
+colorByCols = "ER_status"
+pcaWithAnno = cbind(mPCA$x, patientMetadata[row.names(mPCA$x) ,])
+multiColorPCAPlots = colorClusterPlots(pcaWithAnno, 
+                                       plotCols = c("PC1", "PC4"), 
+                                       colorByCols=colorByCols)
+ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), "/allMPCA_PCA_Plots/multiColorPCAPlots_allMPCA_", 
+                                PCsToPlot[i], "x", PCsToPlot[j], 
+                                ".pdf"), plot = multiColorPCAPlots, device = "pdf",
+                limitsize=FALSE)
 
 
 ############################################################################
@@ -48,9 +85,12 @@ set.seed(1234)
 simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsScores")
 
 # summary figure of COCOA BRCA results: ER set relative ranking among region sets
-plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "esr|eralpha") + ggtitle("Estrogen receptor region sets")
+esrConcentrationPlot = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
+                            colsToSearch = c("rsName", "rsDescription"), 
+                            pattern= "esr|eralpha") + ggtitle("Estrogen receptor region sets")
+
+
+
 plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "esr|eralpha|gata3|foxa1|h3r17") + ggtitle("Estrogen receptor-related region sets")
@@ -106,8 +146,70 @@ plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))),
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "h3k36")
 ################################################################################
-# meta region loading profile plots
+# meta region loading profile plots, DNA methylation BRCA
 
+PCsToAnnotate = paste0("PC", 1:4)
+wideGRList <- lapply(topGRList, resize, width=14000, fix="center")
+loadProfile <- lapply(wideGRList, function(x) getLoadingProfile(loadingMat=brcaLoadings,
+                                                                signalCoord=brcaCoord,
+                                                                regionSet=x, 
+                                                                PCsToAnnotate=PCsToAnnotate,
+                                                                binNum=21))
+
+# average loading value from each PC to normalize so PCs can be compared with each other
+if (is.numeric(brcaLoadings[, PCsToAnnotate])) {
+    avLoad = mean(abs(brcaLoadings[, PCsToAnnotate]))
+} else {
+    avLoad <- apply(X=brcaLoadings[, PCsToAnnotate], 
+                    MARGIN=2, 
+                    FUN=function(x) mean(abs(x)))
+}
+
+# normalize
+loadProfile <- lapply(loadProfile, 
+                      FUN=function(x) as.data.frame(mapply(FUN = function(y, z) x[, y] - z, 
+                                                           y=PCsToAnnotate, z=avLoad)))
+binID = 1:nrow(loadProfile[[1]])
+loadProfile <- lapply(loadProfile, FUN=function(x) cbind(binID, x))
+# for the plot scale
+maxVal <- max(sapply(loadProfile, FUN=function(x) max(x[, PCsToAnnotate])))
+minVal <- min(sapply(loadProfile, FUN=function(x) min(x[, PCsToAnnotate])))
+# convert to long format for plots
+loadProfile <- lapply(X=loadProfile, FUN=function(x) tidyr::gather(data=x, key="PC", value="loading_value", PCsToAnnotate))
+loadProfile <- lapply(loadProfile, 
+                      function(x){x$PC <- factor(x$PC, levels=PCsToAnnotate); return(x)})
+wrapper <- function(x, ...) paste(strwrap(x, ...), collapse="\n") 
+
+# manually get region set name
+regionSetNames = c("Gata3", "H3R17me2", "ESR1", "Gata3", 
+                   "FoxA1", "ESR1", "ESR1", "ESR1", 
+                   "FoxA1", "ESR1", "AR", "AR", 
+                   "Znf217", "TCF7L2", "ESR1", "ESR1", 
+                   "JunD", "ESR1", "FoxA1", "H3R17me2")
+
+profilePList <- list()
+for (i in seq_along(loadProfile)) {
+    
+    thisRS <- loadProfile[[i]]
+    
+    profilePList[[i]] <- ggplot(data=thisRS, 
+                                mapping=aes(x=binID , y=loading_value)) + 
+        geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets="PC") + 
+        ggtitle(label=wrapper(regionSetNames[i], width=30)) + 
+        xlab("Genome around region set, 14 kb") + 
+        ylab("Normalized loading value") + 
+        theme(panel.grid.major.x=element_blank(), 
+              panel.grid.minor.x=element_blank(), 
+              axis.text.x=element_blank(), 
+              axis.ticks.x=element_blank())
+    ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "metaRegionPlots/", regionSetNames[i], "_", i), plot = profilePList[[i]], device = "pdf")
+}
+profilePList[[1]]
+ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, regionSetName) )
+
+profilePList[[2]]
+profilePList[[3]]
+profilePList[[4]]
 
 
 ################################################################################

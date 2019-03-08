@@ -27,7 +27,6 @@ brcaMetadata = brcaMetadata[brcaMetadata$ER_status %in%
                                                      c("Positive", "Negative"), ]
 brcaMetadata = brcaMetadata[brcaMetadata$PGR_status %in% 
                                 c("Positive", "Negative"), ]
-patientMetadata = brcaMetadata
 
 
 brcaMetadata2 = read.table(file = paste0(Sys.getenv("CODE"), 
@@ -40,6 +39,8 @@ patientMetadata = merge(brcaMetadata, brcaMetadata2[, c("bcr_patient_barcode",
                                                        "days_to_last_follow_up")],
                         by.x="subject_ID", 
                         by.y="bcr_patient_barcode", all.x=TRUE)
+
+row.names(patientMetadata) <- patientMetadata$subject_ID
 
 process_brca_expr = function(exprDF) {
     
