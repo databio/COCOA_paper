@@ -124,12 +124,13 @@ plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9),
 ############################
 # MOFA CLL
 simpleCache("rsScore_Cor_CLL196", assignToVariable = "rsScores")
+# View(rsScores[order(rsScores$LF1, decreasing=TRUE), ])
 plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
                                 colsToSearch = c("rsName", "rsDescription"), 
                                 pattern= "K562")
 plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
                     colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "esr|era|gata3|foxa1|h3r17")
+                    pattern= "esr|eralpha|gata3|foxa1|h3r17")
 plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "GM12878|GM18526|GM12891|GM10847|K562|leukemia|leukaemia|lymphoma")
@@ -145,6 +146,19 @@ plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))),
 plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "h3k36")
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k27me")
+# transcription factors
+# associated with immune latent factors
+plotRSConcentration(rsScores[rsScores$region_coverage >= 100, ], scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "nfkb")
+# 
+plotRSConcentration(rsScores[rsScores$region_coverage >= 100, ], scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "esr1")
+
 ################################################################################
 # meta region loading profile plots, DNA methylation BRCA
 

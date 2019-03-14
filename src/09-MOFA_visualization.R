@@ -9,7 +9,7 @@ setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 #####################################################################
 
 # parameters for COCOA_vis_pipeline.R
-plotSubdir = "10_MOFA_Vis"
+plotSubdir = "09_MOFA_Vis"
 dataID = "CLL196MOFA" # 657 patients with both ER and PGR info in metadata, 692 total
 rsScoreCacheName = paste0("rsScore_Cor_", dataID)
 
@@ -40,6 +40,14 @@ lowCov = rsEnrichment$cytosine_coverage < 100
 rsEnrichment = rsEnrichment[!lowCov, ]
 GRList = GRList[!lowCov]
 
+# the latent factors
+mPCA = list()
+mPCA$x = latentFactors
+if (!all(row.names(latentFactors) == colnames(methylData))) {
+    stop("samples are not ordered consistently")
+}
+
+
 
 # TODO make sure GRList and rsEnrichment are both in the same order/with same data
 names(GRList) <- paste0(rsEnrichment$rsName, " : ", rsEnrichment$rsDescription)
@@ -55,7 +63,7 @@ PCSTOANNOTATE = paste0("LF", c(1:3, 5:7, 9))
 PCsToAnnotate_cPCH = PCSTOANNOTATE
 # "methylAlongPC"
 topRSToPlotNum = 15
-PCsToAnnotate_mAPC = PCSTOANNOTATE[1:5]
+PCsToAnnotate_mAPC = PCSTOANNOTATE
 # "regionQuantileByPC"
 PCsToAnnotate_rQBPC = PCSTOANNOTATE
 topRSInd_rQBPC = unique(unlist(rsEnSortedInd[1:15, ])) # get top region sets from each PC

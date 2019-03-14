@@ -116,9 +116,10 @@ simpleCache("cllMOFAFactors", {cllMOFAFactors = latentFactors})
 maleID = row.names(CLL_covariates[CLL_covariates$Gender=="m",]) 
 femaleID = row.names(CLL_covariates[CLL_covariates$Gender=="f",])
 whichLF = "LF7"
-wilcox.test(latentFactors[maleID, whichLF], latentFactors[femaleID, whichLF])
+whichLF = "LF1"
+wilcox.test(latentFactors[maleID[maleID %in% row.names(latentFactors)], whichLF], latentFactors[femaleID[femaleID %in% row.names(latentFactors)], whichLF])
 
-plotFactorScatters(MOFAobject, factors = c(7, 9), color_by = "Gender")
+plotFactorScatters(MOFAobject, factors = c(1,7, 9), color_by = "Gender")
 
 ######################################################################
 #### convert DNA methylation matrix to correlation matrix

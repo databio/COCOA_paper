@@ -127,7 +127,7 @@ grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir,
 for (.i in seq_along(topRSInd_rQBPC)) {
     regionQuantileByPC(loadingMat=loadingMat, signalCoord=coordinateDT, 
                        regionSet=GRList[[topRSInd_rQBPC[.i]]], 
-                       rsNames=paste0(rsEnrichment$rsName[topRSInd_rQBPC[.i]], " : ", rsEnrichment$rsDescription[topRSInd_rQBPC[.i]]), 
+                       rsName=paste0(rsEnrichment$rsName[topRSInd_rQBPC[.i]], " : ", rsEnrichment$rsDescription[topRSInd_rQBPC[.i]]), 
                        PCsToAnnotate=PCsToAnnotate_rQBPC, maxRegionsToPlot = 5000,
                        cluster_rows = TRUE)
 }
