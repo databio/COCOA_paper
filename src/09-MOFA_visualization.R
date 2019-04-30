@@ -32,6 +32,7 @@ coordinateDT = cllMethyl$methylCoord
 # allMPCAString = "allMPCA_657"
 # simpleCache(allMPCAString, assignToVariable = "mPCA", reload = TRUE)
 simpleCache("inferredMethylWeightsMOFA", assignToVariable = "loadingMat")
+simpleCache("cllMOFAFactors", assignToVariable = "latentFactors")
 # use rsEnString to specify?
 simpleCache(rsScoreCacheName, assignToVariable = "rsEnrichment", reload = TRUE)
 

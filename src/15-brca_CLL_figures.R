@@ -91,9 +91,10 @@ esrConcentrationPlot = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1
 
 
 
-plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
+erRelated = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "esr|eralpha|gata3|foxa1|h3r17") + ggtitle("Estrogen receptor-related region sets")
+ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "ER_related_PC1.svg"), plot = erRelated, device = "svg")
 plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "esr|eralpha|gata3|foxa1|h3r17")
@@ -123,7 +124,11 @@ plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9),
 
 ############################
 # MOFA CLL
-simpleCache("rsScore_Cor_CLL196", assignToVariable = "rsScores")
+# http://msb.embopress.org/content/14/6/e8124
+# factors 1 (strong), 7 and 9 were associated with DNA methylation
+# factor 1: cell type/differentiation, factor 7: chemo-immunotherapy treatment prior to sample collection
+# factor 7: del17p, TP53 mutations, methylation of oncogenes
+simpleCache("rsScore_Cor_CLL196MOFA", assignToVariable = "rsScores")
 # View(rsScores[order(rsScores$LF1, decreasing=TRUE), ])
 plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
                                 colsToSearch = c("rsName", "rsDescription"), 
