@@ -31,18 +31,32 @@ max(countDT)
 #######################################################################
 # working locally
 
-aPCA = readRDS(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/TCGA-ATAC_BRCA_pca.Rds"))
-rsScores =  readRDS(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/TCGA-ATAC_BRCA_rssTotal.Rds"))
+# aPCA = readRDS(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/TCGA-ATAC_BRCA_pca.Rds"))
+aPCA = pca
+# rsScores =  readRDS(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/TCGA-ATAC_BRCA_rssTotal.Rds"))
+rsScores= regionSetScoresTotal
 aMetadata = read.csv(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/tcga_brca_metadata.csv"))
+load(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/brca_peak_pca_sample_names.RData")) # pcaNames
 dim(aMetadata)
 length(unique(aMetadata$subject_ID))
 table(aMetadata$ER_status)
+View(rsScores[order(rsScores$PC2, decreasing = TRUE), ])
 
 plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
-
 plotRSConcentration(rsScores = rsScores, scoreColName = "PC2", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
-
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC3", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
 plotRSConcentration(rsScores = rsScores, scoreColName = "PC4", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
+plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "regionSetName", pattern = "ezh2|suz12")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC2", colsToSearch = "regionSetName", pattern = "ezh2|suz12|h3k27me")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC3", colsToSearch = "regionSetName", pattern = "ezh2|suz12")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC4", colsToSearch = "regionSetName", pattern = "ezh2|suz12")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC2", colsToSearch = "regionSetName", pattern = "runx|tal1|gata|lmo2|PU1|lyl1|FLI1|evi1")
 
 ########## make PCA plot
-load("/home/jtl2hk/processed/COCOA_paper/atac/brca_peak_pca_sample_names.RData")
+
+pcScore = data.frame(aPCA$x, pcaNames)
+pcScoreAnno= merge(pcScore, aMetadata, by.x = "pcaNames", by.y= "subject_ID", all.x=TRUE)
+colorClusterPlots(pcScoreAnno, plotCols = paste0("PC", c(1,2)), colorByCols = "ER_status")
+ggplot(data = pcScoreAnno, mapping = aes(x = PC1, y= PC2)) + geom_point(aes(col=ER_status), size = 4, alpha=0.5) + theme_classic()
+pcScoreAnno$ER_status[pcScoreAnno$ER_status == ""] = NA
+plot(as.matrix(pcScoreAnno[,c("PC1", "PC2")]))
