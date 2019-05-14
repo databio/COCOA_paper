@@ -13,6 +13,7 @@ library(gridExtra) #marrangeGrob for colorClusterPlots()
 # some of the environmental variables from aml/.../00-init.R will need to be reset
 source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R" )) 
 library(MultiAssayExperiment)
+library(folderfun)
 # the AML init script will set a different plots directory
 # Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/plots/"))
 
@@ -59,7 +60,10 @@ dirPlot = function(plotFile) {
     )
     
 }
+setff("Plot", Sys.getenv("PLOTS"))
 
+setff("Code", paste0(Sys.getenv("CODE")))
+setff("ProjCode", paste0(Sys.getenv("CODE"), "COCOA_paper/"))
 dirCode = function(.file="") {
     return(paste0(Sys.getenv("CODE"), "COCOA_paper/", .file))
 }
