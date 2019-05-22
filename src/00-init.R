@@ -102,12 +102,11 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
     # reshaping to long format
     ofInterestDF = tidyr::gather(ofInterestDF, key="PC", value="of_interest", scoreColName)
     categoryDistPlot = ggplot(ofInterestDF, aes(x=rsRank, weight=of_interest)) + 
-        geom_histogram(binwidth = binwidth) + theme_classic() + xlab("Region set rank") +
+        geom_histogram(binwidth=binwidth, boundary=0, closed="right") + theme_classic() + xlab("Region set rank") +
         ylab(paste0("Number of region sets (binwidth=", binwidth, ")")) + facet_wrap(~PC)
     return(categoryDistPlot)
-    
-    
 }
+
 
 # @param dataMat columns of dataMat should be samples/patients, rows should be genomic signal
 # (each row corresponds to one genomic coordinate/range)
