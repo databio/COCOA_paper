@@ -37,7 +37,7 @@ brcaLoadings = mPCA$rotation
 brcaCoord = brcaSharedC[["coordinates"]]
 
 #############################################################################
-# PCA plots
+# Fig. 2a, PCA plot, DNA methylation
 
 colorByCols = "ER_status"
 pcaWithAnno = cbind(mPCA$x, patientMetadata[row.names(mPCA$x) ,])
@@ -50,46 +50,14 @@ ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), "/allMPCA_PCA_Plots/multiCo
                 limitsize=FALSE)
 
 
-############################################################################
-# region set results distribution plot
-
-
-
-# plotRSConcentration <- function(rsScores, scoreColName="PC1", 
-#                                 colsToSearch = c("rsName", "rsDescription"), 
-#                                 pattern, breaks) {
-#     
-#     rsScores = as.data.frame(rsScores)
-#     rsScores = rsScores[order(rsScores[, scoreColName], decreasing = TRUE), ]
-#     
-#     rsInd = rep(FALSE, nrow(rsScores))
-#     for (i in seq_along(colsToSearch)) {
-#         rsInd = rsInd | grepl(pattern = pattern, x = rsScores[, colsToSearch[i]], ignore.case = TRUE)
-#     }
-#     
-#     rsInd = which(rsInd)
-#     hist(rsInd, breaks = breaks)
-#     
-# }
-# 
-# plotRSConcentration(rsScores=rsScores, scoreColName = "PC5", pattern = "esr1|eralpha", breaks=seq(0, 2000, by=200))
-# plotRSConcentration(rsScores=rsScores, 
-#                     scoreColName = "PC1", 
-#                     pattern = "stat", 
-#                     breaks=seq(0, 2400, by=200))
-
-
-
-##########################
-# BRCA DNA methylation 
+##################
+# Fig 2. BRCA DNA methylation 
 simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsScores")
 
 # summary figure of COCOA BRCA results: ER set relative ranking among region sets
 esrConcentrationPlot = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
                             colsToSearch = c("rsName", "rsDescription"), 
                             pattern= "esr|eralpha") + ggtitle("Estrogen receptor region sets")
-
-
 
 erRelated = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
                     colsToSearch = c("rsName", "rsDescription"), 
@@ -109,6 +77,12 @@ plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9),
                     pattern= "h3k9")
 plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
                     colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k27me")
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k9|h3k27me")
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
+                    colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "h3k4me3")
 plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
                     colsToSearch = c("rsName", "rsDescription"), 
@@ -119,53 +93,8 @@ plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9),
 plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "mcf7|mcf-7")
-#############################
-# BRCA ATAC
-
-############################
-# MOFA CLL
-# http://msb.embopress.org/content/14/6/e8124
-# factors 1 (strong), 7 and 9 were associated with DNA methylation
-# factor 1: cell type/differentiation, factor 7: chemo-immunotherapy treatment prior to sample collection
-# factor 7: del17p, TP53 mutations, methylation of oncogenes
-simpleCache("rsScore_Cor_CLL196MOFA", assignToVariable = "rsScores")
-# View(rsScores[order(rsScores$LF1, decreasing=TRUE), ])
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                                colsToSearch = c("rsName", "rsDescription"), 
-                                pattern= "K562")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "esr|eralpha|gata3|foxa1|h3r17")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "GM12878|GM18526|GM12891|GM10847|K562|leukemia|leukaemia|lymphoma")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "h3k9")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "h3k4me1")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "h3k4me3")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "h3k36")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "h3k27me")
-# transcription factors
-# associated with immune latent factors
-plotRSConcentration(rsScores[rsScores$region_coverage >= 100, ], scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "nfkb")
-# 
-plotRSConcentration(rsScores[rsScores$region_coverage >= 100, ], scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "esr1")
-
-################################################################################
-# meta region loading profile plots, DNA methylation BRCA
+###################
+# Fig. 2c, meta region loading profile plots, DNA methylation BRCA
 
 PCsToAnnotate = paste0("PC", 1:4)
 wideGRList <- lapply(topGRList, resize, width=14000, fix="center")
@@ -231,5 +160,96 @@ profilePList[[3]]
 profilePList[[4]]
 
 
-################################################################################
+########
+### figures for PC4, Supplementary?
+View(rsScores[order(rsScores$PC4, decreasing = TRUE), ])
+#
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "mcf7|mcf-7")
+plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k9|h3k27me|suz12|ezh2")
+# rsConcentration is only plotting first 25 in bin 1 (-25 to +25 instead of 0-50)?
+
+# meta-region loading profile
+
+###############################################################################
+# Fig. 3, BRCA ATAC
+
+# PCA plots
+
+
+############################
+# Fig. 4, MOFA CLL
+# http://msb.embopress.org/content/14/6/e8124
+# factors 1 (strong), 7 and 9 were associated with DNA methylation
+# factor 1: cell type/differentiation, factor 7: chemo-immunotherapy treatment prior to sample collection
+# factor 7: del17p, TP53 mutations, methylation of oncogenes
+simpleCache("rsScore_Cor_CLL196MOFA", assignToVariable = "rsScores")
+# View(rsScores[order(rsScores$LF1, decreasing=TRUE), ])
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                                colsToSearch = c("rsName", "rsDescription"), 
+                                pattern= "K562")
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "esr|eralpha|gata3|foxa1|h3r17")
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "GM12878|GM18526|GM12891|GM10847|K562|leukemia|leukaemia|lymphoma")
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k9")
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k4me1")
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k4me3")
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k36")
+plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "h3k27me")
+# transcription factors
+# associated with immune latent factors
+plotRSConcentration(rsScores[rsScores$region_coverage >= 100, ], scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "nfkb")
+# 
+plotRSConcentration(rsScores[rsScores$region_coverage >= 100, ], scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
+                    colsToSearch = c("rsName", "rsDescription"), 
+                    pattern= "esr1")
+
+############################################################################
+# region set results distribution plot (base R plotting)
+
+
+
+# plotRSConcentration <- function(rsScores, scoreColName="PC1", 
+#                                 colsToSearch = c("rsName", "rsDescription"), 
+#                                 pattern, breaks) {
+#     
+#     rsScores = as.data.frame(rsScores)
+#     rsScores = rsScores[order(rsScores[, scoreColName], decreasing = TRUE), ]
+#     
+#     rsInd = rep(FALSE, nrow(rsScores))
+#     for (i in seq_along(colsToSearch)) {
+#         rsInd = rsInd | grepl(pattern = pattern, x = rsScores[, colsToSearch[i]], ignore.case = TRUE)
+#     }
+#     
+#     rsInd = which(rsInd)
+#     hist(rsInd, breaks = breaks)
+#     
+# }
+# 
+# plotRSConcentration(rsScores=rsScores, scoreColName = "PC5", pattern = "esr1|eralpha", breaks=seq(0, 2000, by=200))
+# plotRSConcentration(rsScores=rsScores, 
+#                     scoreColName = "PC1", 
+#                     pattern = "stat", 
+#                     breaks=seq(0, 2400, by=200))
+
+
+
 
