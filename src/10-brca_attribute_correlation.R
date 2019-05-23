@@ -1,5 +1,8 @@
 # correlate a sample attribute (like survival) with DNA methylation the run COCOA
+# also try principal component regression
+
 library(pls)
+library(MultiAssayExperiment)
 
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 
@@ -166,3 +169,31 @@ cor.test(as.numeric(as.factor(patientMetadata$ER_status)), patientMetadata$surv_
 
 
 ##################################################################################
+# Principal component regression
+# increase memory limits so that 'pcr' function will work
+Sys.getenv("R_MAX_VSIZE")
+
+########## process patient metadata 
+# filter out patients that don't have HER2 info
+row.names(patientMetadata) <- patientMetadata$subject_ID
+brcaMSE = SummarizedExperiment(brcaMList[[2]][, as.character(patientMetadata$subject_ID)], colData=patientMetadata)
+brcaMSE = brcaMSE[, brcaMSE$her2_status %in% c("Positive", "Negative", "Indeterminate", "Equivocal")]
+
+# assign numerical values based on HER2 status, positive=1, negative=-1, indeterminate/equivocal = 0
+her2_numeric = rep(-99, nrow(colData(brcaMSE)))
+her2_numeric[brcaMSE$her2_status == "Negative"] <- -1
+her2_numeric[(brcaMSE$her2_status == "Indeterminate") | (brcaMSE$her2_status == "Equivocal")] <- 0
+her2_numeric[(brcaMSE$her2_status == "Positive")] <- 1
+brcaMSE$her2_numeric = her2_numeric
+brcaMSE = brcaMSE[, brcaMSE$her2_numeric != -99]
+
+her2PCA = prcomp()
+
+test = as.data.frame(cbind(her2_numeric = brcaMSE$her2_numeric, t(assays(brcaMSE)[[1]][1:8000,])))
+testPCR = pcr(her2_numeric ~ ., data = test, validation = "CV")
+summary(testPCR)
+validationplot(testPCR)
+dim(scores(testPCR))
+class(scores(testPCR))
+scores(testPCR)[1:5, 1:5]
+plot(scores(testPCR)[, c(2,3)])
