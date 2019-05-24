@@ -197,3 +197,17 @@ dim(scores(testPCR))
 class(scores(testPCR))
 scores(testPCR)[1:5, 1:5]
 plot(scores(testPCR)[, c(2,3)])
+
+
+data(iris)
+library(pls)
+a = pcr(Sepal.Length ~ ., data = iris, validation = "CV")
+coef(a)
+validationplot(a)
+a$ncomp
+dim(fitted(a))
+plot(iris$Sepal.Length, fitted(a)[, 1, 1])
+residuals(a)
+dim(residuals(a))
+plot(iris$Sepal.Length, residuals(a)[, 1, 1])
+# https://www.rdocumentation.org/packages/pls/versions/2.7-1/topics/coef.mvr
