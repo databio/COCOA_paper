@@ -25,3 +25,25 @@ write.table(x = clinical, file = dirCode("metadata/brca_clinical_metadata.tsv"),
 
 ##############################################################
 
+library(data.table)
+
+# process BRCA metadata and connect with methylation data
+brcaAnnoPath = "C:/Users/John L/Desktop/AML/brca/Other_Clinical_Data_BRCA.csv"
+bAnno = fread(file = brcaAnnoPath)
+
+# pulling out relevant info
+bAnno$bcr_patient_barcode
+bAnno$breast_carcinoma_progesterone_receptor_status
+bAnno$breast_carcinoma_estrogen_receptor_status
+bAnnoDT = data.table(subject_ID=bAnno$bcr_patient_barcode,
+                     ER_status = bAnno$breast_carcinoma_estrogen_receptor_status,
+                     PGR_status = bAnno$breast_carcinoma_progesterone_receptor_status,
+                     her2_status = bAnno$lab_proc_her2_neu_immunohistochemistry_receptor_status,
+                     gender = bAnno$gender,
+                     ethnicity = bAnno$ethnicity, 
+                     race = bAnno$race_list,
+                     menopause_status = bAnno$menopause_status,
+                     age_diagnosis = bAnno$age_at_initial_pathologic_diagnosis)
+fileName = paste0(Sys.getenv("CODE"), 
+                  "PCARegionAnalysis/metadata/brca_metadata.csv")
+write.csv(x = bAnnoDT, file = fileName, row.names = FALSE)
