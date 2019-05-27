@@ -22,6 +22,8 @@ overwriteRSScoreResultsCaches = TRUE
 ###############################################################################
 
 simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
+
+#############
 #restrict patients included in this analysis
 patientMetadata = patientMetadata[patientMetadata$subject_ID %in% 
                                       colnames(brcaMList[["methylProp"]]), ]
@@ -176,6 +178,7 @@ Sys.getenv("R_MAX_VSIZE")
 ########## process patient metadata 
 # filter out patients that don't have HER2 info
 row.names(patientMetadata) <- patientMetadata$subject_ID
+patientMetadata = patientMetadata[colnames(brcaMList[[2]]), ]
 brcaMSE = SummarizedExperiment(brcaMList[[2]][, as.character(patientMetadata$subject_ID)], colData=patientMetadata)
 brcaMSE = brcaMSE[, brcaMSE$her2_status %in% c("Positive", "Negative", "Indeterminate", "Equivocal")]
 
@@ -186,8 +189,9 @@ her2_numeric[(brcaMSE$her2_status == "Indeterminate") | (brcaMSE$her2_status == 
 her2_numeric[(brcaMSE$her2_status == "Positive")] <- 1
 brcaMSE$her2_numeric = her2_numeric
 brcaMSE = brcaMSE[, brcaMSE$her2_numeric != -99]
+# brcaMSE$her2_numeric = as.numeric(as.factor(brcaMSE$ER_status))
 
-her2PCA = prcomp()
+###########
 
 test = as.data.frame(cbind(her2_numeric = brcaMSE$her2_numeric, t(assays(brcaMSE)[[1]][1:8000,])))
 testPCR = pcr(her2_numeric ~ ., data = test, validation = "CV")
@@ -198,6 +202,77 @@ class(scores(testPCR))
 scores(testPCR)[1:5, 1:5]
 plot(scores(testPCR)[, c(2,3)])
 
+##########
+# my own implementation of PCR
+her2PCA = prcomp(x = t(assay(brcaMSE, 1)), center = TRUE, scale. = FALSE)
+varExpl = (her2PCA$sdev^2 / sum(her2PCA$sdev^2))
+plot(varExpl[1:10])
+nPCs = sum(varExpl > 0.0025)
+her2subX = as.data.frame(cbind(her2PCA$x[, 1:nPCs], her2_numeric = brcaMSE$her2_numeric))
+a = lm(formula = her2_numeric ~ ., data = her2subX)
+b= lm(formula = her2_numeric ~ ., data = her2subX[her2subX$her2_numeric != 0,])
+summary(a)
+summary(b)
+predHer2 = predict(a, newdata = her2subX)
+predHer2 = predict(b, newdata = her2subX[her2subX$her2_numeric != 0,])
+plot(her2subX$her2_numeric[her2subX$her2_numeric != 0], predHer2)
+ggplot(data = as.data.frame(cbind(her2subX, predHer2)), mapping = aes(x = her2_numeric, y = predHer2)) + geom_boxplot(aes(group=her2_numeric))
+ggplot(data = as.data.frame(cbind(her2subX[her2subX$her2_numeric != 0, ], predHer2)), mapping = aes(x = her2_numeric, y = predHer2)) + geom_boxplot(aes(group=her2_numeric))
+wilcox.test(x = predHer2[her2subX[her2subX$her2_numeric != 0, ]$her2_numeric == -1], 
+            y= predHer2[her2subX[her2subX$her2_numeric != 0, ]$her2_numeric == 1])
+# screen based on p values
+pVals = summary(b)$coefficients[, "Pr(>|t|)"]
+sum(pVals < (0.05/nPCs))
+# get coef but don't include intercept
+chosenPCcoef = coefficients(b)[-1][pVals[-1] < (0.05/nPCs)]
+chosenPCs = names(chosenPCcoef)
+
+#weightedLoad = abs(her2PCA$rotation[, chosenPCs]) %*% abs(chosenPCcoef) 
+weightedLoad = abs(her2PCA$rotation[, chosenPCs] %*% (chosenPCcoef)) 
+hist(weightedLoad)
+colnames(weightedLoad) = "her2_weights"
+
+#########
+# visualize
+ggplot(data = her2subX, mapping = aes(x = PC1, y = PC24)) + geom_point(aes(col = her2_numeric))
+
+######## 
+# run COCOA on PCR-weighted loadings
+# run COCOA analysis
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regions_brca.R"))
+
+scoringMetric = "regionMean"
+signalCoord = brcaMList$coordinates
+PCsToAnnotate = "her2_weights"
+
+simpleCache("her2PCRrsScores", {
+    rsScore = runCOCOA(loadingMat=weightedLoad, 
+                       signalCoord = signalCoord, 
+                       GRList, 
+                       PCsToAnnotate = PCsToAnnotate, 
+                       scoringMetric=scoringMetric)
+    rsScore$rsName = rsName
+    rsScore$rsDescription= rsDescription
+    rsScore
+}, recreate=overwriteRSScoreResultsCaches)
+
+View(rsScore[order(rsScore$her2_weights, decreasing = TRUE), ])
+hist(rsScore$her2_weights)
+
+write.csv(x = rsScore, 
+          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/rsScore_brcaMethylPCR_", dataID, ".csv"),
+          quote = FALSE, row.names = FALSE)
+
+plotRSConcentration(rsScores = rsScore, scoreColName = "her2_weights", pattern = "esr|eralpha|eraalpha")
+plotRSConcentration(rsScores = rsScore, scoreColName = "her2_weights", pattern = "suz12|ezh2|h3k27me|h3k9me")
+plotRSConcentration(rsScores = rsScore, scoreColName = "her2_weights", pattern = "h3k27ac")
+plotRSConcentration(rsScores = rsScore, scoreColName = "her2_weights", pattern = "creb")
+
+cor.test(as.numeric(as.factor(patientMetadata$ER_status)), patientMetadata$her2_weights)
+
+
+#########
+# example PCR code
 
 data(iris)
 library(pls)
