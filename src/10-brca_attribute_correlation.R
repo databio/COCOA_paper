@@ -172,8 +172,6 @@ cor.test(as.numeric(as.factor(patientMetadata$ER_status)), patientMetadata$surv_
 
 ##################################################################################
 # Principal component regression
-# increase memory limits so that 'pcr' function will work
-Sys.getenv("R_MAX_VSIZE")
 
 ########## process patient metadata 
 # filter out patients that don't have HER2 info
@@ -189,12 +187,12 @@ her2_numeric[(brcaMSE$her2_status == "Indeterminate") | (brcaMSE$her2_status == 
 her2_numeric[(brcaMSE$her2_status == "Positive")] <- 1
 brcaMSE$her2_numeric = her2_numeric
 brcaMSE = brcaMSE[, brcaMSE$her2_numeric != -99]
-# brcaMSE$her2_numeric = as.numeric(as.factor(brcaMSE$ER_status))
+# as.numeric(as.factor(brcaMSE$ER_status))
 
 ###########
 
 test = as.data.frame(cbind(her2_numeric = brcaMSE$her2_numeric, t(assays(brcaMSE)[[1]][1:8000,])))
-testPCR = pcr(her2_numeric ~ ., data = test, validation = "CV")
+testPCR = pcr(her2_numeric ~ ., data = test, validation = "none")
 summary(testPCR)
 validationplot(testPCR)
 dim(scores(testPCR))
@@ -202,12 +200,38 @@ class(scores(testPCR))
 scores(testPCR)[1:5, 1:5]
 plot(scores(testPCR)[, c(2,3)])
 
-##########
+
+##########################################################################
+# partial least squares regression
+
+test = as.data.frame(cbind(her2_numeric = brcaMSE$her2_numeric, t(assays(brcaMSE)[[1]])[, 1:500]))
+testPLSR = plsr(her2_numeric ~ ., data = test, validation = "CV")
+summary(testPLSR)
+validationplot(testPLSR)
+dim(scores(testPLSR))
+class(scores(testPLSR))
+scores(testPLSR)[1:5, 1:5]
+plot(scores(testPLSR)[, c(2,3)])
+
+# PCA first to reduce dimensions then PLS
+nPCs = ncol(her2PCA$x)
+testPLSR = plsr(her2_numeric ~ ., 
+                data = as.data.frame(cbind(her2PCA$x[, 1:nPCs], her2_numeric = brcaMSE$her2_numeric)), 
+                validation = "CV")
+summary(testPLSR)
+validationplot(testPLSR)
+scores(testPLSR)[1:5, 1:5]
+RMSEP(testPLSR)
+dim(coefficients(testPLSR))
+plot(brcaMSE$her2_numeric, predict(object = testPLSR)[, , 1])
+
+##########################################################################
 # my own implementation of PCR
 her2PCA = prcomp(x = t(assay(brcaMSE, 1)), center = TRUE, scale. = FALSE)
 varExpl = (her2PCA$sdev^2 / sum(her2PCA$sdev^2))
 plot(varExpl[1:10])
 nPCs = sum(varExpl > 0.0025)
+# nPCs = ncol(her2PCA$x) - 10
 her2subX = as.data.frame(cbind(her2PCA$x[, 1:nPCs], her2_numeric = brcaMSE$her2_numeric))
 a = lm(formula = her2_numeric ~ ., data = her2subX)
 b= lm(formula = her2_numeric ~ ., data = her2subX[her2subX$her2_numeric != 0,])
@@ -235,6 +259,10 @@ colnames(weightedLoad) = "her2_weights"
 #########
 # visualize
 ggplot(data = her2subX, mapping = aes(x = PC1, y = PC24)) + geom_point(aes(col = her2_numeric))
+loadMed = apply(X = her2PCA$rotation, MARGIN = 2, median)
+plot(loadMed)
+loadRange = apply(X = her2PCA$rotation, MARGIN = 2, range)
+
 
 ######## 
 # run COCOA on PCR-weighted loadings
@@ -245,7 +273,7 @@ scoringMetric = "regionMean"
 signalCoord = brcaMList$coordinates
 PCsToAnnotate = "her2_weights"
 
-simpleCache("her2PCRrsScores", {
+simpleCache(paste0("her2PCRrsScores", "_nPCs"), {
     rsScore = runCOCOA(loadingMat=weightedLoad, 
                        signalCoord = signalCoord, 
                        GRList, 
