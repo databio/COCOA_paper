@@ -2,13 +2,13 @@
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 # library(fastICA)
 
-setwd(paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/"))
-Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/plots/"))
+setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
+Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
 patientMetadata = brcaMetadata # already screened out patients with incomplete ER or PGR mutation status
 # there should be 657 such patients
 
 # DNA methylation data
-setCacheDir(paste0(Sys.getenv("PROCESSED"), "brca_PCA/RCache/"))
+setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 
 #############################################################################
 # script specific IDs
@@ -85,6 +85,66 @@ View(rsScore[order(rsScore$PC1, decreasing = TRUE), ])
 View(rsScore[order(rsScore$PC2, decreasing = TRUE), ])
 View(rsScore[order(rsScore$PC4, decreasing = TRUE), ])
 hist(rsScore$PC1)
+
+########################
+# function to combine p values for features that overlap with a region set
+
+combinePValRS <- function(dataDT, 
+                          regionGR,
+                          signalCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))]) { 
+    total_region_number <- length(regionGR)
+    mean_region_size <- round(mean(width(regionGR)), 1)
+    dataGR <- COCOA:::BSdtToGRanges(list(dataDT))[[1]]
+    OL <- findOverlaps(query = regionGR, subject = dataGR)
+    if (length(OL) == 0) {
+        return(NULL)
+    }
+    olCpG <- subjectHits(OL)
+    # nonOLCpG <- (seq_len(nrow(dataDT)))[-olCpG]
+    cytosine_coverage <- length(unique(olCpG))
+    region_coverage <- length(unique(queryHits(OL)))
+    combineP <- function(pval) {
+        return(pchisq((sum(log(pval))*-2), df=length(pval)*2, lower.tail=F))
+    }
+    pVals <- vapply(X = signalCols, 
+                    FUN = function(x) combineP(as.numeric(as.matrix(dataDT[olCpG, x, with = FALSE]))), FUN.VALUE = 1)
+    wRes <- data.frame(t(pVals), cytosine_coverage, region_coverage, 
+                       total_region_number, mean_region_size)
+    return(wRes)
+}
+
+
+featurePCCorPVal = apply(X = pcScores[, PCsToAnnotate], MARGIN = 2, function(y) apply(X = centeredMData, 1, FUN = function(x) cor.test(x = x, y)$p.value))
+
+hist(featurePC)
+hist(-1* log(x = featurePCCorPVal[,"PC1"], base = 10))
+hist(-1* log(x = featurePCCorPVal[,"PC2"], base = 10))
+hist(-1* log(x = featurePCCorPVal[,"PC3"], base = 10))
+
+##################################
+
+featurePCCorPVal = featurePCCorPVal * nrow(featurePCCorPVal)
+# maximum p val can be 1
+featurePCCorPVal[featurePCCorPVal > 1] = 1
+
+scoringMetric = "regionMean"
+
+featurePCCorPVal = cbind(signalCoord, featurePCCorPVal)
+
+simpleCache("combinePValScores", {
+    rsScore = rbindlist(lapply(X = GRList[1:1000], FUN = function(x) combinePValRS(dataDT = featurePCCorPVal, regionGR = x)))
+    rsScore$rsName = rsName
+    rsScore$rsDescription= rsDescription
+    rsScore
+}, recreate=overwriteRSScoreResultsCaches)
+
+View(rsScore[order(rsScore$PC1, decreasing = TRUE), ])
+View(rsScore[order(rsScore$PC2, decreasing = TRUE), ])
+View(rsScore[order(rsScore$PC4, decreasing = TRUE), ])
+hist(rsScore$PC1)
+hist(-1* log(x = rsScore$PC1, base = 10))
+
+
 
 ##############################################################################
 # visualization pipeline
