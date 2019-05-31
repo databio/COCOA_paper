@@ -3,20 +3,24 @@
 
 source(paste0(Sys.getenv("CODE"),"COCOA_paper/src/00-init.R"))
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
+
+# parameters for COCOA_vis_pipeline.R
+plotSubdir = "03_brca_COCOA_Vis"
+inputID = "sharedC"
+
+# a cache is created in the script
+setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/")) 
 ########################################
 source(paste0(Sys.getenv("CODE"), "/COCOA_paper/src/load_process_regions_brca.R"))
 
 #################################################################
 
-# parameters for COCOA_vis_pipeline.R
-plotSubdir = "03_brca_COCOA_Vis"
-# a cache is created in the script
-setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/")) 
+
 simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "bigSharedC", reload = TRUE)
 # screen out patients without ER/PGR status
 methylData = bigSharedC[["methylProp"]][, 
                                           colnames(bigSharedC[["methylProp"]]) %in% patientMetadata[, subject_ID]] 
-inputID = "sharedC"
+
 
 # GRList # from load_process_regions pipeline
 coordinateDT = bigSharedC$coordinates
@@ -24,13 +28,13 @@ allMPCAString = "allMPCA_657"
 simpleCache(allMPCAString, assignToVariable = "mPCA", reload = TRUE)
 loadingMat = mPCA$rotation
 # use rsEnString to specify?
-simpleCache("rsEnrichment_657", assignToVariable = "rsEnrichment", reload = TRUE)
+simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsEnrichment", reload = TRUE)
 simpleCache("rsEnrichmentTop10_657", assignToVariable = "rsEnrichmentTop10", reload = TRUE)
 # TODO make sure GRList and rsEnrichment are both in the same order/with same data
 names(GRList) <- paste0(rsEnrichment$rsName, " : ", rsEnrichment$rsDescription)
 GRList = GRList[!is.na(rsEnrichment$PC1)]
 rsEnrichment=rsEnrichment[!is.na(rsEnrichment$PC1), ]
-rsEnSortedInd= rsRankingIndex(rsEnrichment = rsEnrichment, PCsToAnnotate = paste0("PC", 1:10))
+rsEnSortedInd= rsRankingIndex(rsScores = rsEnrichment, PCsToAnnotate = paste0("PC", 1:10))
 
 rsEnrichmentTop10 = rsEnrichmentTop10[!is.na(rsEnrichmentTop10$PC1), ]
 PCSTOANNOTATE = paste0("PC", 1:10)
@@ -148,3 +152,29 @@ for (j in seq_along(PCofInterest)) {
 
 
 ####### generating meta-region plots with only top 4 region sets
+
+
+###############################################################################
+# meta-region plots for H3K27me3 and H3K9me3, expand to wider region than 14 kb
+
+pc4Ind = unique(unlist(rsEnSortedInd[1:20, 4]))
+
+# are 14 kb regions of histone mod. region sets overlapping with each other?
+# expand to 14 kb
+expGRList = resize(x = GRList[pc4Ind], width = 14000, fix = "center")
+names(expGRList)
+regionNum = rep(0, length(expGRList))
+normalSelfOL = rep(0, length(expGRList))
+expSelfOL = rep(0, length(expGRList))
+for (i in seq_along(expGRList)) {
+    normalOL =  findOverlaps(query = GRList[[pc4Ind[i]]], GRList[[pc4Ind[i]]])
+    expOL = findOverlaps(query = expGRList[[i]], expGRList[[i]])
+    regionNum[i] = length(expGRList[[i]])
+    normalSelfOL[i] = length(normalOL)
+    expSelfOL[i] = (length(expOL) - length(expGRList[[i]])) / length(expGRList[[i]])
+}
+
+selfOLInfo = cbind(regionNum, normalSelfOL, expSelfOL)
+
+
+
