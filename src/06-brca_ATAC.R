@@ -1,26 +1,26 @@
 
 
 
-# project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "brca_PCA/"))
+# project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/"))
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 library(ggplot2)
 # library(fastICA)
 
 # 
-setwd(paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/"))
-Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/plots/"))
+setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
+Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
 patientMetadata = brcaMetadata # already screened out patients with incomplete ER or PGR mutation status
 # there should be 657 such patients
 set.seed(1234)
 
 
 # DNA methylation data
-setCacheDir(paste0(Sys.getenv("PROCESSED"), "brca_PCA/RCache/"))
+setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 
 #############################################################################
 
-counts = read.table(file = "/home/jtl2hk/processed/brca_PCA/TCGA-ATAC_BRCA_peaks_counts.tsv", sep = "\t", header = TRUE)
-load(file="/home/jtl2hk/processed/brca_PCA/RCache/topRSCombined.RData")
+counts = read.table(file = "/home/jtl2hk/processed/COCOA_paper/TCGA-ATAC_BRCA_peaks_counts.tsv", sep = "\t", header = TRUE)
+load(file="/home/jtl2hk/processed/COCOA_paper/RCache/topRSCombined.RData")
 signalCoord = topRSCombined
 
 counts[1:5, 1:5]
@@ -47,7 +47,7 @@ colorClusterPlots(clusteredDF = pcDF, plotCols = c("PC1", "PC2"), colorByCols = 
 plotPairwiseColPCs(pcaWithAnno = pcDF, 
                    pcsToPlot = paste0("PC", 1:10), 
                    colorByCols = c("ER_status"),#PGR_status", "her2_status"), 
-                   plotDir = "/home/jtl2hk/processed/brca_PCA/analysis/plots/atacPCA/")
+                   plotDir = "/home/jtl2hk/processed/COCOA_paper/analysis/plots/atacPCA/")
 
 
 atacTSNE = dimRedOnRS(regionSet = topRSCombined, methylData = counts, mCoord = signalCoord,  drMethod = "tsne", perplexity = 20)
@@ -158,3 +158,90 @@ dev.off()
 #                                    END                                       #
 #                                                                              #
 ################################################################################
+
+
+
+
+# project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/"))
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
+
+setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
+#patientMetadata = brcaMetadata # already screened out patients with incomplete ER or PGR mutation status
+# there should be 657 such patients
+set.seed(1234)
+plotSubdir = "06-brcaATAC/"
+
+#########################################################################################################
+
+library(data.table)
+setwd("/sfs/lustre/allocations/shefflab/processed/COCOA_paper/analysis/atac/scores/brca/tile_500-10_hg38")
+
+countDT = fread("tcga_coverage.tab")
+
+dim(countDT)
+head(countDT)
+# row.names(countDT) = countDT[, 1]
+countDT[, V1 := NULL]
+
+# region sums
+
+# sample sums
+cSum = colSums(countDT)
+rSum = rowSums(countDT)
+sum(rSum == 0)
+
+max(countDT)
+
+#######################################################################
+# working locally
+
+# aPCA = readRDS(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/TCGA-ATAC_BRCA_pca.Rds"))
+aPCA = pca
+# rsScores =  readRDS(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/TCGA-ATAC_BRCA_rssTotal.Rds"))
+rsScores= regionSetScoresTotal
+aMetadata = read.csv(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/tcga_brca_metadata.csv"))
+load(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/brca_peak_pca_sample_names.RData")) # pcaNames
+dim(aMetadata)
+length(unique(aMetadata$subject_ID))
+table(aMetadata$ER_status)
+View(rsScores[order(rsScores$PC2, decreasing = TRUE), ])
+
+plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC2", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC3", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC4", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
+plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "regionSetName", pattern = "ezh2|suz12")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC2", colsToSearch = "regionSetName", pattern = "ezh2|suz12|h3k27me")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC3", colsToSearch = "regionSetName", pattern = "ezh2|suz12")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC4", colsToSearch = "regionSetName", pattern = "ezh2|suz12")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC2", colsToSearch = "regionSetName", pattern = "runx|tal1|gata|lmo2|PU1|lyl1|FLI1|evi1")
+
+########## make PCA plot
+
+pcScore = data.frame(aPCA$x, pcaNames)
+pcScoreAnno= merge(pcScore, aMetadata, by.x = "pcaNames", by.y= "subject_ID", all.x=TRUE)
+colorClusterPlots(pcScoreAnno, plotCols = paste0("PC", c(1,2)), colorByCols = "ER_status")
+ggplot(data = pcScoreAnno, mapping = aes(x = PC1, y= PC2)) + geom_point(aes(col=ER_status), size = 4, alpha=0.5) + theme_classic()
+pcScoreAnno$ER_status[pcScoreAnno$ER_status == ""] = NA
+plot(as.matrix(pcScoreAnno[,c("PC1", "PC2")]))
+
+
+######### make "meta-region loading profiles"
+
+# load region sets
+source(ffProjCode("load_process_regions_brca.R"))
+
+topInd = rsRankingIndex(rsScores = rsScores, PCsToAnnotate = "PC1")
+topPC1Ind = topInd[, "PC1"]
+topPC2Ind = topInd[, "PC2"]
+
+topRSList = GRList[unique(c(topPC1Ind, topPC2Ind))]
+
+makeMetaRegionPlots(loadingMat, signalCoord, GRList, rsNames, PCsToAnnotate, binNum) {
+    
+
+ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir,
+                         "/metaRegionLoadingProfiles", 
+                         inputID, ".pdf"), plot = multiProfileP, device = "pdf", limitsize = FALSE)
+
+    

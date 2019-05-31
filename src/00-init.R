@@ -156,6 +156,66 @@ createCorFeatureMat = function(dataMat, featureMat,
     # hist(corLoadRatio[, "PC10"])
 }
 
+################## not sure whether to add this one to COCOA
+# convenience function to quickly make meta-region loading profiles
+# first calculates profiles, then normalizes and plots
+# output is marrangeGrob and should be saved with ggsave
+makeMetaRegionPlots <- function(loadingMat, signalCoord, GRList, rsNames, PCsToAnnotate, binNum) {
+    
+    pcProf = lapply(X = GRList, function(x) getLoadingProfile(loadingMat = loadingMat, 
+                                                              signalCoord = signalCoord, 
+                                                              regionSet = x, PCsToAnnotate = PCsToAnnotate,
+                                                              binNum = binNum))
+    
+    pcP = copy(pcProf)
+    pcP = lapply(pcP,FUN = as.data.table)
+    
+    
+    # average loading value from each PC to normalize so PCs can be compared with each other
+    avLoad = apply(X = loadingMat[, PCsToAnnotate], MARGIN = 2, FUN = function(x) mean(abs(x)))
+    
+    # normalize
+    # pcP = lapply(pcP, FUN = function(x) t(apply(X = x, MARGIN = 1, FUN = function(y) y - c(0, avLoad))))
+    pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=PCsToAnnotate, z = avLoad)])
+    pcP = lapply(pcP, FUN = function(x) data.table(regionGroupID=1:nrow(x), x))
+    
+    # for the plot scale
+    maxVal = max(sapply(pcP, FUN = function(x) max(x[, .SD, .SDcols=PCsToAnnotate])))
+    minVal = min(sapply(pcP, FUN = function(x) min(x[, .SD, .SDcols=PCsToAnnotate])))
+    
+    # convert to long format for plots
+    pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", PCsToAnnotate))
+    pcP = lapply(X = pcP, as.data.table)
+    pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = PCsToAnnotate)])
+    
+    # stack overflow for wrapping plot title
+    wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n") 
+    
+    
+    profilePList = list()
+    for (i in seq_along(pcP)) {
+        
+        thisRS = pcP[[i]]
+        
+        
+        
+        profilePList[[i]] = ggplot(data = thisRS, mapping = aes(x =regionGroupID , y = loading_value)) + 
+            geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets = "PC") + 
+            ggtitle(label = wrapper(rsNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
+            ylab("Normalized Loading Value") + 
+            theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+        profilePList[[i]]
+        # plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
+        # 
+        
+        #xLabels = xAxisForRegionPlots2()
+        
+    }
+    multiProfileP = marrangeGrob(profilePList, ncol = 2, nrow = 2)
+    
+    return(multiProfileP)
+}
+
 
 ########## MOFA/CLL analysis #########################
 # gets coordinates for CLL methyl
