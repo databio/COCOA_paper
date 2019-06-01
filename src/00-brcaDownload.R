@@ -58,6 +58,9 @@ bAnnoDT = data.table(subject_ID=bAnno$bcr_patient_barcode,
                      her2_IHC_score = bAnno$her2_immunohistochemistry_level_result)
 # previously her2_status_IHC listed as her2_status but changed for increased clarity
 
+# get rid of any rows that are complete duplicates
+bAnnoDT = unique(bAnnoDT)
+
 write.csv(x = bAnnoDT, file = ffProjCode("metadata/brca_metadata.csv"), row.names = FALSE)
 
 write.csv(x = clinical2, file = ffProjCode("metadata/brca_drug.csv"), row.names = FALSE)

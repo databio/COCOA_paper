@@ -1,19 +1,19 @@
 # library(projectInit)
 
-# project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "brca_PCA/"))
+# project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/"))
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 # library(fastICA)
 
 # 
-setwd(paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/"))
-Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/plots/"))
+setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
+Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
 patientMetadata = brcaMetadata # already screened out patients with incomplete ER or PGR mutation status
 # there should be 657 such patients
 set.seed(1234)
 
 
 # DNA methylation data
-setCacheDir(paste0(Sys.getenv("PROCESSED"), "brca_PCA/RCache/"))
+setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 
 #############################################################################
 
@@ -135,7 +135,7 @@ enrichResults = COCOA_pipeline(mData=NULL, coordinates=brcaMList[["coordinates"]
 
 rsEnrichment = enrichResults[[1]]
 write.csv(x = rsEnrichment, 
-              file = paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/sheets/PC_Enrichment_All_Shared_Cs_692_rsMean.csv"),
+              file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/PC_Enrichment_All_Shared_Cs_692_rsMean.csv"),
               quote = FALSE, row.names = FALSE)
 
 # running again for top 10 most variable CpGs
@@ -153,7 +153,7 @@ enrichResults = COCOA_pipeline(mData=NULL, coordinates=NULL,
 
 rsEnrichmentTop10 = enrichResults[[2]]
 write.csv(x = rsEnrichmentTop10, 
-          file = paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_657.csv"),
+          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_657.csv"),
           quote = FALSE, row.names = FALSE)
 
 
@@ -176,7 +176,7 @@ enrichResults = COCOA_pipeline(mData=filteredMData, coordinates=brcaMList[["coor
 
 rsEnrichment = enrichResults
 write.csv(x = rsEnrichment, 
-          file = paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/sheets/PC_Enrichment_All_Shared_Cs_ranksum_657.csv"),
+          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/PC_Enrichment_All_Shared_Cs_ranksum_657.csv"),
           quote = FALSE, row.names = FALSE)
 
 # for top 10% variable CpGs
@@ -193,7 +193,7 @@ enrichResults = COCOA_pipeline(mData=filteredMData, coordinates=brcaMList[["coor
                                overwriteResultsCaches = TRUE) 
 rsEnrichmentTop10 = enrichResults
 write.csv(x = rsEnrichmentTop10, 
-          file = paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_ranksum_657.csv"),
+          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_ranksum_657.csv"),
           quote = FALSE, row.names = FALSE)
 
 #################################################################
@@ -218,7 +218,7 @@ rsEnrichment = enrichResults
 
 
 write.csv(x = rsEnrichment, 
-          file = paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/sheets/PC_Enrichment_All_Shared_Cs_rawCpG_657.csv"),
+          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/PC_Enrichment_All_Shared_Cs_rawCpG_657.csv"),
           quote = FALSE, row.names = FALSE)
 
 enrichResults = COCOA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 

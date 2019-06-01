@@ -30,6 +30,7 @@ brcaMetadata = brcaMetadata[brcaMetadata$PGR_status %in%
                                 c("Positive", "Negative"), ]
 
 
+# indexed clinical data (brca_clinical_metadata.tsv) has more up to date follow up info
 brcaMetadata2 = read.table(file = paste0(Sys.getenv("CODE"), 
                                          "COCOA_paper/metadata/brca_clinical_metadata.tsv"), 
                            sep = "\t", header = TRUE)
