@@ -107,4 +107,29 @@ hist(absMedCor)
 
 ##################################################################################
 # try principal component regression instead
+# my own implementation of PCR
+filtProt
+allMPCAString = "allMPCA_657"
+simpleCache(allMPCAString, assignToVariable = "mPCA")
+varExpl = (mPCA$sdev^2 / sum(mPCA$sdev^2))
+plot(varExpl[1:10])
+nPCs = sum(varExpl > 0.0025)
+# nPCs = ncol(mPCA$x) - 10
+sharedPCASamples = rownames(filtProt) %in% rownames(mPCA$x)
+mPCASubX = as.data.frame(cbind(mPCA$x[rownames(filtProt)[sharedPCASamples], 1:nPCs], proteinLevel = filtProt$STAT5ALPHA[sharedPCASamples]))
+a = lm(formula = proteinLevel ~ ., data = mPCASubX)
+summary(a)
+predHer2 = predict(a, newdata = mPCASubX)
+plot(predHer2, mPCASubX$proteinLevel)
+# screen based on p values
+pVals = summary(a)$coefficients[, "Pr(>|t|)"]
+sum(pVals < 0.05)
+sum(pVals < (0.05/nPCs))
+# get coef but don't include intercept
+chosenPCcoef = coefficients(b)[-1][pVals[-1] < (0.05/nPCs)]
+chosenPCs = names(chosenPCcoef)
 
+#weightedLoad = abs(her2PCA$rotation[, chosenPCs]) %*% abs(chosenPCcoef) 
+weightedLoad = abs(her2PCA$rotation[, chosenPCs] %*% (chosenPCcoef)) 
+hist(weightedLoad)
+colnames(weightedLoad) = "proteinLevel"
