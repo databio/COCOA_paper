@@ -273,7 +273,7 @@ scoringMetric = "regionMean"
 signalCoord = brcaMList$coordinates
 PCsToAnnotate = "her2_weights"
 
-simpleCache(paste0("her2PCRrsScores", "_nPCs"), {
+simpleCache(paste0("her2PCRrsScores", "_", nPCs), {
     rsScore = runCOCOA(loadingMat=weightedLoad, 
                        signalCoord = signalCoord, 
                        GRList, 

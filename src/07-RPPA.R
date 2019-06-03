@@ -108,15 +108,16 @@ hist(absMedCor)
 ##################################################################################
 # try principal component regression instead
 # my own implementation of PCR
-filtProt
+
 allMPCAString = "allMPCA_657"
 simpleCache(allMPCAString, assignToVariable = "mPCA")
 varExpl = (mPCA$sdev^2 / sum(mPCA$sdev^2))
 plot(varExpl[1:10])
-nPCs = sum(varExpl > 0.0025)
+# nPCs = sum(varExpl > 0.0025)
 # nPCs = ncol(mPCA$x) - 10
 sharedPCASamples = rownames(filtProt) %in% rownames(mPCA$x)
-mPCASubX = as.data.frame(cbind(mPCA$x[rownames(filtProt)[sharedPCASamples], 1:nPCs], proteinLevel = filtProt$STAT5ALPHA[sharedPCASamples]))
+nPCs = sum(sharedPCASamples) - 10
+mPCASubX = as.data.frame(cbind(mPCA$x[rownames(filtProt)[sharedPCASamples], 1:nPCs], proteinLevel = filtProt$NFKBP65_pS536[sharedPCASamples]))
 a = lm(formula = proteinLevel ~ ., data = mPCASubX)
 summary(a)
 predHer2 = predict(a, newdata = mPCASubX)
@@ -126,10 +127,40 @@ pVals = summary(a)$coefficients[, "Pr(>|t|)"]
 sum(pVals < 0.05)
 sum(pVals < (0.05/nPCs))
 # get coef but don't include intercept
-chosenPCcoef = coefficients(b)[-1][pVals[-1] < (0.05/nPCs)]
+chosenPCcoef = coefficients(a)[-1][pVals[-1] < (0.05)]
 chosenPCs = names(chosenPCcoef)
 
 #weightedLoad = abs(her2PCA$rotation[, chosenPCs]) %*% abs(chosenPCcoef) 
-weightedLoad = abs(her2PCA$rotation[, chosenPCs] %*% (chosenPCcoef)) 
+weightedLoad = abs(mPCA$rotation[, chosenPCs] %*% (chosenPCcoef)) 
 hist(weightedLoad)
 colnames(weightedLoad) = "proteinLevel"
+
+
+##############################################################################
+# run COCOA analysis
+
+scoringMetric = "regionMean"
+signalCoord = brcaMList$coordinates
+PCsToAnnotate = "proteinLevel"
+protein = "NFKB"
+
+simpleCache(paste0("rppa_pcr_", protein, "_rsScores"), {
+    rsScore = runCOCOA(loadingMat=weightedLoad, 
+                       signalCoord = signalCoord, 
+                       GRList, 
+                       PCsToAnnotate = PCsToAnnotate, 
+                       scoringMetric=scoringMetric)
+    rsScore$rsName = rsName
+    rsScore$rsDescription= rsDescription
+    rsScore
+}, recreate=TRUE)
+
+View(rsScore[order(rsScore$proteinLevel, decreasing = TRUE), ])
+hist(rsScore$proteinLevel)
+plotRSConcentration(rsScores = rsScore, scoreColName = "proteinLevel", 
+                    colsToSearch = c("rsName", "rsDescription"), pattern = "nfkb|nfkappa")
+
+dataID = ""
+write.csv(x = rsScore, 
+          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/rsScore_methylCor_RPPA", dataID, ".csv"),
+          quote = FALSE, row.names = FALSE)
