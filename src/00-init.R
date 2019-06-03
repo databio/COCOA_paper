@@ -15,7 +15,7 @@ source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R" ))
 library(MultiAssayExperiment)
 library(folderfun)
 # the AML init script will set a different plots directory
-# Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/plots/"))
+# Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
 
 # source(paste0(Sys.getenv("CODE"), "COCOA/R/COCOA.R"))
 # source(paste0(Sys.getenv("CODE"), "COCOA/R/visualization.R"))
@@ -139,6 +139,9 @@ createCorFeatureMat = function(dataMat, featureMat,
         featureMeans = colMeans(featureMat)
         # centering before calculating correlation
         featureMat = t(apply(X = featureMat, MARGIN = 1, function(x) x - featureMeans))
+        if (dim(featureMat)[1] == 1) {
+            featureMat = t(featureMat)
+        }
         featureMat = as.matrix(featureMat)
     }
     
