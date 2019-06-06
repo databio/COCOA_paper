@@ -64,6 +64,7 @@ rsDescription = c(lolaCoreRegionAnno$description,
 # cleaning up since there were many large objects
 if (exists("GRList")) {
     rm(list = c("GRList1", "GRList2", "GRList3", "regionSetDB", "regionSetDB2"))
+    gc()
 } else {
     warning("Loading regions was not successful.")
 }

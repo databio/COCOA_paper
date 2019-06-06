@@ -160,6 +160,81 @@ createCorFeatureMat = function(dataMat, featureMat,
     # hist(corLoadRatio[, "PC10"])
 }
 
+# @param rsScore numeric A single number that is the score of a given region set
+# for this PC ("pc")
+# @param list Each item in this list is a matrix that has 
+# @param numeric The number of regions from the region set that overlapped 
+# with any of the data ("genomicSignal")
+# returns a list of two matrices, one matrix for upper bounds 
+# and one matrix for lower bounds
+getPValRange <- function(rsScore, nullDistList, pc, regionCoverage) {
+    sapply(X = nullDistList, FUN = function(x) sum(x[ , pc] > rsScore) / nrow(x))
+}
+getPValRangeVec <- function(rsScore, nullDistList, pc, regionCoverage) {
+    getPValRange(rsScore, nullDistList, pc, regionCoverage)
+}
+
+getUpperBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage) {
+    
+    getUpperBoundSingle <- function(rsScore, nullDistList, 
+                                    sampleSize, pc, regionCoverage) {
+        belowInd = which(sampleSize < regionCoverage)
+        
+        # check for empty vector (none were below)
+        if (length(belowInd) == 0) {
+            # worst possible p value
+            bound = 1
+            return(bound)
+        }
+        
+        lastBelow = belowInd[length(belowInd)]
+        
+        bound = sum(nullDistList[[lastBelow]][ , pc] > rsScore) / nrow(nullDistList[[lastBelow]])
+        
+        # if zero, upper bound is lowest possible known p val
+        if (bound == 0) {
+            bound = 1 / nrow(nullDistList[[lastBelow]])
+        }
+        
+        return(bound)
+    }
+    
+    # get upper bound for all scores in vector (rsScore and regionCoverage are vectors
+    # of the same length)
+    bound = mapply(FUN = function(x, y) getUpperBoundSingle(rsScore = x, 
+                                                            nullDistList = nullDistList, sampleSize=sampleSize, 
+                                                            pc=pc, regionCoverage = y), 
+                   x = rsScore, y = regionCoverage)
+    return(bound)
+    
+} 
+getLowerBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage) {
+    
+    getLowerBoundSingle <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage) {
+        aboveInd = which(sampleSize > regionCoverage)
+        
+        # check for empty vector (none were below)
+        if (length(aboveInd) == 0) {
+            # best possible p value
+            bound = 0
+            return(bound)
+        }
+        
+        firstAbove = aboveInd[1]
+        bound = sum(nullDistList[[firstAbove]][ , pc] > rsScore) / nrow(nullDistList[[firstAbove]])
+        return(bound)
+    }
+    
+    # get lower bound for all scores in vector (rsScore and regionCoverage are vectors
+    # of the same length)
+    bound = mapply(FUN = function(x, y) getLowerBoundSingle(rsScore = x, 
+                                                            nullDistList = nullDistList, sampleSize=sampleSize, 
+                                                            pc=pc, regionCoverage = y), 
+                   x = rsScore, y = regionCoverage)
+    return(bound)
+    
+} 
+
 ################## not sure whether to add this one to COCOA
 # convenience function to quickly make meta-region loading profiles
 # first calculates profiles, then normalizes and plots

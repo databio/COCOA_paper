@@ -84,7 +84,13 @@ dev.off()
 nPerm = 100000
 sampleSize = c(10, 100, 1000, 10000, 100000)
 PCsToAnnotate = c(paste0("PC", 1:10))
-nullDistList = multiNullDist(loadingMat, PCsToAnnotate, nPerm = nPerm, sampleSize = sampleSize)
+loadingMat = mPCA$rotation
+# MIRA:::setLapplyAlias(cores = 1)
+# set.seed( 1234, kind = "L'Ecuyer-CMRG" )
+simpleCache("nullDistList100k", {
+    nullDistList = multiNullDist(loadingMat, PCsToAnnotate, nPerm = nPerm, sampleSize = sampleSize)
+    nullDistList
+}, assignToVariable = "nullDistList")
 for (j in seq_along(PCsToAnnotate)) {
     pcOfInt = PCsToAnnotate[j]
     pdf(ffPlot(paste0(plotSubDir, "nullDist", pcOfInt, "_", nPerm, "Perm.pdf"))) 
@@ -94,102 +100,38 @@ for (j in seq_along(PCsToAnnotate)) {
     dev.off()
 }
 sum(nullDistList[[5]][, "PC1"] < 0.001)
-simpleCache("nullDistList100k", {
-    nullDistList
-})
 
-# @param rsScore numeric A single number that is the score of a given region set
-# for this PC ("pc")
-# @param list Each item in this list is a matrix that has 
-# @param numeric The number of regions from the region set that overlapped 
-# with any of the data ("genomicSignal")
-# returns a list of two matrices, one matrix for upper bounds 
-# and one matrix for lower bounds
-getPValRange <- function(rsScore, nullDistList, pc, regionCoverage) {
-    sapply(X = nullDistList, FUN = function(x) sum(x[ , pc] > rsScore) / nrow(x))
-}
-getUpperBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage) {
-    
-    getUpperBoundSingle <- function(rsScore, nullDistList, 
-                                    sampleSize, pc, regionCoverage) {
-        belowInd = which(sampleSize < regionCoverage)
-        
-        # check for empty vector (none were below)
-        if (length(belowInd) == 0) {
-            # worst possible p value
-            bound = 1
-            return(bound)
-        }
-        
-        lastBelow = belowInd[length(belowInd)]
-        
-        bound = sum(nullDistList[[lastBelow]][ , pc] > rsScore) / nrow(nullDistList[[lastBelow]])
-        
-        # if zero, upper bound is lowest possible known p val
-        if (bound == 0) {
-            bound = 1 / nrow(nullDistList[[lastBelow]])
-        }
-        
-        return(bound)
-    }
-    
-    # get upper bound for all scores in vector (rsScore and regionCoverage are vectors
-    # of the same length)
-    bound = mapply(FUN = function(x, y) getUpperBoundSingle(rsScore = x, 
-                                                      nullDistList = nullDistList, sampleSize=sampleSize, 
-                                                      pc="PC1", regionCoverage = y), 
-                   x = rsScore, y = regionCoverage)
-    return(bound)
-    
-} 
-getLowerBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage) {
-    
-    getLowerBoundSingle <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage) {
-        aboveInd = which(sampleSize > regionCoverage)
-        
-        # check for empty vector (none were below)
-        if (length(aboveInd) == 0) {
-            # best possible p value
-            bound = 0
-            return(bound)
-        }
-        
-        firstAbove = aboveInd[1]
-        bound = sum(nullDistList[[firstAbove]][ , pc] > rsScore) / nrow(nullDistList[[firstAbove]])
-        return(bound)
-    }
-    
-    # get lower bound for all scores in vector (rsScore and regionCoverage are vectors
-    # of the same length)
-    bound = mapply(FUN = function(x, y) getLowerBoundSingle(rsScore = x, 
-                                                      nullDistList = nullDistList, sampleSize=sampleSize, 
-                                                      pc="PC1", regionCoverage = y), 
-                   x = rsScore, y = regionCoverage)
-    return(bound)
-
-} 
 
 pRange = getPValRange(rsScore = 0.0015, nullDistList=nullDistList, "PC2")
 plot(-log(pRange, base=10))
 
-getPValRangeVec <- function(rsScore, nullDistList, pc, regionCoverage) {
-    getPValRange(rsScore, nullDistList, pc, regionCoverage)
-}
+
 
 # convert to scores (regionMean) to p values
 simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsScores")
-pValPC1 = getUpperBound(rsScore = rsScores$PC1, nullDistList = nullDistList, sampleSize=sampleSize, 
-                                          pc="PC1", regionCoverage = rsScores$region_coverage)
-upperBoundPVal = apply(X = rsScores[, PCsToAnnotate, with=FALSE], MARGIN = 2, 
-                            FUN = function(x) getUpperBound(rsScore = x, 
-                                                            nullDistList = nullDistList, sampleSize=sampleSize, 
-                                                            pc="PC1", 
-                                                            regionCoverage = rsScores$region_coverage))
+
+upperBoundPVal = list()
+for (i in seq_along(PCsToAnnotate)) {
+    upperBoundPVal[[i]] = getUpperBound(rsScore = as.numeric(as.matrix(rsScores[, PCsToAnnotate[i], with=FALSE])), 
+                                        nullDistList = nullDistList, 
+                                        sampleSize=sampleSize, 
+                                        pc=PCsToAnnotate[i], 
+                                        regionCoverage = rsScores$region_coverage)
+}
+
+upperBoundPVal = do.call(cbind, upperBoundPVal)
+colnames(upperBoundPVal) <- PCsToAnnotate
+upperBoundPVal = as.data.table(upperBoundPVal)
 upperBoundPVal = cbind(upperBoundPVal, rsScores[, c("cytosine_coverage", "region_coverage", 
                                                               "total_region_number", "mean_region_size",
                                                               "rsName", "rsDescription")])
 View(upperBoundPVal[order(upperBoundPVal$PC1, decreasing = FALSE), ])
 head(upperBoundPVal[order(upperBoundPVal$PC1, decreasing = FALSE), ]$PC1)
+View(rsScores[order(cbind(-log(upperBoundPVal$PC1, base=10), rsScores$PC1), decreasing = TRUE), ])
+colnames(upperBoundPVal) <- paste0(colnames(upperBoundPVal), "_pval")
+rsScores = cbind(rsScores, upperBoundPVal)
+View(setorderv(rsScores, cols = c("PC1_pval", "PC1"), order = c(1L, -1L)))
+plot(rsScores$PC1)
 
 pdf(ffPlot(paste0(plotSubDir, "rsScoresPValHist", nPerm, "PermBRCA657.pdf")))
 for (i in seq_along(PCsToAnnotate)) {

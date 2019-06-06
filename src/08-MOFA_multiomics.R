@@ -16,8 +16,13 @@ setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 
 plotSubdir = "08-MOFA_multiomics/"
 dataID = "CLL196" # 657 patients with both ER and PGR info in metadata, 692 total
-rsScoreCacheName = paste0("rsScore_Cor_", dataID)
+rsScoreCacheName = paste0("rsScore_Cor_", dataID, "MOFA")
 overwriteRSScoreResultsCaches = TRUE
+
+
+if (!dir.exists(ffPlot(plotSubdir))) {
+    dir.create(ffPlot(plotSubdir))
+}
 
 ###############################################################################
 
@@ -156,7 +161,8 @@ simpleCache(rsScoreCacheName, {
     rsScore$rsName = rsName
     rsScore$rsDescription= rsDescription
     rsScore
-}, recreate=overwriteRSScoreResultsCaches)
+}, recreate=overwriteRSScoreResultsCaches, assignToVariable = "rsScore")
+rsScores = as.data.table(rsScore)
 
 View(rsScore[order(rsScore$LF1, decreasing = TRUE), ])
 View(rsScore[order(rsScore$LF2, decreasing = TRUE), ])
@@ -169,3 +175,64 @@ write.csv(x = rsScore,
           quote = FALSE, row.names = FALSE)
 
 
+####################################################################
+# permutation based analysis
+featurePCCor = inferredMethylWeightsMOFA
+signalCoord = methCoord
+# only latent factors with no NA's
+PCsToAnnotate = paste0("LF", c(1:3, 5:7, 9))
+
+
+nPerm = 10000
+sampleSize = c(10, 100, 1000, 10000, 100000)
+simpleCache(paste0("nullDistList", dataID), {
+    nullDistList = multiNullDist(loadingMat = featurePCCor, PCsToAnnotate=PCsToAnnotate, nPerm = nPerm, sampleSize = sampleSize)
+    nullDistList
+    
+}, assignToVariable = "nullDistList")
+
+for (j in seq_along(PCsToAnnotate)) {
+    pcOfInt = PCsToAnnotate[j]
+    pdf(ffPlot(paste0(plotSubdir, "nullDist", pcOfInt, "_", nPerm, "Perm.pdf"))) 
+    for (i in seq_along(nullDistList)) {
+        hist(nullDistList[[i]][, pcOfInt], main = paste0("sampleSize=", sampleSize[i]))    
+    }
+    dev.off()
+}
+
+
+getPValRangeVec <- function(rsScore, nullDistList, pc, regionCoverage) {
+    getPValRange(rsScore, nullDistList, pc, regionCoverage)
+}
+
+# convert to scores (regionMean) to p values
+upperBoundPVal = list()
+for (i in seq_along(PCsToAnnotate)) {
+    upperBoundPVal[[i]] = getUpperBound(rsScore = as.numeric(as.matrix(rsScores[, PCsToAnnotate[i], with=FALSE])), 
+                                        nullDistList = nullDistList, 
+                                        sampleSize=sampleSize, 
+                                        pc=PCsToAnnotate[i], 
+                                        regionCoverage = rsScores$region_coverage)
+}
+
+upperBoundPVal = do.call(cbind, upperBoundPVal)
+colnames(upperBoundPVal) <- PCsToAnnotate
+upperBoundPVal = as.data.table(upperBoundPVal)
+
+upperBoundPVal = cbind(upperBoundPVal, rsScores[, c("cytosine_coverage", "region_coverage", 
+                                                    "total_region_number", "mean_region_size",
+                                                    "rsName", "rsDescription")])
+colnames(upperBoundPVal) <- paste0(colnames(upperBoundPVal), "_pval")
+rsScores = cbind(rsScores, upperBoundPVal)
+i=1
+setorderv(rsScores, cols = c(paste0(PCsToAnnotate[i], "_pval"), PCsToAnnotate[i]), order = c(1L, -1L))
+plot(as.numeric(as.matrix(rsScores[, PCsToAnnotate[i], with=FALSE])))
+plot(-log(as.numeric(as.matrix(rsScores[, paste0(PCsToAnnotate[i], "_pval"), with=FALSE]))))
+View(rsScores)
+
+# pdf(ffPlot(paste0(plotSubdir, "rsScoresPValHist", nPerm, "PermBRCA657.pdf")))
+# for (i in seq_along(PCsToAnnotate)) {
+#     hist(-log(as.numeric(as.matrix(upperBoundPVal[, PCsToAnnotate[i], with=FALSE])) * 2246, base = 10), main = paste0("-log10 p value for ", PCsToAnnotate[i]), xlab = "-log10 P Val")
+# }
+# 
+# dev.off()
