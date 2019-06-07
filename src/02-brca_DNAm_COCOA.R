@@ -1,6 +1,6 @@
 # library(projectInit)
 
-# project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/"))
+# project.init(codeRoot = paste0(Sys.getenv("CODE"), "COCOA/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/"))
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 # library(fastICA)
 
@@ -10,7 +10,7 @@ Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"
 patientMetadata = brcaMetadata # already screened out patients with incomplete ER or PGR mutation status
 # there should be 657 such patients
 set.seed(1234)
-
+plotSubdir = "02_COCOA_DNAm/"
 
 # DNA methylation data
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
@@ -59,8 +59,6 @@ simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
 # save(topRSCombined, file="topRSCombined.RData")
 ########
 
-# reading in the metadata, will be used to split data 
-# into training and test set with balanced ER and PGR status
 #restrict patients included in this analysis
 patientMetadata = patientMetadata[patientMetadata$subject_ID %in% 
                                       colnames(brcaMList[["methylProp"]]), ]
@@ -483,5 +481,40 @@ featureCorPC2 = apply(X = centeredMData, 1, FUN = function(x) cor(x = x, pcScore
 loadCorRatioPC2 = pcLoadings[, "PC2"] / featureCorPC2
 hist(loadCorRatioPC2)
 
+
+################################################################################
+# COCOA with PCA done with variance normalization (scale=TRUE)
+
+# patientMetadata should have already screened out patients without ER/PGR status
+# resulting in 657 patients
+hasER_PGR_IDs = patientMetadata[, subject_ID]
+filteredMData = brcaMList[["methylProp"]][, 
+                                          colnames(brcaMList[["methylProp"]]) %in% hasER_PGR_IDs] 
+patientMetadata = patientMetadata[hasER_PGR_IDs %in% colnames(brcaMList[["methylProp"]])]
+
+normPCA = prcomp(x = t(filteredMData), center = TRUE, scale. = TRUE)
+
+pcaWithAnno = cbind(normPCA$x, patientMetadata)
+
+colorByCols = colnames(patientMetadata)[!(colnames(patientMetadata) %in% "subject_ID")]
+
+if (!dir.exists(ffPlot(paste0(plotSubdir)))) {
+    dir.create(ffPlot(paste0(plotSubdir)))
+}
+
+PCsToPlot = c(paste0("PC", 1:7))
+for (i in seq_along(PCsToPlot)) {
+    for (j in seq_along(PCsToPlot)) {
+        multiColorPCAPlots = colorClusterPlots(pcaWithAnno, 
+                                               plotCols = c(PCsToPlot[i], PCsToPlot[j]), 
+                                               colorByCols=colorByCols)
+        ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir, "/multiColorPCAPlots_varNormPCA_", 
+                                        PCsToPlot[i], "x", PCsToPlot[j], 
+                                        ".pdf")), plot = multiColorPCAPlots, device = "pdf",
+                        limitsize=FALSE)
+        
+    }
+    
+}
 
 
