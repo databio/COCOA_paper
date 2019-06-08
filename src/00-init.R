@@ -69,7 +69,9 @@ dirCode = function(.file="") {
     return(paste0(Sys.getenv("CODE"), "COCOA_paper/", .file))
 }
 
-
+# for ggplot2
+theme_set(theme_classic() + 
+              theme(axis.text = element_text(colour = "black", size = 15), axis.ticks = element_line(colour = "black")))
 
 # set environment
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
