@@ -62,7 +62,7 @@ dirPlot = function(plotFile) {
     
 }
 setff("Plot", Sys.getenv("PLOTS"))
-
+setff("Proc", Sys.getenv("PROCESSED"))
 setff("Code", paste0(Sys.getenv("CODE")))
 setff("ProjCode", paste0(Sys.getenv("CODE"), "COCOA_paper/"))
 dirCode = function(.file="") {
@@ -104,9 +104,16 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
     ofInterestDF$rsRank = 1:nrow(ofInterestDF)
     # reshaping to long format
     ofInterestDF = tidyr::gather(ofInterestDF, key="PC", value="of_interest", scoreColName)
-    categoryDistPlot = ggplot(ofInterestDF, aes(x=rsRank, weight=of_interest)) + 
-        geom_histogram(binwidth=binwidth, boundary=0, closed="right") + theme_classic() + xlab("Region set rank") +
-        ylab(paste0("Number of region sets (binwidth=", binwidth, ")")) + facet_wrap(~PC)
+    if (sum(scoreColName %in% colnames(rsScores)) == 1) {
+        categoryDistPlot = ggplot(ofInterestDF, aes(x=rsRank, weight=of_interest)) + 
+            geom_histogram(binwidth=binwidth, boundary=0, closed="right") + theme_classic() + xlab("Region set rank") +
+            ylab(paste0("Number of region sets (binwidth=", binwidth, ")")) + ggtitle(scoreColName[scoreColName %in% colnames(rsScores)])
+    } else {
+        categoryDistPlot = ggplot(ofInterestDF, aes(x=rsRank, weight=of_interest)) + 
+            geom_histogram(binwidth=binwidth, boundary=0, closed="right") + theme_classic() + xlab("Region set rank") +
+            ylab(paste0("Number of region sets (binwidth=", binwidth, ")")) + facet_wrap(~PC)
+    }
+    
     return(categoryDistPlot)
 }
 

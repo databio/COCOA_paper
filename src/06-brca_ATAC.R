@@ -12,6 +12,11 @@ Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"
 patientMetadata = brcaMetadata # already screened out patients with incomplete ER or PGR mutation status
 # there should be 657 such patients
 set.seed(1234)
+plotSubdir = "06-brcaATAC/"
+
+if(!dir.exists(ffPlot(plotSubdir))) {
+    dir.create(ffPlot(plotSubdir))
+}
 
 
 # DNA methylation data
@@ -74,8 +79,8 @@ library(ggplot2)
 library("ComplexHeatmap")
 library(ggbiplot)
 
-cocoa_dir <- "/scratch/jps3dp/tools/databio/COCOA/R/" # feat-atac branch
-data_dir  <- "/sfs/lustre/allocations/shefflab/processed/COCOA_paper/analysis/atac/"
+cocoa_dir <- ffCode("COCOA/R/") # feat-atac branch
+data_dir  <- ffProc("COCOA_paper/analysis/atac/")
 tcga_dir  <- "/scores/brca/tcga_brca_peaks-log2counts-dedup/"
 
 source(paste0(cocoa_dir, "COCOA.R"))
@@ -89,7 +94,7 @@ tcount   <- t(counts)
 colnames(tcount) <- ryan_brca_count_matrix$sample
 
 # Add metadata for each sample that has it
-metadata <- fread("/sfs/lustre/allocations/shefflab/processed/COCOA_paper/analysis/atac/scores/brca/tcga_brca_metadata.csv")
+metadata <- fread(ffProc("COCOA_paper/analysis/atac/scores/brca/tcga_brca_metadata.csv"))
 metadata <- metadata[!duplicated(metadata$subject_ID),]
 metadata <- metadata[order(subject_ID),]
 
@@ -112,10 +117,10 @@ pGR             <- makeGRangesFromDataFrame(peaks)
 # Load methylation region sets
 # Loads a GRList, rsName, and rsDescription object setls()
 
-source("/sfs/lustre/scratch/jps3dp/tools/databio/COCOA_paper/src/load_process_regions_brca.R")
+source(ffCode("COCOA_paper/src/load_process_regions_brca.R"))
 # reload my COCOA.R (from COCOA feat-atac branch)
-source("/sfs/lustre/scratch/jps3dp/tools/databio/COCOA/R/COCOA.R")
-source("/sfs/lustre/scratch/jps3dp/tools/databio/COCOA/R/utility.R")
+source(ffCode("COCOA/R/COCOA.R"))
+source(ffCode("COCOA/R/utility.R"))
 
 system.time(regionSetScoresTotal <- runCOCOA(loadingMat=loadings, signalCoord=peaks, GRList=GRList, PCsToAnnotate=PCsToAnnotate, scoringMetric="regionMean", overlapMethod="total"))
 
@@ -169,12 +174,12 @@ setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
 #patientMetadata = brcaMetadata # already screened out patients with incomplete ER or PGR mutation status
 # there should be 657 such patients
 set.seed(1234)
-plotSubdir = "06-brcaATAC/"
+
 
 #########################################################################################################
 
 library(data.table)
-setwd("/sfs/lustre/allocations/shefflab/processed/COCOA_paper/analysis/atac/scores/brca/tile_500-10_hg38")
+setwd(ffProc("COCOA_paper/analysis/atac/scores/brca/tile_500-10_hg38"))
 
 countDT = fread("tcga_coverage.tab")
 
@@ -198,6 +203,7 @@ max(countDT)
 # aPCA = readRDS(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/TCGA-ATAC_BRCA_pca.Rds"))
 aPCA = pca
 # rsScores =  readRDS(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/TCGA-ATAC_BRCA_rssTotal.Rds"))
+# load(ffProc("COCOA_paper/atac/load_this_john.RData"))
 rsScores= regionSetScoresTotal
 aMetadata = read.csv(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/tcga_brca_metadata.csv"))
 load(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/brca_peak_pca_sample_names.RData")) # pcaNames
@@ -206,15 +212,17 @@ length(unique(aMetadata$subject_ID))
 table(aMetadata$ER_status)
 View(rsScores[order(rsScores$PC2, decreasing = TRUE), ])
 
-plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
-plotRSConcentration(rsScores = rsScores, scoreColName = "PC2", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
-plotRSConcentration(rsScores = rsScores, scoreColName = "PC3", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
-plotRSConcentration(rsScores = rsScores, scoreColName = "PC4", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
+plotRSConcentration(rsScores = rsScores, paste0("PC", 1:4), colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
 plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "regionSetName", pattern = "ezh2|suz12")
 plotRSConcentration(rsScores = rsScores, scoreColName = "PC2", colsToSearch = "regionSetName", pattern = "ezh2|suz12|h3k27me")
 plotRSConcentration(rsScores = rsScores, scoreColName = "PC3", colsToSearch = "regionSetName", pattern = "ezh2|suz12")
-plotRSConcentration(rsScores = rsScores, scoreColName = "PC4", colsToSearch = "regionSetName", pattern = "ezh2|suz12")
-plotRSConcentration(rsScores = rsScores, scoreColName = "PC2", colsToSearch = "regionSetName", pattern = "runx|tal1|gata|lmo2|PU1|lyl1|FLI1|evi1")
+plotRSConcentration(rsScores = rsScores, scoreColName = paste0("PC", 1:4), colsToSearch = "regionSetName", pattern = "ezh2|suz12")
+plotRSConcentration(rsScores = rsScores, scoreColName = paste0("PC", 1:4), colsToSearch = "regionSetName", pattern = "runx|tal1|gata|lmo2|PU1|lyl1|FLI1|evi1")
+pc1ERATAC = plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
+pc1ERATAC + theme(axis.text = element_text(colour = "black", size = 15), axis.ticks = element_line(colour = "black"))
+pc1ERATAC
+ggsave(ffPlot(paste0(plotSubdir, "pc1ERATAC.svg")), plot = pc1ERATAC, device = "svg")
+
 
 ########## make PCA plot
 
