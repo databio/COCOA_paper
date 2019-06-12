@@ -65,6 +65,7 @@ setff("Plot", Sys.getenv("PLOTS"))
 setff("Proc", Sys.getenv("PROCESSED"))
 setff("Code", paste0(Sys.getenv("CODE")))
 setff("ProjCode", paste0(Sys.getenv("CODE"), "COCOA_paper/"))
+setff("Data", Sys.getenv("DATA"))
 dirCode = function(.file="") {
     return(paste0(Sys.getenv("CODE"), "COCOA_paper/", .file))
 }
@@ -116,6 +117,7 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
     
     return(categoryDistPlot)
 }
+
 
 
 # @param dataMat columns of dataMat should be samples/patients, rows should be genomic signal
