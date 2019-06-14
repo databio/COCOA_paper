@@ -14,8 +14,6 @@ library(gridExtra) #marrangeGrob for colorClusterPlots()
 source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R" )) 
 library(MultiAssayExperiment)
 library(folderfun)
-# the AML init script will set a different plots directory
-Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
 
 # source(paste0(Sys.getenv("CODE"), "COCOA/R/COCOA.R"))
 # source(paste0(Sys.getenv("CODE"), "COCOA/R/visualization.R"))
@@ -61,6 +59,9 @@ dirPlot = function(plotFile) {
     )
     
 }
+
+# the AML init script will set a different plots directory
+Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
 setff("Plot", Sys.getenv("PLOTS"))
 setff("Proc", Sys.getenv("PROCESSED"))
 setff("Code", paste0(Sys.getenv("CODE")))
@@ -250,15 +251,18 @@ getLowerBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage)
 # convenience function to quickly make meta-region loading profiles
 # first calculates profiles, then normalizes and plots
 # output is marrangeGrob and should be saved with ggsave
-makeMetaRegionPlots <- function(loadingMat, signalCoord, GRList, rsNames, PCsToAnnotate, binNum) {
+makeMetaRegionPlots <- function(loadingMat, signalCoord, GRList, rsNames, PCsToAnnotate, binNum, overlapMethod="single") {
     
     pcProf = lapply(X = GRList, function(x) getLoadingProfile(loadingMat = loadingMat, 
                                                               signalCoord = signalCoord, 
                                                               regionSet = x, PCsToAnnotate = PCsToAnnotate,
-                                                              binNum = binNum))
+                                                              binNum = binNum, overlapMethod=overlapMethod))
     
     pcP = copy(pcProf)
     pcP = lapply(pcP,FUN = as.data.table)
+    notNull = !vapply(X = pcP, FUN = is.null, FUN.VALUE = TRUE)
+    pcP = pcP[notNull]
+    rsNames = rsNames[notNull]
     
     
     # average loading value from each PC to normalize so PCs can be compared with each other
@@ -303,7 +307,7 @@ makeMetaRegionPlots <- function(loadingMat, signalCoord, GRList, rsNames, PCsToA
     }
     multiProfileP = marrangeGrob(profilePList, ncol = 2, nrow = 2)
     
-    return(multiProfileP)
+    return(list(multiProfileP, pcProf))
 }
 
 

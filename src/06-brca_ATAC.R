@@ -1,11 +1,7 @@
 # below is based off code by Jason Smith
 
-
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
-library(ggplot2)
-library(LOLA)
 library(COCOA)
-library(data.table)
 library("ComplexHeatmap")
 library(ggbiplot)
 library(readr)
@@ -39,7 +35,7 @@ source(ffCode("COCOA/R/utility.R"))
 
 ##############################################################################
 
-ryan_brca_count_matrix <- fread("/sfs/lustre/allocations/shefflab/data/tcga/ATACseq/TCGA-ATAC_BRCA_peaks_counts.tsv", header=TRUE)
+ryan_brca_count_matrix <- fread(ffData("tcga/ATACseq/TCGA-ATAC_BRCA_peaks_counts.tsv"), header=TRUE)
 
 counts   <- as.matrix(ryan_brca_count_matrix[,2:75])
 counts   <- counts[, order(colnames(counts))]
@@ -55,32 +51,69 @@ merged    <- as.data.frame(tcount)
 merged$id <- rownames(tcount)
 merged    <- merge(merged, metadata, by.x="id", by.y="subject_ID")
 
-pca       <- prcomp(as.matrix(merged[,2:215921]))
+simpleCache(paste0("brcaATACPCA_", nrow(merged)), {
+    pca       <- prcomp(as.matrix(merged[,2:215921]))
+    pca
+}, assignToVariable = "pca")
+
 loadings  <- pca$rotation
 scores    <- pca$x
 rownames(scores) <- merged[,1]
 brca_tcga_data   <- as.matrix(merged[,2:215921])
 
 ggbiplot(pca, choices=c(1,2), groups=merged$ER_status, var.axes=FALSE, var.scale=1, obs.scale=1, ellipse=F, circle=F) + scale_color_discrete(name='') + theme(legend.direction='vertical', legend.position = 'right')
+ggbiplot(pca, choices=c(1,6), groups=merged$ER_status, var.axes=FALSE, var.scale=1, obs.scale=1, ellipse=F, circle=F) + scale_color_discrete(name='') + theme(legend.direction='vertical', legend.position = 'right')
 
-peaks           <- ryan_brca_count_matrix[,76:78]
+
+peaks           <- ryan_brca_count_matrix[, .(Chromosome, Start, End)]
 colnames(peaks) <- c("chr","start","end")
 pGR             <- makeGRangesFromDataFrame(peaks)
 
 # Load methylation region sets
 # Loads a GRList, rsName, and rsDescription object setls()
+PCsToAnnotate = paste0("PC", 1:10)
+system.time(
+simpleCache(paste0("brcaATACrsScores_", nrow(merged)), {
+    
+    regionSetScoresTotal=runCOCOA(loadingMat=loadings, signalCoord=peaks, GRList=GRList, PCsToAnnotate=PCsToAnnotate, scoringMetric="regionMean", overlapMethod="total")
+    regionSetScoresTotal$rsName = rsName
+    regionSetScoresTotal$rsDescription = rsDescription
+    regionSetScoresTotal
+}, assignToVariable = "regionSetScoresTotal", recreate = TRUE)
+)
 
-system.time(regionSetScoresTotal <- runCOCOA(loadingMat=loadings, signalCoord=peaks, GRList=GRList, PCsToAnnotate=PCsToAnnotate, scoringMetric="regionMean", overlapMethod="total"))
+system.time(
+    simpleCache(paste0("brcaATACrsScoresWeightedMean_", nrow(merged)), {
+        
+        regionSetScoresTotal=runCOCOA(loadingMat=loadings, signalCoord=peaks, GRList=GRList, 
+                                      PCsToAnnotate=PCsToAnnotate, 
+                                      scoringMetric="regionMean", 
+                                      overlapMethod="regionWeightedMean")
+        regionSetScoresTotal$rsName = rsName
+        regionSetScoresTotal$rsDescription = rsDescription
+        regionSetScoresTotal
+    }, assignToVariable = "regionSetScoresTotal", recreate = TRUE)
+)
 
+
+
+rsScores = regionSetScoresTotal
+rssTotalComplete = regionSetScoresTotal
 
 write_delim(head(rssTotalComplete[order(rssTotalComplete$PC1, decreasing=T),]), "TCGA-ATAC_BRCA_load-process-regions_TotalOM_headRegionSetScores.tsv",delim="\t")
 
-rsScoreHeatmap(rssTotalComplete, PCsToAnnotate=paste0("PC", 1:4), rsNameCol = "regionSetName", orderByPC = "PC1", column_title = "Region sets ordered by score for PC1")
+rsScoreHeatmap(rssTotalComplete, PCsToAnnotate=paste0("PC", 1:4), rsNameCol = "rsName", orderByPC = "PC1", column_title = "Region sets ordered by score for PC1")
 
-plotRSConcentration(rssTotalComplete, colsToSearch = "regionSetName", pattern="esr")
+plotRSConcentration(rssTotalComplete, colsToSearch = c("rsName", "rsDescription"), 
+                    scoreColName = paste0("PC", 1:10), pattern="esr1|eralpha|eraa|gata3|foxa1|H3R17me")
+plotRSConcentration(rssTotalComplete, colsToSearch = c("rsName", "rsDescription"), 
+                    scoreColName = paste0("PC", 1:10), pattern="ezh2|suz12")
+plotRSConcentration(rssTotalComplete, colsToSearch = c("rsName", "rsDescription"), 
+                    scoreColName = paste0("PC", 1:10), pattern="h3k9me3")
+
 
 pdf("TCGA-ATAC_BRCA_regionSetScoresTotal_load-process-regions_rsConcentration_esr-eraa-eralpha.pdf", width=10, height=10)
-plotRSConcentration(rssTotalComplete, colsToSearch = "regionSetName", pattern="esr|eraa|eralpha")
+plotRSConcentration(rssTotalComplete, colsToSearch = "rsName", pattern="esr|eraa|eralpha")
 dev.off()
 
 
@@ -105,13 +138,13 @@ length(unique(aMetadata$subject_ID))
 table(aMetadata$ER_status)
 View(rsScores[order(rsScores$PC2, decreasing = TRUE), ])
 
-plotRSConcentration(rsScores = rsScores, paste0("PC", 1:4), colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
-plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "regionSetName", pattern = "ezh2|suz12")
-plotRSConcentration(rsScores = rsScores, scoreColName = "PC2", colsToSearch = "regionSetName", pattern = "ezh2|suz12|h3k27me")
-plotRSConcentration(rsScores = rsScores, scoreColName = "PC3", colsToSearch = "regionSetName", pattern = "ezh2|suz12")
-plotRSConcentration(rsScores = rsScores, scoreColName = paste0("PC", 1:4), colsToSearch = "regionSetName", pattern = "ezh2|suz12")
-plotRSConcentration(rsScores = rsScores, scoreColName = paste0("PC", 1:4), colsToSearch = "regionSetName", pattern = "runx|tal1|gata|lmo2|PU1|lyl1|FLI1|evi1")
-pc1ERATAC = plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "regionSetName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
+plotRSConcentration(rsScores = rsScores, paste0("PC", 1:4), colsToSearch = "rsName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
+plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "rsName", pattern = "ezh2|suz12")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC2", colsToSearch = "rsName", pattern = "ezh2|suz12|h3k27me")
+plotRSConcentration(rsScores = rsScores, scoreColName = "PC3", colsToSearch = "rsName", pattern = "ezh2|suz12")
+plotRSConcentration(rsScores = rsScores, scoreColName = paste0("PC", 1:4), colsToSearch = "rsName", pattern = "ezh2|suz12")
+plotRSConcentration(rsScores = rsScores, scoreColName = paste0("PC", 1:4), colsToSearch = "rsName", pattern = "runx|tal1|gata|lmo2|PU1|lyl1|FLI1|evi1")
+pc1ERATAC = plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "rsName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
 pc1ERATAC + theme(axis.text = element_text(colour = "black", size = 15), axis.ticks = element_line(colour = "black"))
 pc1ERATAC
 ggsave(ffPlot(paste0(plotSubdir, "pc1ERATAC.svg")), plot = pc1ERATAC, device = "svg")
@@ -172,28 +205,32 @@ tsneDF[tsneDF$Dim1 > 1.25 & tsneDF$Dim2 < -3, ]
 ######### make "meta-region" loading profiles
 
 # load region sets
-source(ffProjCode("load_process_regions_brca.R"))
+# source(ffProjCode("load_process_regions_brca.R"))
 
-rsScores= regionSetScoresTotal
-setnames(rsScores, c("regionSetName"), "rsName")
 
 topInd = rsRankingIndex(rsScores = rsScores, PCsToAnnotate = c("PC1", "PC2"))
 topPC1Ind = topInd[, "PC1"][1:15]
 topPC2Ind = topInd[, "PC2"][1:15]
 uTopInd = unique(c(topPC1Ind, topPC2Ind))
 
-topRSList = GRList[uTopInd]
-rsNames = rsScores$rsName[uTopInd]
+# topRSList = GRList[uTopInd]
+topRSList = lapply(X = GRList[uTopInd], FUN = function(x) resize(x = x, width = 14000, fix = "center"))
+topRSNames = rsScores$rsName[uTopInd]
 
 
-multiProfileP = makeMetaRegionPlots(loadingMat=aPCA$rotation, 
-                                    signalCoord=coordinates, GRList=topRSList, 
-                                    rsNames=rsNames, 
-                                    PCsToAnnotate=PCsToAnnotate, binNum=21) 
+multiProfileP = makeMetaRegionPlots(loadingMat=pca$rotation, 
+                                    signalCoord=peaks, GRList=topRSList, 
+                                    rsNames=topRSNames, 
+                                    PCsToAnnotate=PCsToAnnotate, binNum=21, overlapMethod="total") 
+multiProfileP2 = makeMetaRegionPlots(loadingMat=pca$rotation, 
+                                    signalCoord=peaks, GRList=topRSList, 
+                                    rsNames=topRSNames, 
+                                    PCsToAnnotate=PCsToAnnotate, binNum=21, overlapMethod="regionWeightedMean") 
 
-
-ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir,
+inputID = paste0("brcaATAC", nrow(merged))
+ggsave(filename = ffPlot(paste0(plotSubdir,
                          "/metaRegionLoadingProfiles", 
-                         inputID, ".pdf"), plot = multiProfileP, device = "pdf", limitsize = FALSE)
+                         inputID, ".pdf")), plot = multiProfileP[[1]], device = "pdf", limitsize = FALSE)
+ggsave(filename = ffPlot(paste0(plotSubdir, "/metaRegionLoadingProfilesWeightedMean", inputID, ".pdf")), plot = multiProfileP2[[1]], device = "pdf", limitsize = FALSE)
 
     
