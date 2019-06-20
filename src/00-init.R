@@ -83,11 +83,13 @@ setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 # ggplot version of rs concentration
 # 1 row per region set, column for rank in a given PC, 0/1 column for ER or not
 
+# @param useGlobalTheme logical. If global ggplot theme has been set, it will
+# be used if useGlobalTheme=TRUE. plot + theme_get() 
 # TODO: add check that scoreColNames are present as columns of rsScores
 plotRSConcentration <- function(rsScores, scoreColName="PC1", 
                                 colsToSearch = c("rsName", "rsDescription"), 
                                 pattern, percent = FALSE, 
-                                binwidth=50) {
+                                binwidth=50, useGlobalTheme=TRUE) {
     # breaks
     rsScores = as.data.frame(rsScores)
     rsRankInd = rsRankingIndex(rsScores=rsScores, PCsToAnnotate=scoreColName)
@@ -115,6 +117,11 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
             geom_histogram(binwidth=binwidth, boundary=0, closed="right") + theme_classic() + xlab("Region set rank") +
             ylab(paste0("Number of region sets (binwidth=", binwidth, ")")) + facet_wrap(~PC)
     }
+    
+    if (useGlobalTheme) {
+        categoryDistPlot = categoryDistPlot + theme_get()    
+    }
+    
     
     return(categoryDistPlot)
 }

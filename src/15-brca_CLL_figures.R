@@ -57,7 +57,12 @@ simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsScores")
 # summary figure of COCOA BRCA results: ER set relative ranking among region sets
 esrConcentrationPlot = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
                             colsToSearch = c("rsName", "rsDescription"), 
-                            pattern= "esr|eralpha") + ggtitle("Estrogen receptor region sets")
+                            pattern= "esr|eralpha|eraa") + ggtitle("Estrogen receptor region sets") + 
+    theme(axis.title.x = element_text(size = 20), 
+                             axis.title.y = element_text(size=20), 
+          axis.text.x = element_text(size=20), 
+          axis.text.y = element_text(size=20), title = element_text(size = 20)) + scale_y_continuous(breaks = seq(from=0, to=10, by=2))
+ggsave(filename = ffPlot(paste0(plotSubdir, "erRegionSetsDNAm.svg")), plot = esrConcentrationPlot, device = "svg")
 
 erRelated = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
                     colsToSearch = c("rsName", "rsDescription"), 

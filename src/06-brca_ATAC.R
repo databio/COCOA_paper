@@ -50,6 +50,7 @@ metadata <- metadata[order(subject_ID),]
 merged    <- as.data.frame(tcount)
 merged$id <- rownames(tcount)
 merged    <- merge(merged, metadata, by.x="id", by.y="subject_ID")
+pcaNames <- merged$id
 
 simpleCache(paste0("brcaATACPCA_", nrow(merged)), {
     pca       <- prcomp(as.matrix(merged[,2:215921]))
@@ -105,6 +106,8 @@ write_delim(head(rssTotalComplete[order(rssTotalComplete$PC1, decreasing=T),]), 
 rsScoreHeatmap(rssTotalComplete, PCsToAnnotate=paste0("PC", 1:4), rsNameCol = "rsName", orderByPC = "PC1", column_title = "Region sets ordered by score for PC1")
 
 plotRSConcentration(rssTotalComplete, colsToSearch = c("rsName", "rsDescription"), 
+                    scoreColName = paste0("PC", 1:10), pattern="esr1|eralpha|eraa")
+plotRSConcentration(rssTotalComplete, colsToSearch = c("rsName", "rsDescription"), 
                     scoreColName = paste0("PC", 1:10), pattern="esr1|eralpha|eraa|gata3|foxa1|H3R17me")
 plotRSConcentration(rssTotalComplete, colsToSearch = c("rsName", "rsDescription"), 
                     scoreColName = paste0("PC", 1:10), pattern="ezh2|suz12")
@@ -113,9 +116,20 @@ plotRSConcentration(rssTotalComplete, colsToSearch = c("rsName", "rsDescription"
 
 
 pdf("TCGA-ATAC_BRCA_regionSetScoresTotal_load-process-regions_rsConcentration_esr-eraa-eralpha.pdf", width=10, height=10)
-plotRSConcentration(rssTotalComplete, colsToSearch = "rsName", pattern="esr|eraa|eralpha")
+plotRSConcentration(rssTotalComplete, scoreColName = "PC1", colsToSearch = "rsName", pattern="esr|eraa|eralpha")
 dev.off()
 
+erPC1Hist = plotRSConcentration(rssTotalComplete, 
+                    scoreColName = "PC1", 
+                    colsToSearch = c("rsName"), 
+                    pattern="esr|eraa|eralpha") + theme_get() + theme(axis.text.y= element_text(size=15),
+                                                        axis.text.x = element_text(size=15),
+                                                        axis.title.x = element_text(size=20),
+                                                        axis.title.y = element_text(size=20), 
+                                                        plot.title = element_text(size=20, hjust = 0.5))
+
+ggsave(filename = ffPlot(paste0(plotSubdir, "rsConcentrationERPC1_brcaATAC_", nrow(merged), ".svg")), 
+       plot = erPC1Hist, device = "svg") 
 
 #########################################################################################################
 
@@ -132,7 +146,7 @@ aPCA = pca
 # load(ffProc("COCOA_paper/atac/load_this_john.RData"))
 rsScores= regionSetScoresTotal
 aMetadata = read.csv(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/tcga_brca_metadata.csv"))
-load(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/brca_peak_pca_sample_names.RData")) # pcaNames
+# load(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/brca_peak_pca_sample_names.RData")) # pcaNames
 dim(aMetadata)
 length(unique(aMetadata$subject_ID))
 table(aMetadata$ER_status)
@@ -157,6 +171,11 @@ pcScoreAnno= merge(pcScore, aMetadata, by.x = "pcaNames", by.y= "subject_ID", al
 colorClusterPlots(pcScoreAnno, plotCols = paste0("PC", c(1,2)), colorByCols = "ER_status")
 ggplot(data = pcScoreAnno, mapping = aes(x = PC1, y= PC2)) + geom_point(aes(col=ER_status), size = 4, alpha=0.5) + theme_classic()
 pcScoreAnno$ER_status[pcScoreAnno$ER_status == ""] = NA
+aPCAPlot = ggplot(data = pcScoreAnno, mapping = aes(x = PC1, y= PC2)) + geom_point(aes(col=ER_status), size = 4, alpha=0.5) +
+    theme(axis.title.x = element_text(size=20), axis.title.y = element_text(size=20)) + coord_fixed()
+aPCAPlot
+ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_ATAC.svg")), plot = aPCAPlot, device = "svg")
+
 plot(as.matrix(pcScoreAnno[,c("PC1", "PC2")]))
 
 #############################################################################
