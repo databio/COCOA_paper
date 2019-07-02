@@ -128,9 +128,10 @@ rsName = rsName[!is.na(rsScores$PC1)]
 rsDescription = rsDescription[!is.na(rsScores$PC1)]
 rsEnSortedInd= rsRankingIndex(rsScores = rsScores, PCsToAnnotate = PCsToAnnotate)
 
-subGRList = GRList[c(unique(as.numeric(as.matrix(rsEnSortedInd[1:10, PCsToAnnotate]))),
-                     unique(as.numeric(as.matrix(rsEnSortedInd[1001:1005, PCsToAnnotate]))),
-                     unique(as.numeric(as.matrix(rsEnSortedInd[(nrow(rsEnSortedInd)-4):nrow(rsEnSortedInd), PCsToAnnotate]))))]
+rsInd = c(unique(as.numeric(as.matrix(rsEnSortedInd[1:10, PCsToAnnotate]))),
+          unique(as.numeric(as.matrix(rsEnSortedInd[1001:1005, PCsToAnnotate]))),
+          unique(as.numeric(as.matrix(rsEnSortedInd[(nrow(rsEnSortedInd)-4):nrow(rsEnSortedInd), PCsToAnnotate]))))
+subGRList = GRList[rsInd]
 
 scoringMetric = "rankSum"
 
@@ -142,8 +143,8 @@ simpleCache(rsScoreCacheName, {
                        scoringMetric=scoringMetric,
                        verbose = TRUE, 
                        wilcox.conf.int = TRUE)
-    rsScores$rsName = rsName
-    rsScores$rsDescription= rsDescription
+    rsScores$rsName = rsName[rsInd]
+    rsScores$rsDescription= rsDescription[rsInd]
     rsScores
 }, recreate=overwriteRSScoreResultsCaches)
 
