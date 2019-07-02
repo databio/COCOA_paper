@@ -141,7 +141,12 @@ for (i in seq_along(PCsToAnnotate)) {
 dev.off()
 
 #########################################################################
+# Kolmogorov-Smirnov Test
 
+ks.test(x = 1:5, y = 6:10)
+plot(ecdf(x = c(1:5, 5)))
+lines(ecdf(x = 6:10))
+#########################################################################
 # # loading PCA and combining components that could separate ER=/-
 # # for rsEnrichment, PCs 1 and 4 could separate ER+/-
 # simpleCache(allMPCAString, assignToVariable = allMPCAString)

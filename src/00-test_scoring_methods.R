@@ -1,5 +1,5 @@
 # test/visualize different scoring metrics and normalizers
-
+scriptID = "00_testScoring"
 
 ############################# testing out various scoring methods
 # not unit tests, just exploratory analysis
@@ -97,3 +97,68 @@ subsetDist = function(dataVec, subsetInd) {
 nC = nrow(loadingMat)
 lengthMat = t(cbind(loadingMat[, "PC1"], rep(0, nC)))
 dist(lengthMat)
+
+############################################################################
+# testing wilcox scoring with confidence intervals
+
+###########################################################
+# reading in the region sets
+# load LOLA database
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regions_brca.R"))
+
+#################################################################
+PCsToAnnotate = paste0("PC", 1:4)
+rsScoreCacheName = paste0(scriptID, "_WilcoxConfInt657")
+overwriteRSScoreResultsCaches = TRUE
+
+simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "bigSharedC", reload = TRUE)
+
+# GRList # from load_process_regions pipeline
+signalCoord = bigSharedC$coordinates
+allMPCAString = "allMPCA_657"
+simpleCache(allMPCAString, assignToVariable = "mPCA", reload = TRUE)
+loadingMat = mPCA$rotation
+# use rsEnString to specify?
+simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsScores", reload = TRUE)
+# TODO make sure GRList and rsScores are both in the same order/with same data
+names(GRList) <- paste0(rsScores$rsName, " : ", rsScores$rsDescription)
+GRList = GRList[!is.na(rsScores$PC1)]
+rsScores=rsScores[!is.na(rsScores$PC1), ]
+rsName = rsName[!is.na(rsScores$PC1)]
+rsDescription = rsDescription[!is.na(rsScores$PC1)]
+rsEnSortedInd= rsRankingIndex(rsScores = rsScores, PCsToAnnotate = PCsToAnnotate)
+
+subGRList = GRList[c(unique(as.numeric(as.matrix(rsEnSortedInd[1:10, PCsToAnnotate]))),
+                     unique(as.numeric(as.matrix(rsEnSortedInd[1001:1005, PCsToAnnotate]))),
+                     unique(as.numeric(as.matrix(rsEnSortedInd[(nrow(rsEnSortedInd)-4):nrow(rsEnSortedInd), PCsToAnnotate]))))]
+
+scoringMetric = "rankSum"
+
+simpleCache(rsScoreCacheName, {
+    rsScores = runCOCOA(loadingMat=loadingMat, 
+                       signalCoord = signalCoord, 
+                       GRList = subGRList, 
+                       PCsToAnnotate = PCsToAnnotate, 
+                       scoringMetric=scoringMetric,
+                       verbose = TRUE, 
+                       wilcox.conf.int = TRUE)
+    rsScores$rsName = rsName
+    rsScores$rsDescription= rsDescription
+    rsScores
+}, recreate=overwriteRSScoreResultsCaches)
+
+View(rsScore[order(rsScore$surv_at_daysCutoff, decreasing = TRUE), ])
+hist(rsScore$surv_at_daysCutoff)
+
+write.csv(x = rsScore, 
+          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/rsScore_brcaMethylPCR_", dataID, ".csv"),
+          quote = FALSE, row.names = FALSE)
+
+
+
+
+    
+
+
+
+

@@ -79,6 +79,42 @@ theme_set(theme_classic() +
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 
+############# functions to load data easily ############################
+loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE, 
+                         loadingMat=TRUE, pcScores=TRUE,
+                         .env=environment()) {
+    if (signalMat) {
+        simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
+        #restrict patients included in this analysis
+        patientMetadata = patientMetadata[patientMetadata$subject_ID %in% 
+                                              colnames(brcaMList[["methylProp"]]), ]
+        # patientMetadata should have already screened out patients without ER/PGR status
+        # resulting in 657 patients
+        hasER_PGR_IDs = patientMetadata[, subject_ID]
+        filteredMData = brcaMList[["methylProp"]][, hasER_PGR_IDs] 
+        
+        assign("signalMat", filteredMData, envir=.env)
+    }
+    
+    if (signalCoord) {
+        simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList",
+                    reload = FALSE, recreate = FALSE)
+        assign("signalCoord", brcaMList$coordinates, envir=.env)
+    }
+    
+    if (loadingMat) {
+        simpleCache("allMPCA_657", assignToVariable = "allMPCA")
+        loadingMat = allMPCA$rotation
+        assign("loadingMat", loadingMat, envir=.env)
+    }
+    if (pcScores) {
+        simpleCache("allMPCA_657", assignToVariable = "allMPCA", reload = FALSE)
+        pcScores = allMPCA$x
+        assign("pcScores", pcScores, envir=.env)
+    }
+}
+
+
 ############ functions to add to COCOA ##############################
 # ggplot version of rs concentration
 # 1 row per region set, column for rank in a given PC, 0/1 column for ER or not
