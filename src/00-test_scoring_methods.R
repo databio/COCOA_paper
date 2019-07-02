@@ -1,4 +1,5 @@
 # test/visualize different scoring metrics and normalizers
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 scriptID = "00_testScoring"
 
 ############################# testing out various scoring methods
@@ -126,12 +127,23 @@ GRList = GRList[!is.na(rsScores$PC1)]
 rsScores=rsScores[!is.na(rsScores$PC1), ]
 rsName = rsName[!is.na(rsScores$PC1)]
 rsDescription = rsDescription[!is.na(rsScores$PC1)]
+
+# the region set database has more region sets than rsScores so indexing by
+# name instead of row number
+names(rsName) = rsName
+names(GRList) = rsName
+names(rsDescription) = rsName
+
 rsEnSortedInd= rsRankingIndex(rsScores = rsScores, PCsToAnnotate = PCsToAnnotate)
 
 rsInd = c(unique(as.numeric(as.matrix(rsEnSortedInd[1:10, PCsToAnnotate]))),
           unique(as.numeric(as.matrix(rsEnSortedInd[1001:1005, PCsToAnnotate]))),
           unique(as.numeric(as.matrix(rsEnSortedInd[(nrow(rsEnSortedInd)-4):nrow(rsEnSortedInd), PCsToAnnotate]))))
-subGRList = GRList[rsInd]
+rsIndNames = rsScores$rsName[rsInd]
+subGRList = GRList[rsIndNames]
+subRSNames = rsName[rsIndNames]
+subRSDescription = rsDescription[rsIndNames]
+
 
 scoringMetric = "rankSum"
 
@@ -143,8 +155,8 @@ simpleCache(rsScoreCacheName, {
                        scoringMetric=scoringMetric,
                        verbose = TRUE, 
                        wilcox.conf.int = TRUE)
-    rsScores$rsName = rsName[rsInd]
-    rsScores$rsDescription= rsDescription[rsInd]
+    rsScores$rsName = subRSNames
+    rsScores$rsDescription= subRSDescription
     rsScores
 }, recreate=overwriteRSScoreResultsCaches)
 
