@@ -1,11 +1,11 @@
 
-source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/00-init.R"))
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "ews_patients/RCache/"))
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "ews_patients/analysis/plots/"))
 
 ########################################
 
-source(paste0(Sys.getenv("CODE"), "/pcrsa_method_paper/src/load_process_regions_brca.R"))
+source(paste0(Sys.getenv("CODE"), "/COCOA_paper/src/load_process_regions_brca.R"))
 
 #################################################################
 simpleCache("bigSharedC")

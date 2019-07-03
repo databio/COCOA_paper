@@ -114,6 +114,75 @@ loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE,
     }
 }
 
+loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactors=TRUE, 
+                         factorWeights=FALSE, .env=environment()) {
+    
+    library(ExperimentHub)
+    library("SummarizedExperiment")
+    library(MOFAtools)
+    library("FDb.InfiniumMethylation.hg19")
+    library(MultiAssayExperiment)
+    
+    
+    if (methylMat) {
+        cllMethyl = prepareCLLMethyl()
+        methData = cllMethyl$methylProp
+        assign("methylMat", methData, envir = .env)
+    }
+    if (signalCoord) {
+        cllMethyl = prepareCLLMethyl()
+        methCoord = cllMethyl$methylCoord
+        assign(x = "signalCoord", value = methCoord, envir = .env)
+        
+    }
+    if (latentFactors) {
+        # Loading an existing trained model
+        filepath <- system.file("extdata", "CLL_model.hdf5",
+                                package = "MOFAtools")
+        
+        MOFAobject <- loadModel(filepath, MOFAobject)
+
+        latentFactors <- getFactors(
+            MOFAobject,
+            as.data.frame = FALSE
+        )
+        assign("latentFactors", latentFactors, envir = .env)
+    }
+    if (factorWeights) {
+        # Loading an existing trained model
+        filepath <- system.file("extdata", "CLL_model.hdf5",
+                                package = "MOFAtools")
+        
+        MOFAobject <- loadModel(filepath, MOFAobject)
+        
+        MOFAweights <- getWeights(
+            MOFAobject, 
+            views = "Methylation", 
+            factors = "all", 
+            as.data.frame = TRUE
+        )
+        assign("factorWeights", MOFAweights, envir = .env)
+    }
+    
+}
+
+# loads GRList, rsName, rsDescription
+
+loadGRList(genomeV = "hg38", .env=environment()) {
+    if (genomeV == "hg38") {
+        source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regions_brca.R"))
+        names(GRList) = rsName
+        assign(x = "GRList", GRList, envir = .env)
+        assign(x = "rsName", rsName, envir = .env)
+        assign(x = "rsDescription", rsDescription, envir = .env)
+    # } else if (genomeV == "hg19") {
+    #     
+    } else {
+        stop("Only hg38 is available in this function currently.")
+    }
+    
+}
+
 
 ############ functions to add to COCOA ##############################
 # ggplot version of rs concentration

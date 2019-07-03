@@ -44,38 +44,10 @@ mae_CLL <- MultiAssayExperiment(
     colData = CLL_covariates
 )
 
+
+
 # Build the MOFA object
 MOFAobject <- createMOFAobject(mae_CLL)
-# 
-# plotTilesData(MOFAobject)
-# 
-# DataOptions <- getDefaultDataOptions()
-# DataOptions 
-# 
-# ModelOptions <- getDefaultModelOptions(MOFAobject)
-# ModelOptions$numFactors <- 25
-# ModelOptions
-# 
-# 
-# TrainOptions <- getDefaultTrainOptions()
-# 
-# # Automatically drop factors that explain less than 2% of variance in all omics
-# TrainOptions$DropFactorThreshold <- 0.02
-# 
-# TrainOptions$seed <- 2017
-# 
-# TrainOptions
-# 
-# 
-# MOFAobject <- prepareMOFA(
-#     MOFAobject, 
-#     DataOptions = DataOptions,
-#     ModelOptions = ModelOptions,
-#     TrainOptions = TrainOptions
-# )
-# 
-# 
-# MOFAobject <- runMOFA(MOFAobject)
 
 # Loading an existing trained model
 filepath <- system.file("extdata", "CLL_model.hdf5",
