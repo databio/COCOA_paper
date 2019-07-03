@@ -82,7 +82,7 @@ setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 ############# functions to load data easily ############################
 loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE, 
                          loadingMat=TRUE, pcScores=TRUE,
-                         .env=environment()) {
+                         .env=parent.env(environment())) {
     if (signalMat) {
         simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
         #restrict patients included in this analysis
@@ -115,45 +115,66 @@ loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE,
 }
 
 loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactors=TRUE, 
-                         factorWeights=FALSE, .env=environment()) {
+                         factorWeights=FALSE, .env=parent.env(environment())) {
     
     library(ExperimentHub)
     library("SummarizedExperiment")
-    library(MOFAtools)
+    # library(MOFAtools)
+    library(MOFA)
+    library("MOFAdata")
     library("FDb.InfiniumMethylation.hg19")
     library(MultiAssayExperiment)
     
-    
-    if (methylMat) {
-        cllMethyl = prepareCLLMethyl()
-        methData = cllMethyl$methylProp
-        assign("methylMat", methData, envir = .env)
-    }
     if (signalCoord) {
         cllMethyl = prepareCLLMethyl()
         methCoord = cllMethyl$methylCoord
         assign(x = "signalCoord", value = methCoord, envir = .env)
         
     }
-    if (latentFactors) {
-        # Loading an existing trained model
-        filepath <- system.file("extdata", "CLL_model.hdf5",
-                                package = "MOFAtools")
+    
+    # if both are loaded, put samples in same order
+    if (methylMat || latentFactors) {
         
-        MOFAobject <- loadModel(filepath, MOFAobject)
-
-        latentFactors <- getFactors(
-            MOFAobject,
-            as.data.frame = FALSE
-        )
-        assign("latentFactors", latentFactors, envir = .env)
+        # load but don't yet assign
+        if (methylMat) {
+            cllMethyl = prepareCLLMethyl()
+            methData = cllMethyl$methylProp
+        }
+        
+        # load but don't yet assign
+        if (latentFactors) {
+            # Loading an existing trained model
+            filepath <- system.file("extdata", "CLL_model.hdf5",
+                                    package = "MOFAdata")
+            
+            MOFAobject <- loadModel(filepath)
+            
+            latentFactors <- getFactors(
+                MOFAobject,
+                as.data.frame = FALSE
+            )
+        }
+        if (methylMat && latentFactors) {
+            sharedNames = colnames(methData)[colnames(methData) %in% 
+                                                 row.names(latentFactors)]
+            latentFactors = latentFactors[sharedNames, ]
+            methData = methData[, sharedNames]
+            
+            assign("latentFactors", latentFactors, envir = .env)
+            assign("methylMat", methData, envir = .env)
+        } else if (methylMat) {
+            assign("methylMat", methData, envir = .env)
+        } else if (latentFactors) {
+            assign("latentFactors", latentFactors, envir = .env)
+        }
     }
+    
     if (factorWeights) {
         # Loading an existing trained model
         filepath <- system.file("extdata", "CLL_model.hdf5",
-                                package = "MOFAtools")
+                                package = "MOFAdata")
         
-        MOFAobject <- loadModel(filepath, MOFAobject)
+        MOFAobject <- loadModel(filepath)
         
         MOFAweights <- getWeights(
             MOFAobject, 
@@ -168,7 +189,7 @@ loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactors=TRUE,
 
 # loads GRList, rsName, rsDescription
 
-loadGRList(genomeV = "hg38", .env=environment()) {
+loadGRList <- function(genomeV = "hg38", .env=parent.env(environment())) {
     if (genomeV == "hg38") {
         source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regions_brca.R"))
         names(GRList) = rsName
@@ -297,6 +318,49 @@ getPValRange <- function(rsScore, nullDistList, pc, regionCoverage) {
 getPValRangeVec <- function(rsScore, nullDistList, pc, regionCoverage) {
     getPValRange(rsScore, nullDistList, pc, regionCoverage)
 }
+
+# @param rsScores is a data.frame of 
+# @param nullDistList list. one item per region set. Each item is a 
+# data.frame with the 
+# null distribution for a single region set. Each column in the data.frame
+# is for a single variable (e.g. PC or latent factor)
+
+getPermPval <- function(rsScores, nullDistList, calcCols) {
+    
+    
+    # do once for each region set
+    mapply(FUN = function(x, y) getPermPvalSingle(rsScore=x, 
+                                               nullDistList = y,
+                                               calcCols = calcCols), 
+           x = rsScores[, calcCols], y=nullDistList)
+
+    
+    # combine into single data.frame
+    # @param rsScore a row of values for a single region set. One 
+    # value for each calcCols
+    
+    getPermPvalSingle <- function(rsScore, nullDist, 
+                                    calcCols) {
+        
+        pVal = rep(-1, length(rsScore))
+        for (i in seq_along(pVal)) {
+            # only for one sided test (greater than)
+            1-ecdf(x = nullDist[, calcCols[i]])(rsScore[i])
+        }
+        # (-abs(x-0.5) + 0.5) * 2
+                return(bound)
+    }
+    
+    # get upper bound for all scores in vector (rsScore and regionCoverage are vectors
+    # of the same length)
+    bound = mapply(FUN = function(x, y) getUpperBoundSingle(rsScore = x, 
+                                                            nullDistList = nullDistList, sampleSize=sampleSize, 
+                                                            pc=pc, regionCoverage = y), 
+                   x = rsScore, y = regionCoverage)
+    return(bound)
+    
+} 
+
 
 getUpperBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage) {
     
@@ -427,7 +491,8 @@ makeMetaRegionPlots <- function(loadingMat, signalCoord, GRList, rsNames, PCsToA
 # gets coordinates for CLL methyl
 # returns a list with methylProp that has methylation and "methylCoord"
 # that has corresponding genomic coordinates
-prepareCLLMethyl = function() {
+# filters out X and Y chromosomes
+prepareCLLMethyl = function(removeXY=TRUE) {
     
     # get microarray data
     eh = ExperimentHub()
@@ -448,6 +513,13 @@ prepareCLLMethyl = function() {
     methCoordDT = COCOA:::grToDt(methCoord)
     # keep start coordinate as CpG site
     methCoordDT = methCoordDT[, .(chr, start)]
+    
+    if (removeXY) {
+        xyInd = methCoordDT$chr %in% c("chrX", "chrY")
+        methCoordDT = methCoordDT[!xyInd, ]
+        methData = methData[!xyInd, ]
+    }
+    
     methCoord = COCOA:::dtToGr(methCoordDT)
     if (nrow(methCoordDT) != nrow(methData)) {
         stop("error matching probes to coordinates")
