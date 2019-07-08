@@ -6,7 +6,7 @@ library(data.table)
 library(ggplot2)
 library(GenomicRanges) # GRangesList, resize
 # library(caret)
-library(RGenomeUtils)
+# library(RGenomeUtils)
 library(MIRA)
 library(ComplexHeatmap)
 library(gridExtra) #marrangeGrob for colorClusterPlots()
@@ -196,10 +196,14 @@ loadGRList <- function(genomeV = "hg38", .env=parent.env(environment())) {
         assign(x = "GRList", GRList, envir = .env)
         assign(x = "rsName", rsName, envir = .env)
         assign(x = "rsDescription", rsDescription, envir = .env)
-    # } else if (genomeV == "hg19") {
-    #     
+    } else if (genomeV == "hg19") {
+        source(paste0(Sys.getenv("CODE"), "aml_e3999/src/load_process_regionDB.R"))
+        names(GRList) = rsName
+        assign(x = "GRList", GRList, envir = .env)
+        assign(x = "rsName", rsName, envir = .env)
+        assign(x = "rsDescription", rsDescription, envir = .env)
     } else {
-        stop("Only hg38 is available in this function currently.")
+        stop("Only hg38 and hg19 are available in this function currently.")
     }
     
 }

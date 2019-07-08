@@ -2,11 +2,11 @@
 
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 
-nCores = 2 # detectCores() - 1
+nCores = 1 # detectCores() - 1
 options("mc.cores"=nCores)
 
 set.seed(1234)
-nPerm =5
+nPerm = 500
 
 ######################################################################
 
@@ -16,7 +16,7 @@ genomicSignal = methylMat
 
 # loads database of region sets 
 # (assigns GRList, rsName, rsDescription to global environment)
-loadGRList(genomeV="hg38")
+loadGRList(genomeV="hg19")
 simpleCache(paste0("rsScore_Cor_", "CLL196", "MOFA"), assignToVariable = "realRSScores")
 row.names(realRSScores) = realRSScores$rsName
 sharedRSNames = names(GRList)[names(GRList) %in% realRSScores$rsName]
@@ -91,6 +91,22 @@ rsPermScores = COCOA:::lapplyAlias(X= indList, FUN=function(x) corPerm(randomInd
                                                         GRList=GRList, 
                                                         calcCols=colsToAnnotate,
                                                         sampleLabels=latentFactors))
+
+for (i in seq_along(indList)) {
+    
+    corPerm(randomInd=indList[[i]], 
+            genomicSignal=methylMat, 
+            signalCoord=signalCoord, 
+            GRList=GRList, 
+            calcCols=colsToAnnotate,
+            sampleLabels=latentFactors)
+    
+    if ((i %% 50) == 0) {
+        save(rsPermScores, file = "/scratch/jtl2hk/rsPermScores.RData")
+    }
+    
+}
+
 
 
 # get score null distribution for each region set
