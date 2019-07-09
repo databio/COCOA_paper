@@ -5,6 +5,9 @@ source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 nCores = 1 # detectCores() - 1
 options("mc.cores"=nCores)
 
+scriptID = "18-truePerm"
+
+
 set.seed(1234)
 nPerm = 500
 
@@ -84,30 +87,31 @@ for (i in 1:nPerm) {
 # hist(sapply(indList, function(x) x[1]))
 
 
-# plug random indices into parallelized function
-rsPermScores = COCOA:::lapplyAlias(X= indList, FUN=function(x) corPerm(randomInd=x, 
-                                                        genomicSignal=methylMat, 
-                                                        signalCoord=signalCoord, 
-                                                        GRList=GRList, 
-                                                        calcCols=colsToAnnotate,
-                                                        sampleLabels=latentFactors))
+# # plug random indices into parallelized function
+# rsPermScores = COCOA:::lapplyAlias(X= indList, FUN=function(x) corPerm(randomInd=x, 
+#                                                         genomicSignal=methylMat, 
+#                                                         signalCoord=signalCoord, 
+#                                                         GRList=GRList, 
+#                                                         calcCols=colsToAnnotate,
+#                                                         sampleLabels=latentFactors))
 
+rsPermScores = list()
 for (i in seq_along(indList)) {
     
-    corPerm(randomInd=indList[[i]], 
+    rsPermScores[[i]] = corPerm(randomInd=indList[[i]], 
             genomicSignal=methylMat, 
             signalCoord=signalCoord, 
             GRList=GRList, 
             calcCols=colsToAnnotate,
             sampleLabels=latentFactors)
-    
+    message(i)
     if ((i %% 50) == 0) {
-        save(rsPermScores, file = "/scratch/jtl2hk/rsPermScores.RData")
+        save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", scriptID, ".RData")))
     }
     
 }
 
-
+save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", scriptID, ".RData")))
 
 # get score null distribution for each region set
 # one null distribution for each region set
@@ -117,5 +121,18 @@ simpleCache("nullDistListMOFACor196", {
     nullDistList
 })
 
-getPermPval(rsScore=realRSScores, nullDistList=nullDistList, calcCols="LF1") 
+hist(nullDistList[[1]]$LF1)
 
+rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
+                      calcCols=colsToAnnotate, whichMetric = "pval")
+hist(rsPVals$LF1, breaks = seq(0, 1, by=0.005))
+hist(rsPVals$LF2, breaks = seq(0, 1, by=0.005))
+hist(rsPVals$LF9, breaks = seq(0, 1, by=0.005))
+hist(rsPVals$LF3)
+hist(rsPVals$LF7)
+
+View(rsPVals[which(rsPVals$LF3 < 0.01), ])
+
+rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
+                        calcCols=colsToAnnotate, whichMetric = "zscore")
+View(rsZScores[which(rsZScores$LF7 > 25), ])

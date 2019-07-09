@@ -82,7 +82,7 @@ setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 ############# functions to load data easily ############################
 loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE, 
                          loadingMat=TRUE, pcScores=TRUE,
-                         .env=parent.env(environment())) {
+                         .env=parent.frame(n=1)) {
     if (signalMat) {
         simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
         #restrict patients included in this analysis
@@ -115,7 +115,7 @@ loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE,
 }
 
 loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactors=TRUE, 
-                         factorWeights=FALSE, .env=parent.env(environment())) {
+                         factorWeights=FALSE, .env=parent.frame(n=1)) {
     
     library(ExperimentHub)
     library("SummarizedExperiment")
@@ -189,7 +189,7 @@ loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactors=TRUE,
 
 # loads GRList, rsName, rsDescription
 
-loadGRList <- function(genomeV = "hg38", .env=parent.env(environment())) {
+loadGRList <- function(genomeV = "hg38", .env=parent.frame(n=1)) {
     if (genomeV == "hg38") {
         source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regions_brca.R"))
         names(GRList) = rsName
@@ -197,7 +197,7 @@ loadGRList <- function(genomeV = "hg38", .env=parent.env(environment())) {
         assign(x = "rsName", rsName, envir = .env)
         assign(x = "rsDescription", rsDescription, envir = .env)
     } else if (genomeV == "hg19") {
-        source(paste0(Sys.getenv("CODE"), "aml_e3999/src/load_process_regionDB.R"))
+        source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regionDB_hg19.R"))
         names(GRList) = rsName
         assign(x = "GRList", GRList, envir = .env)
         assign(x = "rsName", rsName, envir = .env)
@@ -328,41 +328,78 @@ getPValRangeVec <- function(rsScore, nullDistList, pc, regionCoverage) {
 # data.frame with the 
 # null distribution for a single region set. Each column in the data.frame
 # is for a single variable (e.g. PC or latent factor)
+# @param testType character. "greater", "lesser", "two-sided" Whether to
+# create p values based on one sided test or not.
+# @param whichMetric character. Can be "pval" or "zscore"
 
-getPermPval <- function(rsScores, nullDistList, calcCols) {
+getPermStat <- function(rsScores, nullDistList, calcCols, testType="greater", whichMetric = "pval") {
     
-    
-    # do once for each region set
-    mapply(FUN = function(x, y) getPermPvalSingle(rsScore=x, 
-                                               nullDistList = y,
-                                               calcCols = calcCols), 
-           x = rsScores[, calcCols], y=nullDistList)
-
-    
-    # combine into single data.frame
-    # @param rsScore a row of values for a single region set. One 
-    # value for each calcCols
-    
-    getPermPvalSingle <- function(rsScore, nullDist, 
-                                    calcCols) {
-        
-        pVal = rep(-1, length(rsScore))
-        for (i in seq_along(pVal)) {
-            # only for one sided test (greater than)
-            1-ecdf(x = nullDist[, calcCols[i]])(rsScore[i])
-        }
-        # (-abs(x-0.5) + 0.5) * 2
-                return(bound)
+    if (is(rsScores, "data.table")) {
+        rsScores = as.data.frame(rsScores)
     }
     
-    # get upper bound for all scores in vector (rsScore and regionCoverage are vectors
-    # of the same length)
-    bound = mapply(FUN = function(x, y) getUpperBoundSingle(rsScore = x, 
-                                                            nullDistList = nullDistList, sampleSize=sampleSize, 
-                                                            pc=pc, regionCoverage = y), 
-                   x = rsScore, y = regionCoverage)
-    return(bound)
+    # get p values for a single region set (can get p val for multiple columns)
+    # @param rsScore a row of values for a single region set. One 
+    # value for each calcCols
+    getPermStatSingle <- function(rsScore, nullDist, 
+                                  calcCols, testType="greater", whichMetric = "pval") {
+        
+        if (is(nullDist, "data.table")) {
+            nullDist = as.data.frame(nullDist)
+        }
+        if (whichMetric == "pval") {
+            
+            pVal = rep(-1, length(rsScore))
+            if (testType == "greater") {
+                
+                for (i in seq_along(pVal)) {
+                    # only for one sided test (greater than)
+                    pVal[i] = 1 - ecdf(x = nullDist[, calcCols[i]])(rsScore[i])
+                }
+            }
+            
+            # (-abs(x-0.5) + 0.5) * 2
+            
+            thisStat = pVal
+        }
+        
+        if (whichMetric == "zscore") {
+            
+            
+            zScore = rep(NA, length(rsScore))
+            for (i in seq_along(zScore)) {
+                # only for one sided test (greater than)
+                zScore[i] = (rsScore[i] - mean(nullDist[, calcCols[i]])) / sd(x = nullDist[, calcCols[i]])
+            }
+            
+            thisStat = as.numeric(zScore)
+        }
+        
+        
+        return(thisStat)
+    }
     
+    
+        # do once for each region set
+        thisStatList = list()
+        for (i in 1:nrow(rsScores)) {
+            thisStatList[[i]] = as.data.frame(t(getPermStatSingle(rsScore=rsScores[i, calcCols], 
+                                                              nullDist = nullDistList[[i]],
+                                                              calcCols = calcCols,
+                                                              whichMetric=whichMetric)))
+            colnames(thisStatList[[i]]) <- calcCols
+        }
+        thisStat = rbindlist(thisStatList)
+        # add back on annotation info
+        thisStat = cbind(thisStat, rsScores[, colnames(rsScores)[!(colnames(rsScores) %in% calcCols)]])
+        
+        # pVals = mapply(FUN = function(x, y) getPermPvalSingle(rsScore=x, 
+        #                                            nullDist = y,
+        #                                            calcCols = calcCols), 
+        #        x = rsScores[, calcCols], y=nullDistList)
+        
+
+    return(thisStat)
 } 
 
 
