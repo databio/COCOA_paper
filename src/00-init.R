@@ -257,6 +257,7 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
 }
 
 
+################################################################################
 
 # @param dataMat columns of dataMat should be samples/patients, rows should be genomic signal
 # (each row corresponds to one genomic coordinate/range)
@@ -526,6 +527,13 @@ makeMetaRegionPlots <- function(loadingMat, signalCoord, GRList, rsNames, PCsToA
     
     return(list(multiProfileP, pcProf))
 }
+
+###################### visualization ##########################
+
+# function to make nice histograms
+# add axis and overall titles
+# if making multiple plots, scale/bin them consistently (consistent bins)
+# able to plot multiple plots to one pdf
 
 
 ########## MOFA/CLL analysis #########################
