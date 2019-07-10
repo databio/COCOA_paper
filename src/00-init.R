@@ -530,11 +530,54 @@ makeMetaRegionPlots <- function(loadingMat, signalCoord, GRList, rsNames, PCsToA
 
 ###################### visualization ##########################
 
-# function to make nice histograms
-# add axis and overall titles
-# if making multiple plots, scale/bin them consistently (consistent bins)
-# able to plot multiple plots to one pdf
+# @examples dataDF = data.frame(data.frame(a=c((1:4)/10, .4), b=6:10))
+# niceHist(dataDF=dataDF, colToPlot="a", xLabel="myXLab", binwidth=0.01)
+# make a single ggplot histogram
+niceHist = function(dataDF, colToPlot, xLabel=colToPlot, binwidth=1, boundary=0, yLabel="", plotTitle = "", 
+                    ggExpr=NULL) {
+    p= ggplot(dataDF, aes(get(colToPlot))) + 
+        geom_histogram(binwidth=binwidth, boundary=boundary) + 
+        xlab(xLabel) +ylab(yLabel) + ggtitle(plotTitle)
+    # geom_histogram(aes(y=..count../sum(..count..))
+    # could add arbitrary expression  # e.g. plottingExpr = "theme_classic() + (etc.)"
+    if (!is.null(ggExpr)) {
+        eval(parse(text=paste0("p", ggExpr)))
+    } else (
+        p
+    )
+    
+    # theme_classic(), ylim(0, yMax)
+}
 
+# make one or more ggplot histograms and save them to a pdf
+# @param colsToPlot character. The name of the column itself. One histogram
+# for each column. 
+# @param xLabels character. A more complete/understandable name/title for the 
+# columns which are being plotted
+multiNiceHist = function(file, dataDF, colsToPlot, xLabels=colsToPlot,
+                         binwidth=1, boundary=0, yLabel="", plotTitles="", ggExpr=NULL) {
+    
+    # make it the same length
+    if (length(plotTitles) == 1) {
+        plotTitles = rep(plotTitles, length(colsToPlot))
+    }
+    if (length(xLabels) == 1) {
+        xLabels = rep(xLabels, length(colsToPlot))
+    }
+    
+    pdf(file = file)
+    
+    for (i in seq_along(colsToPlot)) {
+        colToPlot = colsToPlot[i]
+        p = niceHist(dataDF, colToPlot=colToPlot, xLabel=xLabels[i], 
+                     binwidth=binwidth, boundary=boundary, yLabel=yLabel,
+                     plotTitle=plotTitles[i], ggExpr=ggExpr)  
+        print(p)
+    }
+    
+    dev.off()
+    
+}
 
 ########## MOFA/CLL analysis #########################
 # gets coordinates for CLL methyl

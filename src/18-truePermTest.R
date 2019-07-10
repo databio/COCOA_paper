@@ -6,7 +6,11 @@ nCores = 1 # detectCores() - 1
 options("mc.cores"=nCores)
 
 scriptID = "18-truePerm"
+plotSubdir = "18-truePerm/"
 
+if (!dir.exists(ffPlot(plotSubdir))) {
+    dir.create(ffPlot(plotSubdir))
+}
 
 set.seed(1234)
 nPerm = 500
@@ -121,18 +125,48 @@ simpleCache("nullDistListMOFACor196", {
     nullDistList
 })
 
-hist(nullDistList[[1]]$LF1)
+multiNiceHist(file = ffPlot(paste0(plotSubdir, "nullDistMOFACorPermRS2250.pdf")), dataDF = nullDistList[[2250]], 
+              colsToPlot = colsToAnnotate, xLabels = "COCOA score (absolute correlation)", 
+              binwidth = 0.001, yLabel = "Number of region sets", 
+              plotTitles = paste0("Null distribution of COCOA scores, ", colsToAnnotate),
+              ggExpr = "+xlim(0,0.15)")
+
+hist(nullDistList[[2260]]$LF1)
 
 rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
                       calcCols=colsToAnnotate, whichMetric = "pval")
-hist(rsPVals$LF1, breaks = seq(0, 1, by=0.005))
-hist(rsPVals$LF2, breaks = seq(0, 1, by=0.005))
-hist(rsPVals$LF9, breaks = seq(0, 1, by=0.005))
-hist(rsPVals$LF3)
-hist(rsPVals$LF7)
+multiNiceHist(file = ffPlot(paste0(plotSubdir, "pValDistMOFACorPerm.pdf")), dataDF = rsPVals, 
+              colsToPlot = colsToAnnotate, xLabels = "p-value", 
+              binwidth = 0.005, yLabel = "Number of region sets", 
+              plotTitles = paste0("Distribution of region set p-values, ", colsToAnnotate),
+              ggExpr = "+xlim(0,1)+ylim(0, 2270)")
+
 
 View(rsPVals[which(rsPVals$LF3 < 0.01), ])
 
 rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
                         calcCols=colsToAnnotate, whichMetric = "zscore")
 View(rsZScores[which(rsZScores$LF7 > 25), ])
+
+multiNiceHist(file = ffPlot(paste0(plotSubdir, "zScoreDistMOFACorPerm.pdf")), dataDF = rsZScores, 
+              colsToPlot = colsToAnnotate, xLabels = "z score", 
+              binwidth = 1, yLabel = "Number of region sets", 
+              plotTitles = paste0("Distribution of region set z scores, ", colsToAnnotate),
+              ggExpr = "+xlim(-3,40)")
+
+hist(rsZScores$LF5)
+
+topRSInd = rsRankingIndex(rsScores = rsZScores, PCsToAnnotate = colsToAnnotate)
+
+topRSAnnoList = list()
+for (i in seq_along(colsToAnnotate)) {
+    topRSAnnoList[[i]] = data.frame(rsName=rsZScores$rsName[topRSInd[1:20, colsToAnnotate[i]]], 
+                                    rsDescription=rsZScores$rsDescription[topRSInd[1:20, colsToAnnotate[i]]])
+    names(topRSAnnoList[[i]]) <- paste0(names(topRSAnnoList[[i]]), "_", colsToAnnotate[i])
+}
+
+write.csv(topRSAnnoList, file = ffProc(paste0("COCOA_paper/analysis/sheets/topRSMOFACorPerm.csv")))
+for (i in 2:length(topRSAnnoList)) {
+    write.csv(topRSAnnoList[[i]], file = ffProc(paste0("COCOA_paper/analysis/sheets/topRSMOFACorPerm.csv")), append = TRUE)
+    
+}
