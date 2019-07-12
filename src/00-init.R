@@ -82,36 +82,113 @@ setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 ############# functions to load data easily ############################
 loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE, 
                          loadingMat=TRUE, pcScores=TRUE,
+                         patientMetadata=TRUE,
                          .env=parent.frame(n=1)) {
-    if (signalMat) {
+    
+    if (signalMat || signalCoord) {
         simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
+    }
+    if (signalMat) {
         #restrict patients included in this analysis
-        patientMetadata = patientMetadata[patientMetadata$subject_ID %in% 
+        brcaMetadata = fread(paste0(Sys.getenv("CODE"), 
+                                    "COCOA_paper/metadata/brca_metadata.csv"))
+        # only keep patients who have definitive status for ER and PGR
+        brcaMetadata = brcaMetadata[brcaMetadata$ER_status %in% 
+                                        c("Positive", "Negative"), ]
+        brcaMetadata = brcaMetadata[brcaMetadata$PGR_status %in% 
+                                        c("Positive", "Negative"), ]
+        brcaMetadata = brcaMetadata[brcaMetadata$subject_ID %in% 
                                               colnames(brcaMList[["methylProp"]]), ]
-        # patientMetadata should have already screened out patients without ER/PGR status
+        # brcaMetadata should have already screened out patients without ER/PGR status
         # resulting in 657 patients
-        hasER_PGR_IDs = patientMetadata[, subject_ID]
+        hasER_PGR_IDs = as.character(brcaMetadata[, subject_ID])
         filteredMData = brcaMList[["methylProp"]][, hasER_PGR_IDs] 
         
         assign("signalMat", filteredMData, envir=.env)
     }
-    
     if (signalCoord) {
-        simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList",
-                    reload = FALSE, recreate = FALSE)
         assign("signalCoord", brcaMList$coordinates, envir=.env)
     }
-    
-    if (loadingMat) {
+    #####
+    if (loadingMat || pcScores) {
         simpleCache("allMPCA_657", assignToVariable = "allMPCA")
+    }
+    if (loadingMat) {
         loadingMat = allMPCA$rotation
         assign("loadingMat", loadingMat, envir=.env)
     }
     if (pcScores) {
-        simpleCache("allMPCA_657", assignToVariable = "allMPCA", reload = FALSE)
         pcScores = allMPCA$x
         assign("pcScores", pcScores, envir=.env)
     }
+    #####
+    if (patientMetadata == TRUE) {
+        brcaMetadata = fread(paste0(Sys.getenv("CODE"), 
+                                    "COCOA_paper/metadata/brca_metadata.csv"))
+        # only keep patients who have definitive status for ER and PGR
+        brcaMetadata = brcaMetadata[brcaMetadata$ER_status %in% 
+                                        c("Positive", "Negative"), ]
+        brcaMetadata = brcaMetadata[brcaMetadata$PGR_status %in% 
+                                        c("Positive", "Negative"), ]
+        
+        
+        # indexed clinical data (brca_clinical_metadata.tsv) has more up to date follow up info
+        brcaMetadata2 = read.table(file = paste0(Sys.getenv("CODE"), 
+                                                 "COCOA_paper/metadata/brca_clinical_metadata.tsv"), 
+                                   sep = "\t", header = TRUE)
+        
+        patientMetadata = merge(brcaMetadata, brcaMetadata2[, c("bcr_patient_barcode", 
+                                                                "vital_status", 
+                                                                "days_to_death", 
+                                                                "days_to_last_follow_up")],
+                                by.x="subject_ID", 
+                                by.y="bcr_patient_barcode", all.x=TRUE)
+        
+        row.names(patientMetadata) <- patientMetadata$subject_ID
+        assign("patientMetadata", patientMetadata, envir=.env)
+    }
+}
+
+########## MOFA/CLL analysis #########################
+# gets coordinates for CLL methyl
+# returns a list with methylProp that has methylation and "methylCoord"
+# that has corresponding genomic coordinates
+# filters out X and Y chromosomes
+prepareCLLMethyl = function(removeXY=TRUE) {
+    
+    # get microarray data
+    eh = ExperimentHub()
+    meth = eh[[names(query(eh, "CLLmethylation"))]] # EH1071
+    # rows are cpgs, columns are samples
+    methData = assay(meth)
+    dataProbeNames = row.names(methData)
+    
+    
+    # match probe names with genomic coordinates
+    # ls('package:FDb.InfiniumMethylation.hg19')
+    m450kAnno = get450k()
+    length(m450kAnno)
+    
+    # get coordinates in same order as CLL data
+    methCoord = m450kAnno[dataProbeNames]
+    all(names(methCoord) == dataProbeNames)
+    methCoordDT = COCOA:::grToDt(methCoord)
+    # keep start coordinate as CpG site
+    methCoordDT = methCoordDT[, .(chr, start)]
+    
+    if (removeXY) {
+        xyInd = methCoordDT$chr %in% c("chrX", "chrY")
+        methCoordDT = methCoordDT[!xyInd, ]
+        methData = methData[!xyInd, ]
+    }
+    
+    methCoord = COCOA:::dtToGr(methCoordDT)
+    if (nrow(methCoordDT) != nrow(methData)) {
+        stop("error matching probes to coordinates")
+    }
+    
+    return(list(methylProp = methData, methylCoord = methCoord))
+    
 }
 
 loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactors=TRUE, 
@@ -465,6 +542,58 @@ getLowerBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage)
     
 } 
 
+#####################################################################
+# functions for parallel permutations
+
+# @param genomicSignal columns of dataMat should be samples/patients, rows should be genomic signal
+# (each row corresponds to one genomic coordinate/range)
+# @param sampleLabels Rows should be samples, columns should be "features" 
+# (whatever you want to get correlation with: eg PC scores),
+# all columns in featureMat will be used (subset when passing to function
+# in order to not use all columns)
+# @param calcCols character. the columns for which to calculate
+# correlation and then to run COCOA on
+corPerm <- function(randomInd, genomicSignal, 
+                    signalCoord, GRList, calcCols,
+                    sampleLabels) {
+    
+    # reorder the sample labels
+    sampleLabels = sampleLabels[randomInd, ]
+    
+    # calculate correlation
+    featureLabelCor = createCorFeatureMat(dataMat = genomicSignal, 
+                                          featureMat = sampleLabels, 
+                                          centerDataMat = TRUE, 
+                                          centerFeatureMat = TRUE)
+    
+    # run COCOA
+    thisPermRes = runCOCOA(loadingMat=featureLabelCor, 
+                           signalCoord=signalCoord, GRList=GRList, 
+                           PCsToAnnotate = calcCols, 
+                           scoringMetric = "regionMean", verbose = TRUE)
+    
+    # return
+    return(thisPermRes)
+    
+}
+# This function will take a list of results of permutation tests that included
+# many region sets and return a data.frame/data.table with the null
+# distribution for a single region set (row)
+# @param resultsList each item in the list is a data.frame, one item for
+# each permutation with the results of that permutation. Each row in the 
+# data.frame is a region set. Rows in all the data.frames should be
+# in the same order.
+# @param rsInd numeric. The row number for the region set of interest.
+extractNullDist <- function(resultsList, rsInd) {
+    rowList = lapply(resultsList, FUN = function(x) x[rsInd, ])
+    rsNullDist = rbindlist(rowList)
+    return(rsNullDist)
+}
+
+
+####################################################################
+
+
 ################## not sure whether to add this one to COCOA
 # convenience function to quickly make meta-region loading profiles
 # first calculates profiles, then normalizes and plots
@@ -576,47 +705,5 @@ multiNiceHist = function(file, dataDF, colsToPlot, xLabels=colsToPlot,
     }
     
     dev.off()
-    
-}
-
-########## MOFA/CLL analysis #########################
-# gets coordinates for CLL methyl
-# returns a list with methylProp that has methylation and "methylCoord"
-# that has corresponding genomic coordinates
-# filters out X and Y chromosomes
-prepareCLLMethyl = function(removeXY=TRUE) {
-    
-    # get microarray data
-    eh = ExperimentHub()
-    meth = eh[[names(query(eh, "CLLmethylation"))]] # EH1071
-    # rows are cpgs, columns are samples
-    methData = assay(meth)
-    dataProbeNames = row.names(methData)
-    
-    
-    # match probe names with genomic coordinates
-    # ls('package:FDb.InfiniumMethylation.hg19')
-    m450kAnno = get450k()
-    length(m450kAnno)
-    
-    # get coordinates in same order as CLL data
-    methCoord = m450kAnno[dataProbeNames]
-    all(names(methCoord) == dataProbeNames)
-    methCoordDT = COCOA:::grToDt(methCoord)
-    # keep start coordinate as CpG site
-    methCoordDT = methCoordDT[, .(chr, start)]
-    
-    if (removeXY) {
-        xyInd = methCoordDT$chr %in% c("chrX", "chrY")
-        methCoordDT = methCoordDT[!xyInd, ]
-        methData = methData[!xyInd, ]
-    }
-    
-    methCoord = COCOA:::dtToGr(methCoordDT)
-    if (nrow(methCoordDT) != nrow(methData)) {
-        stop("error matching probes to coordinates")
-    }
-    
-    return(list(methylProp = methData, methylCoord = methCoord))
     
 }

@@ -30,56 +30,6 @@ sharedRSNames = names(GRList)[names(GRList) %in% realRSScores$rsName]
 GRList = GRList[sharedRSNames]
 realRSScores = realRSScores[sharedRSNames, ]
 
-#####################################################################
-# functions for parallel permutations
-
-# @param genomicSignal columns of dataMat should be samples/patients, rows should be genomic signal
-# (each row corresponds to one genomic coordinate/range)
-# @param sampleLabels Rows should be samples, columns should be "features" 
-# (whatever you want to get correlation with: eg PC scores),
-# all columns in featureMat will be used (subset when passing to function
-# in order to not use all columns)
-# @param calcCols character. the columns for which to calculate
-# correlation and then to run COCOA on
-corPerm <- function(randomInd, genomicSignal, 
-                    signalCoord, GRList, calcCols,
-                    sampleLabels) {
-    
-    # reorder the sample labels
-    sampleLabels = sampleLabels[randomInd, ]
-    
-    # calculate correlation
-    featureLabelCor = createCorFeatureMat(dataMat = genomicSignal, 
-                                          featureMat = sampleLabels, 
-                                          centerDataMat = TRUE, 
-                                          centerFeatureMat = TRUE)
-    
-    # run COCOA
-    thisPermRes = runCOCOA(loadingMat=featureLabelCor, 
-                           signalCoord=signalCoord, GRList=GRList, 
-                           PCsToAnnotate = calcCols, 
-                           scoringMetric = "regionMean", verbose = TRUE)
-    
-    # return
-    return(thisPermRes)
-    
-}
-# This function will take a list of results of permutation tests that included
-# many region sets and return a data.frame/data.table with the null
-# distribution for a single region set (row)
-# @param resultsList each item in the list is a data.frame, one item for
-# each permutation with the results of that permutation. Each row in the 
-# data.frame is a region set. Rows in all the data.frames should be
-# in the same order.
-# @param rsInd numeric. The row number for the region set of interest.
-extractNullDist <- function(resultsList, rsInd) {
-    rowList = lapply(resultsList, FUN = function(x) x[rsInd, ])
-    rsNullDist = rbindlist(rowList)
-    return(rsNullDist)
-}
-
-
-####################################################################
 
 colsToAnnotate = paste0("LF", c(1:3, 5:7, 9))
 
@@ -127,7 +77,7 @@ simpleCache("nullDistListMOFACor196", {
 
 multiNiceHist(file = ffPlot(paste0(plotSubdir, "nullDistMOFACorPermRS2250.pdf")), dataDF = nullDistList[[2250]], 
               colsToPlot = colsToAnnotate, xLabels = "COCOA score (absolute correlation)", 
-              binwidth = 0.001, yLabel = "Number of region sets", 
+              binwidth = 0.001, yLabel = "Number of permutation results", 
               plotTitles = paste0("Null distribution of COCOA scores, ", colsToAnnotate),
               ggExpr = "+xlim(0,0.15)")
 
@@ -142,11 +92,11 @@ multiNiceHist(file = ffPlot(paste0(plotSubdir, "pValDistMOFACorPerm.pdf")), data
               ggExpr = "+xlim(0,1)+ylim(0, 2270)")
 
 
-View(rsPVals[which(rsPVals$LF3 < 0.01), ])
+View(rsPVals[which(rsPVals$LF5 < 0.01), ])
 
 rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
                         calcCols=colsToAnnotate, whichMetric = "zscore")
-View(rsZScores[which(rsZScores$LF7 > 25), ])
+View(rsZScores[which(rsZScores$LF2 > 7), ])
 
 multiNiceHist(file = ffPlot(paste0(plotSubdir, "zScoreDistMOFACorPerm.pdf")), dataDF = rsZScores, 
               colsToPlot = colsToAnnotate, xLabels = "z score", 
