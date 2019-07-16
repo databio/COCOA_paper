@@ -1,5 +1,4 @@
 # 
-# PCsToAnnotate_cPCH = c("PC1m4", "PC1p3", PCSTOANNOTATE)
 
 source(paste0(Sys.getenv("CODE"),"COCOA_paper/src/00-init.R"))
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))

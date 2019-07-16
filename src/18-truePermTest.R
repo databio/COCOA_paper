@@ -7,6 +7,7 @@ options("mc.cores"=nCores)
 
 scriptID = "18-truePerm"
 plotSubdir = "18-truePerm/"
+dataID = "_Cor"
 
 if (!dir.exists(ffPlot(plotSubdir))) {
     dir.create(ffPlot(plotSubdir))
@@ -32,6 +33,8 @@ realRSScores = realRSScores[sharedRSNames, ]
 
 
 colsToAnnotate = paste0("LF", c(1:3, 5:7, 9))
+
+#####################################################################
 
 indList = list()
 # generate random indices for shuffling of samples
@@ -83,8 +86,11 @@ multiNiceHist(file = ffPlot(paste0(plotSubdir, "nullDistMOFACorPermRS2250.pdf"))
 
 hist(nullDistList[[2260]]$LF1)
 
-rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
-                      calcCols=colsToAnnotate, whichMetric = "pval")
+simpleCache(paste0("mofaPermPVals", dataID), {
+    rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
+                          calcCols=colsToAnnotate, whichMetric = "pval")
+    rsPVals
+})
 multiNiceHist(file = ffPlot(paste0(plotSubdir, "pValDistMOFACorPerm.pdf")), dataDF = rsPVals, 
               colsToPlot = colsToAnnotate, xLabels = "p-value", 
               binwidth = 0.005, yLabel = "Number of region sets", 
@@ -94,8 +100,12 @@ multiNiceHist(file = ffPlot(paste0(plotSubdir, "pValDistMOFACorPerm.pdf")), data
 
 View(rsPVals[which(rsPVals$LF5 < 0.01), ])
 
-rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
-                        calcCols=colsToAnnotate, whichMetric = "zscore")
+simpleCache(paste0("mofaPermZScores", dataID), { 
+    rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
+                            calcCols=colsToAnnotate, whichMetric = "zscore")
+    rsZScores
+    
+})
 View(rsZScores[which(rsZScores$LF2 > 7), ])
 
 multiNiceHist(file = ffPlot(paste0(plotSubdir, "zScoreDistMOFACorPerm.pdf")), dataDF = rsZScores, 

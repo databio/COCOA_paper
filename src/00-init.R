@@ -71,6 +71,12 @@ dirCode = function(.file="") {
     return(paste0(Sys.getenv("CODE"), "COCOA_paper/", .file))
 }
 
+createPlotSubdir = function(plotSubdir) {
+    if (!dir.exists(ffPlot(plotSubdir))) {
+        dir.create(ffPlot(plotSubdir))
+    }
+}
+
 # for ggplot2
 theme_set(theme_classic() + 
               theme(axis.text = element_text(colour = "black", size = 15), axis.ticks = element_line(colour = "black")))
@@ -192,7 +198,7 @@ prepareCLLMethyl = function(removeXY=TRUE) {
 }
 
 loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactors=TRUE, 
-                         factorWeights=FALSE, .env=parent.frame(n=1)) {
+                         factorWeights=FALSE, cllMultiOmics=FALSE, .env=parent.frame(n=1)) {
     
     library(ExperimentHub)
     library("SummarizedExperiment")
@@ -226,23 +232,25 @@ loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactors=TRUE,
             
             MOFAobject <- loadModel(filepath)
             
-            latentFactors <- getFactors(
+            lFactors <- getFactors(
                 MOFAobject,
                 as.data.frame = FALSE
             )
         }
         if (methylMat && latentFactors) {
-            sharedNames = colnames(methData)[colnames(methData) %in% 
-                                                 row.names(latentFactors)]
-            latentFactors = latentFactors[sharedNames, ]
+            # ordering them according to order of latentFactors
+            sharedNames = row.names(lFactors)[row.names(lFactors) %in%
+                                                       colnames(methData)]
+
+            lFactors = lFactors[sharedNames, ]
             methData = methData[, sharedNames]
             
-            assign("latentFactors", latentFactors, envir = .env)
+            assign("latentFactors", lFactors, envir = .env)
             assign("methylMat", methData, envir = .env)
         } else if (methylMat) {
             assign("methylMat", methData, envir = .env)
         } else if (latentFactors) {
-            assign("latentFactors", latentFactors, envir = .env)
+            assign("latentFactors", lFactors, envir = .env)
         }
     }
     
@@ -260,6 +268,29 @@ loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactors=TRUE,
             as.data.frame = TRUE
         )
         assign("factorWeights", MOFAweights, envir = .env)
+    }
+    if (cllMultiOmics) {
+        # a list with named items: $Drugs, $Methylation, $mRNA, $Mutations
+        data("CLL_data", package = "MOFAdata")
+        if (cllMultiOmics && latentFactors) {
+            # Loading an existing trained model
+            filepath <- system.file("extdata", "CLL_model.hdf5",
+                                    package = "MOFAdata")
+            
+            MOFAobject <- loadModel(filepath)
+            
+            lFactors <- getFactors(
+                MOFAobject,
+                as.data.frame = FALSE)
+            
+            # make same order
+            for (i in seq_along(CLL_data)) {
+                sharedNames = row.names(lFactors)[row.names(lFactors) %in% colnames(CLL_data[[i]])]
+                CLL_data[[i]] <- CLL_data[[i]][, sharedNames]
+            }
+
+        } 
+        assign("cllMultiOmics", CLL_data, envir = .env)
     }
     
 }

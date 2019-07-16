@@ -1,13 +1,13 @@
 # library(projectInit)
 
-# project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "brca_PCA/"))
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 
 setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
-#patientMetadata = brcaMetadata # already screened out patients with incomplete ER or PGR mutation status
-# there should be 657 such patients
+
 set.seed(1234)
 plotSubdir = "15_brca_CLL_figures/"
+scriptID = "15-brcaCLLFigures"
+createPlotSubdir(plotSubdir = plotSubdir)
 
 ###########################################################
 # reading in the region sets
@@ -192,7 +192,38 @@ plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9),
 # factors 1 (strong), 7 and 9 were associated with DNA methylation
 # factor 1: cell type/differentiation, factor 7: chemo-immunotherapy treatment prior to sample collection
 # factor 7: del17p, TP53 mutations, methylation of oncogenes
+
+loadMOFAData(methylMat = FALSE, signalCoord=FALSE, latentFactors = TRUE,
+             cllMultiOmics=TRUE)
+simpleCache("mofaPermZScoresCor", assignToVariable = "rsZScores")
+mutDF = cllMultiOmics$Mutation
+# same order
+latentFactors = latentFactors[colnames(mutDF), ]
+IGHV = mutDF["IGHV", ]
+IGHV[IGHV == 1] = "mutated"
+IGHV[IGHV == 0] = "unmutated"
+IGHV = as.factor(IGHV)
+latentFactors = data.frame(latentFactors, IGHV, KLHL6=mutDF["KLHL6", ], BRAF=factor(mutDF["BRAF", ])) 
+                           # CD56=cllMultiOmics$mRNA["ENSG00000149294", ],
+                           # CD3=cllMultiOmics$mRNA["ENSG00000167286", ])
+# CD19=cllMultiOmics$mRNA["ENSG00000177455", ]
+# latentFactors$IGHV = factor(latentFactors$IGHV, levels = c("mutated", "unmutated"))
+
+# make plot of latent factors (show that LF1 separates based on differentiation)
+# it seems that the sign of latent factor 1 is switched either in the paper or the data package
+# -1 * LF1 to make it the same as the paper
+fPlot = ggplot(data = latentFactors, mapping = aes(x = -1*LF1, y = LF2)) + geom_point(aes(col=IGHV)) +
+            xlab("Factor 1") + ylab("Factor 2") + theme(axis.title.x = element_text(size = 18),
+                                                        axis.title.y = element_text(size = 18),
+                                                        legend.text = element_text(size=18), 
+                                                        legend.title = element_text(size=18))
+fPlot
+ggsave(filename = ffPlot(paste0(plotSubdir, "mofaFactorLF1LF2.svg")), 
+       plot = fPlot, device = "svg")
+cor.test(x = latentFactors$CD3, y = latentFactors$LF9)
+
 simpleCache("rsScore_Cor_CLL196MOFA", assignToVariable = "rsScores")
+
 # View(rsScores[order(rsScores$LF1, decreasing=TRUE), ])
 plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
                                 colsToSearch = c("rsName", "rsDescription"), 

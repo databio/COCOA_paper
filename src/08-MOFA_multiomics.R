@@ -4,12 +4,11 @@
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 library(ExperimentHub)
 library("SummarizedExperiment")
-library(MOFAtools)
 library("FDb.InfiniumMethylation.hg19")
 library(MultiAssayExperiment)
 library(COCOA)
-
-setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
+library(MOFAdata)
+library(MOFA)
 
 #############################################################################
 # script specific IDs
