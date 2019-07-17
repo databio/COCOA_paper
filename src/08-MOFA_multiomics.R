@@ -50,7 +50,7 @@ MOFAobject <- createMOFAobject(mae_CLL)
 
 # Loading an existing trained model
 filepath <- system.file("extdata", "CLL_model.hdf5",
-                        package = "MOFAtools")
+                        package = "MOFAdata")
 
 MOFAobject <- loadModel(filepath, MOFAobject)
 
