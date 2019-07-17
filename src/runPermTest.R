@@ -1,37 +1,17 @@
 # permutation test by shuffling sample labels
-
-source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
-
-nCores = 1 # detectCores() - 1
-options("mc.cores"=nCores)
-
-scriptID = "19-applyPerm"
-plotSubdir = "19-applyPerm/"
-
-if (!dir.exists(ffPlot(plotSubdir))) {
-    dir.create(ffPlot(plotSubdir))
-}
-
-set.seed(1234)
-nPerm = 250
-
-######################################################################
-
-# assigns signalMat, signalCoord, loadingMat, pcScores
-loadBRCADNAm()
-genomicSignal = signalMat
-sampleLabels = pcScores
-
-# loads database of region sets 
-# (assigns GRList, rsName, rsDescription to global environment)
-loadGRList(genomeV="hg38")
-
-colsToAnnotate = paste0("PC", 1:10)
-
-dataID = "brcaDNAm657"
-
-############################################################################
-
+# expected inputs: 
+#' @param nPerm numeric. The number of permutations to do.
+#' @param sampleLabels data.frame/matrix. Sample labels/values that 
+#' you are running COCOA to find region sets associated with. These 
+#' values will be shuffled for the permutation test. Rows are samples.
+#' Each column is a sample label.
+#' @param genomicSignal
+#' @param signalCoord
+#' @param GRList
+#' @param colsToAnnotate character. The column names of `sampleLabels` that
+#' you want to test.
+#' @param dataID character. A unique identifier for this dataset 
+#' (for saving results)
 
 
 indList = list()
@@ -59,12 +39,14 @@ for (i in seq_along(indList)) {
                                 sampleLabels=sampleLabels)
     message(i)
     if ((i %% 50) == 0) {
-        save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", dataID, ".RData")))
+        save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
+                                                dataID, ".RData")))
     }
     
 }
 
-save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", dataID, ".RData")))
+save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
+                                        dataID, ".RData")))
 
 # # get score null distribution for each region set
 # # one null distribution for each region set

@@ -71,12 +71,6 @@ dirCode = function(.file="") {
     return(paste0(Sys.getenv("CODE"), "COCOA_paper/", .file))
 }
 
-createPlotSubdir = function(plotSubdir) {
-    if (!dir.exists(ffPlot(plotSubdir))) {
-        dir.create(ffPlot(plotSubdir))
-    }
-}
-
 # for ggplot2
 theme_set(theme_classic() + 
               theme(axis.text = element_text(colour = "black", size = 15), axis.ticks = element_line(colour = "black")))
@@ -88,117 +82,98 @@ setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 ############# functions to load data easily ############################
 loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE, 
                          loadingMat=TRUE, pcScores=TRUE,
-                         patientMetadata=TRUE,
-                         .env=parent.frame(n=1)) {
+                         .env=currentEnv) {
+    # making sure parent.frame is evaluated inside function (not outside as 
+    # when listed as default argument)
+    currentEnv = parent.frame(n=1) # env where function was called
+    .env = currentEnv
     
-    if (signalMat || signalCoord) {
-        simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
-    }
     if (signalMat) {
+        simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
         #restrict patients included in this analysis
-        brcaMetadata = fread(paste0(Sys.getenv("CODE"), 
-                                    "COCOA_paper/metadata/brca_metadata.csv"))
-        # only keep patients who have definitive status for ER and PGR
-        brcaMetadata = brcaMetadata[brcaMetadata$ER_status %in% 
-                                        c("Positive", "Negative"), ]
-        brcaMetadata = brcaMetadata[brcaMetadata$PGR_status %in% 
-                                        c("Positive", "Negative"), ]
-        brcaMetadata = brcaMetadata[brcaMetadata$subject_ID %in% 
+        patientMetadata = patientMetadata[patientMetadata$subject_ID %in% 
                                               colnames(brcaMList[["methylProp"]]), ]
-        # brcaMetadata should have already screened out patients without ER/PGR status
+        # patientMetadata should have already screened out patients without ER/PGR status
         # resulting in 657 patients
-        hasER_PGR_IDs = as.character(brcaMetadata[, subject_ID])
+        hasER_PGR_IDs = patientMetadata[, subject_ID]
         filteredMData = brcaMList[["methylProp"]][, hasER_PGR_IDs] 
         
         assign("signalMat", filteredMData, envir=.env)
     }
+    
     if (signalCoord) {
+        simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList",
+                    reload = FALSE, recreate = FALSE)
         assign("signalCoord", brcaMList$coordinates, envir=.env)
     }
-    #####
-    if (loadingMat || pcScores) {
-        simpleCache("allMPCA_657", assignToVariable = "allMPCA")
-    }
+    
     if (loadingMat) {
+        simpleCache("allMPCA_657", assignToVariable = "allMPCA")
         loadingMat = allMPCA$rotation
         assign("loadingMat", loadingMat, envir=.env)
     }
     if (pcScores) {
+        simpleCache("allMPCA_657", assignToVariable = "allMPCA", reload = FALSE)
         pcScores = allMPCA$x
         assign("pcScores", pcScores, envir=.env)
     }
-    #####
-    if (patientMetadata == TRUE) {
-        brcaMetadata = fread(paste0(Sys.getenv("CODE"), 
-                                    "COCOA_paper/metadata/brca_metadata.csv"))
-        # only keep patients who have definitive status for ER and PGR
-        brcaMetadata = brcaMetadata[brcaMetadata$ER_status %in% 
-                                        c("Positive", "Negative"), ]
-        brcaMetadata = brcaMetadata[brcaMetadata$PGR_status %in% 
-                                        c("Positive", "Negative"), ]
-        
-        
-        # indexed clinical data (brca_clinical_metadata.tsv) has more up to date follow up info
-        brcaMetadata2 = read.table(file = paste0(Sys.getenv("CODE"), 
-                                                 "COCOA_paper/metadata/brca_clinical_metadata.tsv"), 
-                                   sep = "\t", header = TRUE)
-        
-        patientMetadata = merge(brcaMetadata, brcaMetadata2[, c("bcr_patient_barcode", 
-                                                                "vital_status", 
-                                                                "days_to_death", 
-                                                                "days_to_last_follow_up")],
-                                by.x="subject_ID", 
-                                by.y="bcr_patient_barcode", all.x=TRUE)
-        
-        row.names(patientMetadata) <- patientMetadata$subject_ID
-        assign("patientMetadata", patientMetadata, envir=.env)
-    }
+
+    message(paste0(paste(c("signalMat", "signalCoord", 
+                           "loadingMat", "pcScores")[c(signalMat, signalCoord,
+                                                       loadingMat, pcScores)], 
+                         collapse =" "), 
+                   " loaded into the environment."))
+    
 }
 
-########## MOFA/CLL analysis #########################
-# gets coordinates for CLL methyl
-# returns a list with methylProp that has methylation and "methylCoord"
-# that has corresponding genomic coordinates
-# filters out X and Y chromosomes
-prepareCLLMethyl = function(removeXY=TRUE) {
+loadBRCAatac(signalMat=TRUE, signalCoord=TRUE, .env=currentEnv){
     
-    # get microarray data
-    eh = ExperimentHub()
-    meth = eh[[names(query(eh, "CLLmethylation"))]] # EH1071
-    # rows are cpgs, columns are samples
-    methData = assay(meth)
-    dataProbeNames = row.names(methData)
+    # making sure parent.frame is evaluated inside function (not outside as 
+    # when listed as default argument)
+    currentEnv = parent.frame(n=1) # env where function was called
+    .env = currentEnv
     
+    ryan_brca_count_matrix <- fread(ffData("tcga/ATACseq/TCGA-ATAC_BRCA_peaks_counts.tsv"), 
+                                    header=TRUE)
     
-    # match probe names with genomic coordinates
-    # ls('package:FDb.InfiniumMethylation.hg19')
-    m450kAnno = get450k()
-    length(m450kAnno)
-    
-    # get coordinates in same order as CLL data
-    methCoord = m450kAnno[dataProbeNames]
-    all(names(methCoord) == dataProbeNames)
-    methCoordDT = COCOA:::grToDt(methCoord)
-    # keep start coordinate as CpG site
-    methCoordDT = methCoordDT[, .(chr, start)]
-    
-    if (removeXY) {
-        xyInd = methCoordDT$chr %in% c("chrX", "chrY")
-        methCoordDT = methCoordDT[!xyInd, ]
-        methData = methData[!xyInd, ]
+    if (signalMat) {
+        
+        counts   <- as.matrix(ryan_brca_count_matrix[,2:75])
+        counts   <- counts[, order(colnames(counts))]
+        tcount   <- t(counts)
+        colnames(tcount) <- ryan_brca_count_matrix$sample
+        
+        # Add metadata for each sample that has it
+        metadata <- fread(ffProc("COCOA_paper/analysis/atac/scores/brca/tcga_brca_metadata.csv"))
+        metadata <- metadata[!duplicated(metadata$subject_ID),]
+        metadata <- metadata[order(subject_ID),]
+        
+        merged    <- as.data.frame(tcount)
+        merged$id <- rownames(tcount)
+        merged    <- merge(merged, metadata, by.x="id", by.y="subject_ID")
+        assign("signalMat", merged, envir = .env)
     }
     
-    methCoord = COCOA:::dtToGr(methCoordDT)
-    if (nrow(methCoordDT) != nrow(methData)) {
-        stop("error matching probes to coordinates")
+    if (signalCoord) {
+        peaks           <- ryan_brca_count_matrix[, .(Chromosome, Start, End)]
+        colnames(peaks) <- c("chr","start","end")
+        pGR             <- makeGRangesFromDataFrame(peaks)
+        assign("signalCoord", pGR, envir = .env)
     }
     
-    return(list(methylProp = methData, methylCoord = methCoord))
     
+    message(paste0(paste(c("signalMat", "signalCoord")[c(signalMat, signalCoord)], 
+                         collapse =" "), 
+                   " loaded into the environment."))
 }
 
 loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactors=TRUE, 
-                         factorWeights=FALSE, cllMultiOmics=FALSE, .env=parent.frame(n=1)) {
+                         factorWeights=FALSE, .env=currentEnv) {
+    
+    # making sure parent.frame is evaluated inside function (not outside as 
+    # when listed as default argument)
+    currentEnv = parent.frame(n=1) # env where function was called
+    .env = currentEnv
     
     library(ExperimentHub)
     library("SummarizedExperiment")
@@ -232,25 +207,23 @@ loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactors=TRUE,
             
             MOFAobject <- loadModel(filepath)
             
-            lFactors <- getFactors(
+            latentFactors <- getFactors(
                 MOFAobject,
                 as.data.frame = FALSE
             )
         }
         if (methylMat && latentFactors) {
-            # ordering them according to order of latentFactors
-            sharedNames = row.names(lFactors)[row.names(lFactors) %in%
-                                                       colnames(methData)]
-
-            lFactors = lFactors[sharedNames, ]
+            sharedNames = colnames(methData)[colnames(methData) %in% 
+                                                 row.names(latentFactors)]
+            latentFactors = latentFactors[sharedNames, ]
             methData = methData[, sharedNames]
             
-            assign("latentFactors", lFactors, envir = .env)
+            assign("latentFactors", latentFactors, envir = .env)
             assign("methylMat", methData, envir = .env)
         } else if (methylMat) {
             assign("methylMat", methData, envir = .env)
         } else if (latentFactors) {
-            assign("latentFactors", lFactors, envir = .env)
+            assign("latentFactors", latentFactors, envir = .env)
         }
     }
     
@@ -269,35 +242,23 @@ loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactors=TRUE,
         )
         assign("factorWeights", MOFAweights, envir = .env)
     }
-    if (cllMultiOmics) {
-        # a list with named items: $Drugs, $Methylation, $mRNA, $Mutations
-        data("CLL_data", package = "MOFAdata")
-        if (cllMultiOmics && latentFactors) {
-            # Loading an existing trained model
-            filepath <- system.file("extdata", "CLL_model.hdf5",
-                                    package = "MOFAdata")
-            
-            MOFAobject <- loadModel(filepath)
-            
-            lFactors <- getFactors(
-                MOFAobject,
-                as.data.frame = FALSE)
-            
-            # make same order
-            for (i in seq_along(CLL_data)) {
-                sharedNames = row.names(lFactors)[row.names(lFactors) %in% colnames(CLL_data[[i]])]
-                CLL_data[[i]] <- CLL_data[[i]][, sharedNames]
-            }
-
-        } 
-        assign("cllMultiOmics", CLL_data, envir = .env)
-    }
+    
+    message(paste0(paste(c("methylMat", "signalCoord", 
+                           "latentFactors", "factorWeights")[c(methylMat, signalCoord,
+                                                       latentFactors, factorWeights)], 
+                         collapse =" "), 
+                   " loaded into the environment."))
     
 }
 
 # loads GRList, rsName, rsDescription
 
-loadGRList <- function(genomeV = "hg38", .env=parent.frame(n=1)) {
+loadGRList <- function(genomeV = "hg38", .env=currentEnv) {
+    # making sure parent.frame is evaluated inside function (not outside as 
+    # when listed as default argument)
+    currentEnv = parent.frame(n=1) # env where function was called
+    .env = currentEnv
+    
     if (genomeV == "hg38") {
         source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regions_brca.R"))
         names(GRList) = rsName
@@ -305,7 +266,7 @@ loadGRList <- function(genomeV = "hg38", .env=parent.frame(n=1)) {
         assign(x = "rsName", rsName, envir = .env)
         assign(x = "rsDescription", rsDescription, envir = .env)
     } else if (genomeV == "hg19") {
-        source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regionDB_hg19.R"))
+        source(paste0(Sys.getenv("CODE"), "aml_e3999/src/load_process_regionDB.R"))
         names(GRList) = rsName
         assign(x = "GRList", GRList, envir = .env)
         assign(x = "rsName", rsName, envir = .env)
@@ -365,7 +326,6 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
 }
 
 
-################################################################################
 
 # @param dataMat columns of dataMat should be samples/patients, rows should be genomic signal
 # (each row corresponds to one genomic coordinate/range)
@@ -437,78 +397,41 @@ getPValRangeVec <- function(rsScore, nullDistList, pc, regionCoverage) {
 # data.frame with the 
 # null distribution for a single region set. Each column in the data.frame
 # is for a single variable (e.g. PC or latent factor)
-# @param testType character. "greater", "lesser", "two-sided" Whether to
-# create p values based on one sided test or not.
-# @param whichMetric character. Can be "pval" or "zscore"
 
-getPermStat <- function(rsScores, nullDistList, calcCols, testType="greater", whichMetric = "pval") {
+getPermPval <- function(rsScores, nullDistList, calcCols) {
     
-    if (is(rsScores, "data.table")) {
-        rsScores = as.data.frame(rsScores)
-    }
     
-    # get p values for a single region set (can get p val for multiple columns)
+    # do once for each region set
+    mapply(FUN = function(x, y) getPermPvalSingle(rsScore=x, 
+                                               nullDistList = y,
+                                               calcCols = calcCols), 
+           x = rsScores[, calcCols], y=nullDistList)
+
+    
+    # combine into single data.frame
     # @param rsScore a row of values for a single region set. One 
     # value for each calcCols
-    getPermStatSingle <- function(rsScore, nullDist, 
-                                  calcCols, testType="greater", whichMetric = "pval") {
+    
+    getPermPvalSingle <- function(rsScore, nullDist, 
+                                    calcCols) {
         
-        if (is(nullDist, "data.table")) {
-            nullDist = as.data.frame(nullDist)
+        pVal = rep(-1, length(rsScore))
+        for (i in seq_along(pVal)) {
+            # only for one sided test (greater than)
+            1-ecdf(x = nullDist[, calcCols[i]])(rsScore[i])
         }
-        if (whichMetric == "pval") {
-            
-            pVal = rep(-1, length(rsScore))
-            if (testType == "greater") {
-                
-                for (i in seq_along(pVal)) {
-                    # only for one sided test (greater than)
-                    pVal[i] = 1 - ecdf(x = nullDist[, calcCols[i]])(rsScore[i])
-                }
-            }
-            
-            # (-abs(x-0.5) + 0.5) * 2
-            
-            thisStat = pVal
-        }
-        
-        if (whichMetric == "zscore") {
-            
-            
-            zScore = rep(NA, length(rsScore))
-            for (i in seq_along(zScore)) {
-                # only for one sided test (greater than)
-                zScore[i] = (rsScore[i] - mean(nullDist[, calcCols[i]])) / sd(x = nullDist[, calcCols[i]])
-            }
-            
-            thisStat = as.numeric(zScore)
-        }
-        
-        
-        return(thisStat)
+        # (-abs(x-0.5) + 0.5) * 2
+                return(bound)
     }
     
+    # get upper bound for all scores in vector (rsScore and regionCoverage are vectors
+    # of the same length)
+    bound = mapply(FUN = function(x, y) getUpperBoundSingle(rsScore = x, 
+                                                            nullDistList = nullDistList, sampleSize=sampleSize, 
+                                                            pc=pc, regionCoverage = y), 
+                   x = rsScore, y = regionCoverage)
+    return(bound)
     
-        # do once for each region set
-        thisStatList = list()
-        for (i in 1:nrow(rsScores)) {
-            thisStatList[[i]] = as.data.frame(t(getPermStatSingle(rsScore=rsScores[i, calcCols], 
-                                                              nullDist = nullDistList[[i]],
-                                                              calcCols = calcCols,
-                                                              whichMetric=whichMetric)))
-            colnames(thisStatList[[i]]) <- calcCols
-        }
-        thisStat = rbindlist(thisStatList)
-        # add back on annotation info
-        thisStat = cbind(thisStat, rsScores[, colnames(rsScores)[!(colnames(rsScores) %in% calcCols)]])
-        
-        # pVals = mapply(FUN = function(x, y) getPermPvalSingle(rsScore=x, 
-        #                                            nullDist = y,
-        #                                            calcCols = calcCols), 
-        #        x = rsScores[, calcCols], y=nullDistList)
-        
-
-    return(thisStat)
 } 
 
 
@@ -573,58 +496,6 @@ getLowerBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage)
     
 } 
 
-#####################################################################
-# functions for parallel permutations
-
-# @param genomicSignal columns of dataMat should be samples/patients, rows should be genomic signal
-# (each row corresponds to one genomic coordinate/range)
-# @param sampleLabels Rows should be samples, columns should be "features" 
-# (whatever you want to get correlation with: eg PC scores),
-# all columns in featureMat will be used (subset when passing to function
-# in order to not use all columns)
-# @param calcCols character. the columns for which to calculate
-# correlation and then to run COCOA on
-corPerm <- function(randomInd, genomicSignal, 
-                    signalCoord, GRList, calcCols,
-                    sampleLabels) {
-    
-    # reorder the sample labels
-    sampleLabels = sampleLabels[randomInd, ]
-    
-    # calculate correlation
-    featureLabelCor = createCorFeatureMat(dataMat = genomicSignal, 
-                                          featureMat = sampleLabels, 
-                                          centerDataMat = TRUE, 
-                                          centerFeatureMat = TRUE)
-    
-    # run COCOA
-    thisPermRes = runCOCOA(loadingMat=featureLabelCor, 
-                           signalCoord=signalCoord, GRList=GRList, 
-                           PCsToAnnotate = calcCols, 
-                           scoringMetric = "regionMean", verbose = TRUE)
-    
-    # return
-    return(thisPermRes)
-    
-}
-# This function will take a list of results of permutation tests that included
-# many region sets and return a data.frame/data.table with the null
-# distribution for a single region set (row)
-# @param resultsList each item in the list is a data.frame, one item for
-# each permutation with the results of that permutation. Each row in the 
-# data.frame is a region set. Rows in all the data.frames should be
-# in the same order.
-# @param rsInd numeric. The row number for the region set of interest.
-extractNullDist <- function(resultsList, rsInd) {
-    rowList = lapply(resultsList, FUN = function(x) x[rsInd, ])
-    rsNullDist = rbindlist(rowList)
-    return(rsNullDist)
-}
-
-
-####################################################################
-
-
 ################## not sure whether to add this one to COCOA
 # convenience function to quickly make meta-region loading profiles
 # first calculates profiles, then normalizes and plots
@@ -688,53 +559,45 @@ makeMetaRegionPlots <- function(loadingMat, signalCoord, GRList, rsNames, PCsToA
     return(list(multiProfileP, pcProf))
 }
 
-###################### visualization ##########################
 
-# @examples dataDF = data.frame(data.frame(a=c((1:4)/10, .4), b=6:10))
-# niceHist(dataDF=dataDF, colToPlot="a", xLabel="myXLab", binwidth=0.01)
-# make a single ggplot histogram
-niceHist = function(dataDF, colToPlot, xLabel=colToPlot, binwidth=1, boundary=0, yLabel="", plotTitle = "", 
-                    ggExpr=NULL) {
-    p= ggplot(dataDF, aes(get(colToPlot))) + 
-        geom_histogram(binwidth=binwidth, boundary=boundary) + 
-        xlab(xLabel) +ylab(yLabel) + ggtitle(plotTitle)
-    # geom_histogram(aes(y=..count../sum(..count..))
-    # could add arbitrary expression  # e.g. plottingExpr = "theme_classic() + (etc.)"
-    if (!is.null(ggExpr)) {
-        eval(parse(text=paste0("p", ggExpr)))
-    } else (
-        p
-    )
+########## MOFA/CLL analysis #########################
+# gets coordinates for CLL methyl
+# returns a list with methylProp that has methylation and "methylCoord"
+# that has corresponding genomic coordinates
+# filters out X and Y chromosomes
+prepareCLLMethyl = function(removeXY=TRUE) {
     
-    # theme_classic(), ylim(0, yMax)
-}
-
-# make one or more ggplot histograms and save them to a pdf
-# @param colsToPlot character. The name of the column itself. One histogram
-# for each column. 
-# @param xLabels character. A more complete/understandable name/title for the 
-# columns which are being plotted
-multiNiceHist = function(file, dataDF, colsToPlot, xLabels=colsToPlot,
-                         binwidth=1, boundary=0, yLabel="", plotTitles="", ggExpr=NULL) {
+    # get microarray data
+    eh = ExperimentHub()
+    meth = eh[[names(query(eh, "CLLmethylation"))]] # EH1071
+    # rows are cpgs, columns are samples
+    methData = assay(meth)
+    dataProbeNames = row.names(methData)
     
-    # make it the same length
-    if (length(plotTitles) == 1) {
-        plotTitles = rep(plotTitles, length(colsToPlot))
-    }
-    if (length(xLabels) == 1) {
-        xLabels = rep(xLabels, length(colsToPlot))
+    
+    # match probe names with genomic coordinates
+    # ls('package:FDb.InfiniumMethylation.hg19')
+    m450kAnno = get450k()
+    length(m450kAnno)
+    
+    # get coordinates in same order as CLL data
+    methCoord = m450kAnno[dataProbeNames]
+    all(names(methCoord) == dataProbeNames)
+    methCoordDT = COCOA:::grToDt(methCoord)
+    # keep start coordinate as CpG site
+    methCoordDT = methCoordDT[, .(chr, start)]
+    
+    if (removeXY) {
+        xyInd = methCoordDT$chr %in% c("chrX", "chrY")
+        methCoordDT = methCoordDT[!xyInd, ]
+        methData = methData[!xyInd, ]
     }
     
-    pdf(file = file)
-    
-    for (i in seq_along(colsToPlot)) {
-        colToPlot = colsToPlot[i]
-        p = niceHist(dataDF, colToPlot=colToPlot, xLabel=xLabels[i], 
-                     binwidth=binwidth, boundary=boundary, yLabel=yLabel,
-                     plotTitle=plotTitles[i], ggExpr=ggExpr)  
-        print(p)
+    methCoord = COCOA:::dtToGr(methCoordDT)
+    if (nrow(methCoordDT) != nrow(methData)) {
+        stop("error matching probes to coordinates")
     }
     
-    dev.off()
+    return(list(methylProp = methData, methylCoord = methCoord))
     
 }
