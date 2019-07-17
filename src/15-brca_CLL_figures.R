@@ -262,7 +262,11 @@ plotRSConcentration(rsScores[rsScores$region_coverage >= 100, ], scoreColName=c(
                     pattern= "esr1")
 
 #################### plot raw data in top regions for LF1
+simpleCache("inferredMethylWeightsMOFA", assignToVariable = "featureLFCor")
+# make sure they are in the same order/have same CpGs
+featureLFCor = featureLFCor[row.names(methylMat), ]
 loadGRList(genomeV = "hg19")
+dataID = "cll196"
 lfCols= paste0("LF", c(1:3, 5:7, 9))
 topRSInd = rsRankingIndex(rsScores = rsScores, PCsToAnnotate = latentFactors)
 View(rsScores[order(rsScores$LF1, decreasing = TRUE), ])
@@ -276,21 +280,24 @@ topLF1RS = GRList[topLF1Ind][cpgCov >= 200]
 topLF1RSNames = rsName[topLF1Ind][cpgCov >= 200]
 topLF1RSDes = rsDescription[topLF1Ind][cpgCov >= 200]
     
-
+topRSToPlotNum = length(topLF1RS)
 for (i in seq_along(lfCols)) {
     
-    # top region sets for this PC
-    rsInd = as.numeric(as.matrix(rsEnSortedInd[1:topRSToPlotNum, lfCols[i]])) # original index
+    # # top region sets for this PC
+    # rsInd = as.numeric(as.matrix(rsEnSortedInd[1:topRSToPlotNum, lfCols[i]])) # original index
     
-    grDevices::pdf(ffPlot(paste0(plotSubdir, "regionMethylHeatmaps", lfCols[i], inputID, ".pdf"), width = 11, height = 8.5 * topRSToPlotNum))
+    grDevices::pdf(ffPlot(paste0(plotSubdir, "regionMethylHeatmaps", lfCols[i], dataID, ".pdf")), width = 11, height = 8.5)
     
     # heatmap
-    signalAlongPC(loadingMat=loadingMat, loadingThreshold=0.8,
-                  pcScores=latentFactorMat,
-                  signalCoord=signalCoord,
-                  genomicSignal=methylMat,
-                  regionSet=topLF1RS[[j]], orderByPC=lfCols[i],
-                  topXRegions=50)
+    for (j in seq_along(topLF1RS)) {
+        print(signalAlongPC(genomicSignal=methylMat,
+                      signalCoord=signalCoord,
+                      sampleScores=latentFactorMat,
+                      regionSet=topLF1RS[[j]], orderByCol=lfCols[i],
+                      topXVariables=50,
+                      variableScores = abs(as.numeric(featureLFCor[, lfCols[i]])),
+                      cluster_columns = TRUE, column_title = topLF1RSNames[j]))
+    }
     
     # draw(Heatmap(matrix = methylData[1:1000, 1:10]))
     # plot(methylData[1:1000, 1])
@@ -298,6 +305,13 @@ for (i in seq_along(lfCols)) {
     dev.off()
 }
 
+signalAlongPC(genomicSignal=methylMat,
+              signalCoord=signalCoord,
+              sampleScores=latentFactorMat,
+              regionSet=topLF1RS[["Gm12878_WE.bed"]], orderByCol=lfCols[i],
+              topXVariables=50,
+              variableScores = abs(as.numeric(featureLFCor[, lfCols[i]])),
+              cluster_columns = TRUE, column_title = "Individual cytosines")
 
 
 ############################################################################
