@@ -268,20 +268,24 @@ featureLFCor = featureLFCor[row.names(methylMat), ]
 loadGRList(genomeV = "hg19")
 dataID = "cll196"
 lfCols= paste0("LF", c(1:3, 5:7, 9))
-topRSInd = rsRankingIndex(rsScores = rsScores, PCsToAnnotate = latentFactors)
+cpgCov = rsScores$cytosine_coverage
+topRSInd = rsRankingIndex(rsScores = rsScores[cpgCov >= 200, ], signalCol = lfCols)
 View(rsScores[order(rsScores$LF1, decreasing = TRUE), ])
 topLF1Ind = topRSInd$LF1[1:20]
 
-cpgCov = rsScores$cytosine_coverage[topLF1Ind]
+
 
 # top few region sets for LF1
 # arbitrarily selecting region sets that covered at least 200 CpGs
-topLF1RS = GRList[topLF1Ind][cpgCov >= 200]
-topLF1RSNames = rsName[topLF1Ind][cpgCov >= 200]
-topLF1RSDes = rsDescription[topLF1Ind][cpgCov >= 200]
+topLF1RS = GRList[cpgCov >= 200][topLF1Ind]
+topLF1RSNames = rsName[cpgCov >= 200][topLF1Ind]
+topLF1RSDes = rsDescription[cpgCov >= 200][topLF1Ind]
     
-topRSToPlotNum = length(topLF1RS)
 for (i in seq_along(lfCols)) {
+    theseTopRSInd = as.numeric(topRSInd[1:20, lfCols[i]])
+    theseTopRS = GRList[cpgCov >= 200][theseTopRSInd]
+    theseTopRSNames = rsName[cpgCov >= 200][theseTopRSInd]
+    theseTopRSDes = rsDescription[cpgCov >= 200][theseTopRSInd]
     
     # # top region sets for this PC
     # rsInd = as.numeric(as.matrix(rsEnSortedInd[1:topRSToPlotNum, lfCols[i]])) # original index
@@ -289,14 +293,14 @@ for (i in seq_along(lfCols)) {
     grDevices::pdf(ffPlot(paste0(plotSubdir, "regionMethylHeatmaps", lfCols[i], dataID, ".pdf")), width = 11, height = 8.5)
     
     # heatmap
-    for (j in seq_along(topLF1RS)) {
+    for (j in seq_along(theseTopRS)) {
         print(signalAlongPC(genomicSignal=methylMat,
                       signalCoord=signalCoord,
                       sampleScores=latentFactorMat,
-                      regionSet=topLF1RS[[j]], orderByCol=lfCols[i],
+                      regionSet=theseTopRS[[j]], orderByCol=lfCols[i],
                       topXVariables=50,
                       variableScores = abs(as.numeric(featureLFCor[, lfCols[i]])),
-                      cluster_columns = TRUE, column_title = topLF1RSNames[j]))
+                      cluster_columns = TRUE, column_title = theseTopRSNames[j]))
     }
     
     # draw(Heatmap(matrix = methylData[1:1000, 1:10]))
