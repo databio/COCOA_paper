@@ -1,4 +1,4 @@
-# load libraries and prepare environment for other scripts
+F# load libraries and prepare environment for other scripts
 
 library(LOLA)
 library(simpleCache)
@@ -163,7 +163,7 @@ loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE,
     }
 
     message(paste0(paste(c("signalMat", "signalCoord", 
-                           "loadingMat", "pcScores"
+                           "loadingMat", "pcScores",
                            "patientMetadata")[c(signalMat, signalCoord,
                                                        loadingMat, pcScores,
                                                         patientMetadata)], 
@@ -186,18 +186,22 @@ loadBRCAatac <- function(signalMat=TRUE, signalCoord=TRUE, .env=currentEnv){
         
         counts   <- as.matrix(ryan_brca_count_matrix[,2:75])
         counts   <- counts[, order(colnames(counts))]
-        tcount   <- t(counts)
-        colnames(tcount) <- ryan_brca_count_matrix$sample
+        # $sample is actually region ID (e.g. "BRCA_100")
+        row.names(counts) <- ryan_brca_count_matrix$sample
+        # tcount   <- t(counts)
+        # colnames(tcount) <- ryan_brca_count_matrix$sample
         
-        # Add metadata for each sample that has it
-        metadata <- fread(ffProc("COCOA_paper/analysis/atac/scores/brca/tcga_brca_metadata.csv"))
-        metadata <- metadata[!duplicated(metadata$subject_ID),]
-        metadata <- metadata[order(subject_ID),]
+        # # Add metadata for each sample that has it
+        # metadata <- fread(ffProc("COCOA_paper/analysis/atac/scores/brca/tcga_brca_metadata.csv"))
+        # metadata <- metadata[!duplicated(metadata$subject_ID),]
+        # metadata <- metadata[order(subject_ID),]
         
-        merged    <- as.data.frame(tcount)
-        merged$id <- rownames(tcount)
-        merged    <- merge(merged, metadata, by.x="id", by.y="subject_ID")
-        assign("signalMat", merged, envir = .env)
+        # merged    <- as.data.frame(tcount)
+        # merged$id <- rownames(tcount)
+        # merged    <- merge(merged, metadata, by.x="id", by.y="subject_ID")
+        # row.names(merged) <- merged$id
+        # merged = merged[, 2:215921]
+        assign("signalMat", counts, envir = .env)
     }
     
     if (signalCoord) {
@@ -463,14 +467,14 @@ createCorFeatureMat = function(dataMat, featureMat,
     featureMat = as.matrix(featureMat)
     
     if (centerDataMat) {
-        cpgMeans = rowMeans(dataMat)
+        cpgMeans = rowMeans(dataMat, na.rm = TRUE)
         # centering before calculating correlation
         dataMat = apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
         
     }
     
     if (centerFeatureMat) {
-        featureMeans = colMeans(featureMat)
+        featureMeans = colMeans(featureMat, na.rm = TRUE)
         # centering before calculating correlation
         featureMat = t(apply(X = featureMat, MARGIN = 1, function(x) x - featureMeans))
         if (dim(featureMat)[1] == 1) {
@@ -482,7 +486,9 @@ createCorFeatureMat = function(dataMat, featureMat,
     
     # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
     # how much do features correlate with each PC?
-    featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 1, FUN = function(x) cor(x = x, y)))
+    featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 1, 
+                                                                       FUN = function(x) cor(x = x, y, 
+                                                                                             use="pairwise.complete.obs")))
     
     # if standard deviation of the data was zero, NA will be produced
     # set to 0 because no standard deviation means no correlation with attribute of interest
@@ -674,10 +680,10 @@ corPerm <- function(randomInd, genomicSignal,
                                           centerFeatureMat = TRUE)
     
     # run COCOA
-    thisPermRes = runCOCOA(loadingMat=featureLabelCor, 
+    thisPermRes = runCOCOA(signal=featureLabelCor, 
                            signalCoord=signalCoord, GRList=GRList, 
-                           PCsToAnnotate = calcCols, 
-                           scoringMetric = "regionMean", verbose = TRUE)
+                           signalCol = calcCols, 
+                           scoringMetric = "default", verbose = TRUE)
     
     # return
     return(thisPermRes)
