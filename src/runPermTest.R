@@ -48,6 +48,67 @@ for (i in seq_along(indList)) {
 save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
                                         dataID, ".RData")))
 
+
+
+nullDistList = lapply(X = seq_along(GRList),
+                      FUN = function(x) extractNullDist(resultsList=rsPermScores, rsInd = x))
+
+# just an example of the null distributions for a single region set (arbitrarily rs1)
+multiNiceHist(file = ffPlot(paste0(plotSubdir, "nullDistRS1", dataID, ".pdf")), dataDF = nullDistList[[1]], 
+              colsToPlot = colsToAnnotate, xLabels = "COCOA score (absolute correlation)", 
+              binwidth = 0.001, yLabel = "Number of permutation results", 
+              plotTitles = paste0("Null distribution of COCOA scores, ", colsToAnnotate),
+              ggExpr = "+xlim(0,0.25)")
+
+
+simpleCache(paste0("permPVals", dataID), {
+    rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
+                          calcCols=colsToAnnotate, whichMetric = "pval")
+    rsPVals
+}, recreate = TRUE, reload = TRUE)
+multiNiceHist(file = ffPlot(paste0(plotSubdir, "pValDist", dataID, ".pdf")), dataDF = rsPVals, 
+              colsToPlot = colsToAnnotate, xLabels = "p-value", 
+              binwidth = 0.005, yLabel = "Number of region sets", 
+              plotTitles = paste0("Distribution of region set p-values, ", colsToAnnotate),
+              ggExpr = paste0("+xlim(0,1)+ylim(0, ", nrow(rsPVals), ")"))
+
+simpleCache(paste0("permZScores", dataID), { 
+    rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
+                            calcCols=colsToAnnotate, whichMetric = "zscore")
+    rsZScores
+    
+}, recreate = TRUE, reload=TRUE)
+# View(rsZScores[which(rsZScores$ > 7), ])
+
+multiNiceHist(file = ffPlot(paste0(plotSubdir, "zScoreDist", dataID, ".pdf")), dataDF = rsZScores, 
+              colsToPlot = colsToAnnotate, xLabels = "z score", 
+              binwidth = 1, yLabel = "Number of region sets", 
+              plotTitles = paste0("Distribution of region set z scores, ", colsToAnnotate),
+              ggExpr = "+xlim(-3,40)")
+
+
+topRSInd = rsRankingIndex(rsScores = rsZScores, signalCol = colsToAnnotate)
+
+
+# get top region sets for each colsToAnnotate based on z score
+topRSZAnnoList = list()
+for (i in seq_along(colsToAnnotate)) {
+    topRSZAnnoList[[i]] = data.frame(rsName=rsZScores$rsName[topRSInd[1:20, colsToAnnotate[i]]], 
+                                     rsDescription=rsZScores$rsDescription[topRSInd[1:20, colsToAnnotate[i]]])
+    names(topRSZAnnoList[[i]]) <- paste0(names(topRSZAnnoList[[i]]), "_", colsToAnnotate[i])
+}
+
+write.csv(topRSZAnnoList, file = paste0(sheetsDir, "topRSPermZScores", dataID, ".csv"))
+
+# get top region sets based on p value
+
+
+
+
+
+
+
+
 # # get score null distribution for each region set
 # # one null distribution for each region set
 # nullDistList = lapply(X = seq_along(GRList),

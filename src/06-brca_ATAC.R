@@ -40,6 +40,7 @@ ryan_brca_count_matrix <- fread(ffData("tcga/ATACseq/TCGA-ATAC_BRCA_peaks_counts
 counts   <- as.matrix(ryan_brca_count_matrix[,2:75])
 counts   <- counts[, order(colnames(counts))]
 tcount   <- t(counts)
+# column was named sample but is actually region ID
 colnames(tcount) <- ryan_brca_count_matrix$sample
 
 # Add metadata for each sample that has it
@@ -50,11 +51,13 @@ metadata <- metadata[order(subject_ID),]
 merged    <- as.data.frame(tcount)
 merged$id <- rownames(tcount)
 merged    <- merge(merged, metadata, by.x="id", by.y="subject_ID")
-pcaNames <- merged$id
+pcaSampleNames <- merged$id
 
 simpleCache(paste0("brcaATACPCA_", nrow(merged)), {
     pca       <- prcomp(as.matrix(merged[,2:215921]))
+    row.names(pca$x) <- pcaSampleNames
     pca
+    
 }, assignToVariable = "pca")
 
 loadings  <- pca$rotation

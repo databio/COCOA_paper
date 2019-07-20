@@ -8,6 +8,7 @@ options("mc.cores"=nCores)
 
 scriptID = "19-permTestBRCA_ATAC_Protein"
 plotSubdir = "19-permBRCA_ATAC_Protein/"
+sheetsDir = ffProc("COCOA_paper/analysis/sheets/")
 
 if (!dir.exists(ffPlot(plotSubdir))) {
     dir.create(ffPlot(plotSubdir))
@@ -96,61 +97,5 @@ source(ffProjCode("src/runPermTest.R"))
 ############################################################################
 
 
-nullDistList = lapply(X = seq_along(GRList),
-                      FUN = function(x) extractNullDist(resultsList=rsPermScores, rsInd = x))
-simpleCache(paste0("nullDistList", dataID), {
-    nullDistList
-})
-
-# just an example of the null distributions for a single region set
-multiNiceHist(file = ffPlot(paste0(plotSubdir, "nullDist2200", dataID, ".pdf")), dataDF = nullDistList[[2200]], 
-              colsToPlot = colsToAnnotate, xLabels = "COCOA score (absolute correlation)", 
-              binwidth = 0.001, yLabel = "Number of permutation results", 
-              plotTitles = paste0("Null distribution of COCOA scores, ", colsToAnnotate),
-              ggExpr = "+xlim(0,0.20)")
-
-
-simpleCache(paste0("permPVals", dataID), {
-    rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
-                          calcCols=colsToAnnotate, whichMetric = "pval")
-    rsPVals
-})
-multiNiceHist(file = ffPlot(paste0(plotSubdir, "pValDist", dataID, ".pdf")), dataDF = rsPVals, 
-              colsToPlot = colsToAnnotate, xLabels = "p-value", 
-              binwidth = 0.005, yLabel = "Number of region sets", 
-              plotTitles = paste0("Distribution of region set p-values, ", colsToAnnotate),
-              ggExpr = paste0("+xlim(0,1)+ylim(0, ", nrow(rsPVals), ")"))
-
-
-
-simpleCache(paste0("permZScores", dataID), { 
-    rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
-                            calcCols=colsToAnnotate, whichMetric = "zscore")
-    rsZScores
-    
-})
-# View(rsZScores[which(rsZScores$ > 7), ])
-
-multiNiceHist(file = ffPlot(paste0(plotSubdir, "zScoreDist", dataID, ".pdf")), dataDF = rsZScores, 
-              colsToPlot = colsToAnnotate, xLabels = "z score", 
-              binwidth = 1, yLabel = "Number of region sets", 
-              plotTitles = paste0("Distribution of region set z scores, ", colsToAnnotate),
-              ggExpr = "+xlim(-3,40)")
-
-
-topRSInd = rsRankingIndex(rsScores = rsZScores, signalCol = colsToAnnotate)
-
-topRSAnnoList = list()
-for (i in seq_along(colsToAnnotate)) {
-    topRSAnnoList[[i]] = data.frame(rsName=rsZScores$rsName[topRSInd[1:20, colsToAnnotate[i]]], 
-                                    rsDescription=rsZScores$rsDescription[topRSInd[1:20, colsToAnnotate[i]]])
-    names(topRSAnnoList[[i]]) <- paste0(names(topRSAnnoList[[i]]), "_", colsToAnnotate[i])
-}
-
-write.csv(topRSAnnoList, file = ffProc(paste0("COCOA_paper/analysis/sheets/topRSPerm", dataID, ".csv")))
-# for (i in 2:length(topRSAnnoList)) {
-#     write.csv(topRSAnnoList[[i]], file = ffProc(paste0("COCOA_paper/analysis/sheets/topRS", dataID, ".csv")), append = TRUE)
-#     
-# }
 
 
