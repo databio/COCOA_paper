@@ -1,7 +1,7 @@
 
-# project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/"))
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 library(curatedTCGAData)
+library(TCGAutils)
 
 setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
@@ -19,9 +19,19 @@ curatedTCGAData(diseaseCode = "THCA", assays = "*", dry.run = TRUE)
 mData = curatedTCGAData(diseaseCode = "THCA", assays = c("Methylation*"), dry.run = FALSE)
 testM = assays(mData)[[1]]
 testM = as.matrix(testM)
-testM[221:226, 934:937]
-which(is.na(testM))
+testM[221:226, 304:307]
+hasNA = apply(testM, 2, function(x) any(is.na(x)))
+table(hasNA)
 
+############
+# get patient metadata, stored in colData(curatedTCGAData())
+metaDataCols = getClinicalNames("THCA")
+allMeta = colData(mData) 
+View(allMeta[, 387:405])
+
+
+
+############
 
 rna = curatedTCGAData(diseaseCode = "THCA", assays = c("RNASeq2GeneNorm"), 
                       dry.run = FALSE)
