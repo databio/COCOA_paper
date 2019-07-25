@@ -1,4 +1,4 @@
-F# load libraries and prepare environment for other scripts
+# load libraries and prepare environment for other scripts
 
 library(LOLA)
 library(simpleCache)
@@ -654,6 +654,73 @@ getLowerBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage)
     return(bound)
     
 } 
+
+#' @param nullDistDF a data.frame. Has null distributions for a single 
+#' region set. Each column corresponds to a null distribution for that 
+#' region set for a given variable/sample attribute.   
+#' 
+#' @return Returns a list. Each list item is a "fitdist" object which is 
+#' a fitted function 
+#' for one of the columns in nullDistDF (output of fitdist() from
+#' fitdistrplus.
+#' These are gamma distributions and can be used to get p values for the 
+#' null distribution so that a large number of permutations 
+#' are not required.The list is in order of the columns and will
+#' have the names of the data.frame columns. 
+
+fitGammaNullDistr <- function(nullDistDF) {
+    modelList = apply(X = nullDistDF, 
+                      MARGIN = 2, 
+                      FUN = function(x) tryCatch({fitdistrplus::fitdist(data=x, 
+                                                                       distr = "gamma", 
+                                                                       method="mle")}, 
+                                                 error = function(e) { fitdistrplus::fitdist(data=x, 
+                                                                                           distr = "gamma", 
+                                                                                           method="mme")}))
+    
+    return(modelList)    
+}
+
+#' Get p value after fitting a gamma distribution to the null distribution
+#' @param nullDistList list of a data.frame. Each list item 
+#' has null distributions for a single 
+#' region set. Each column corresponds to a null distribution for that 
+#' region set for a given variable/sample attribute.   
+#' @param scores a data.frame. Has same columns as nullDistDF. One row per
+#' region set (should be in same order as nullDistDF) The scores
+#' that will be used to get p values.
+#' 
+#' @return Returns a data.frame with p values, one column for each col in
+#' scores and nullDistDF 
+
+getGammaPVal <- function(scores, nullDistList) {
+    
+    # make sure the same columns are present/in the same order
+    
+    # returns list, each item in list is also a list.
+    # in sub list: each col in nullDistDF has one list item
+    fittedDistList = lapply(X = nullDistList, function(x) fitGammaNullDistr(nullDistDF = x))
+    
+    pValList = list()
+    # once for each region set
+    for (i in seq_along(nullDistList)) {
+        
+        pValList[[i]] = as.data.frame(t(pGammaList(scoreVec = as.numeric(scores[i, ]), 
+                                                   fitDistrList = fittedDistList[[i]])))
+    }
+    pValDF = rbindlist(pValList)
+    
+    
+    return(pValDF)
+}
+
+pGammaList <- function(scoreVec, fitDistrList) {
+    pValVec = mapply(FUN = function(x, y) pgamma(q = y, 
+                      shape = x$estimate["shape"], 
+                      rate = x$estimate["rate"], 
+                      lower.tail = FALSE), x = fitDistrList, y = scoreVec)
+    return(pValVec)
+}
 
 #####################################################################
 # functions for parallel permutations

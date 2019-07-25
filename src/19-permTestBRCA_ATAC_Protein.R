@@ -96,6 +96,26 @@ source(ffProjCode("src/runPermTest.R"))
 
 ############################################################################
 
+load(paste0(getCacheDir(),"rsPermScores_", dataID, ".RData"))
+nullDistList = lapply(X = 1:nrow(rsPermScores[[1]]),
+                      FUN = function(x) extractNullDist(resultsList=rsPermScores, rsInd = x))
+nullDistList = lapply(nullDistList, FUN=function(x) as.data.frame(x)[, colsToAnnotate])
 
 
+a = fitGammaNullDistr(nullDistList[[58]])
+gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate], nullDistList = nullDistList)
+gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) %in% colsToAnnotate)]])
 
+# for (i in seq_along(nullDistList)) {
+#     thisI = i
+#     message(i)
+#     test = getGammaPVal(scores = realRSScores[, colsToAnnotate], nullDistList = nullDistList[i])
+#     
+# }
+# for (i in 1:ncol(nullDistList[[58]])) {
+#     thisI = i
+#     message(i)
+#     test=fitdistrplus::fitdist(data=nullDistList[[58]][, i], distr = "gamma", method="mme")
+# }
+
+View(gPValDF[order(gPValDF$NFKBP65_pS536, decreasing=FALSE), ])
