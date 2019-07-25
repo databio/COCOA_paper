@@ -1,5 +1,7 @@
 # RPPA protein data
-
+# TCGA-BRCA-L4.csv downloaded from https://tcpaportal.org/tcpa/download.html
+# data was normalized as described at: 
+# https://tcpaportal.org/tcpa/faq.html
 
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 
