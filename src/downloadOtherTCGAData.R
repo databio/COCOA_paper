@@ -9,31 +9,41 @@ patientMetadata = brcaMetadata # already screened out patients with incomplete E
 # there should be 657 such patients
 set.seed(1234)
 
-# DNA methylation data
-setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
-
 #############################################################################
 
-curatedTCGAData(diseaseCode = "THCA", assays = "*", dry.run = TRUE)
+cancerID = "KIRC"
+#########
 
-mData = curatedTCGAData(diseaseCode = "THCA", assays = c("Methylation*"), dry.run = FALSE)
+curatedTCGAData(diseaseCode = cancerID, assays = "*", dry.run = TRUE)
+
+mData = curatedTCGAData(diseaseCode = cancerID, assays = c("*methyl450*"), dry.run = FALSE)
 testM = assays(mData)[[1]]
 testM = as.matrix(testM)
 testM[221:226, 304:307]
-hasNA = apply(testM, 2, function(x) any(is.na(x)))
-table(hasNA)
+hasNA = apply(testM, 2, function(x) sum(is.na(x)))
+hist(hasNA)
+cpgHasNA = apply(testM, 1, function(x) sum(is.na(x)))
+table(cpgHasNA)
+
+
+##### get CpG coordinates
+# match probe names to coordinates
+# screen out CpGs that have any NAs and the XY chromosomes
+methylList = filtMethylMat(signalCoord=NULL, methylMat = testM) 
+
+
 
 ############
 # get patient metadata, stored in colData(curatedTCGAData())
-metaDataCols = getClinicalNames("THCA")
+metaDataCols = getClinicalNames(cancerID)
 allMeta = colData(mData) 
-View(allMeta[, 387:405])
+tcgaMetadata = allMeta[, metaDataCols]
 
 
 
 ############
 
-rna = curatedTCGAData(diseaseCode = "THCA", assays = c("RNASeq2GeneNorm"), 
+rna = curatedTCGAData(diseaseCode = cancerID, assays = c("RNASeq2GeneNorm"), 
                       dry.run = FALSE)
 dlbc <- curatedTCGAData("DLBC", assays = c("RNASeq2GeneNorm", "Methylation"), FALSE)
 class(rna)
