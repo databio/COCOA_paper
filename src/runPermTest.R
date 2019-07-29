@@ -12,6 +12,9 @@
 #' you want to test.
 #' @param dataID character. A unique identifier for this dataset 
 #' (for saving results)
+#' 
+# # for visualization
+#' @param realRSScores
 
 
 indList = list()

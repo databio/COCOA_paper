@@ -15,6 +15,7 @@ if (!dir.exists(ffPlot(plotSubdir))) {
 }
 
 set.seed(1234)
+nPerm = 300
 
 ######################################################################
 # load data
@@ -106,11 +107,14 @@ simpleCache(paste0("rsScores_", dataID, "Cor"), {
                           rsDescription=rsDescription)
     actualResults
 }, assignToVariable = "realRSScores")
+# View(realRSScores[order(realRSScores$cancerStage, decreasing=TRUE), ])
 
 ##########################################################################
 # permutation test for significance
 # requires: nPerm, sampleLabels, genomicSignal, signalCoord, GRList, colsToAnnotate
 # dataID
+sampleLabels = data.frame(sampleLabels)
+colnames(sampleLabels) = colsToAnnotate
 source(ffProjCode("src/runPermTest.R"))
 
 ############################################################################

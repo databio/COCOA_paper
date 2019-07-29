@@ -80,7 +80,16 @@ simpleCache("rsScores_brcaProteinATACCor", {
 }, assignToVariable = "realRSScores")
 
 
+# get top region sets for each colsToAnnotate
+topRSInd = rsRankingIndex(rsScores = realRSScores, signalCol = colsToAnnotate)
+topRSAnnoList = list()
+for (i in seq_along(colsToAnnotate)) {
+    topRSAnnoList[[i]] = data.frame(rsName=realRSScores$rsName[topRSInd[1:50, colsToAnnotate[i]]], 
+                                     rsDescription=realRSScores$rsDescription[topRSInd[1:50, colsToAnnotate[i]]])
+    names(topRSAnnoList[[i]]) <- paste0(names(topRSAnnoList[[i]]), "_", colsToAnnotate[i])
+}
 
+write.csv(topRSAnnoList, file = paste0(sheetsDir, "topRSCor", dataID, ".csv"))
 
 
 ############################################################################
@@ -95,6 +104,13 @@ simpleCache("rsScores_brcaProteinATACCor", {
 source(ffProjCode("src/runPermTest.R"))
 
 ############################################################################
+# check whether corresponding proteins are top region set 
+# mainP = c("NFKB", "GATA3", "GATA6", "ERALPHA", "AR", 
+#           "JUN", "MYC", "BETACATENIN", "PR", "SMAD1", "SMAD3", "STAT3_pY705", 
+#           "STAT5ALPHA", "ETS1", "FOXM1", "IRF1")
+
+
+#############################################################################
 
 load(paste0(getCacheDir(),"rsPermScores_", dataID, ".RData"))
 nullDistList = lapply(X = 1:nrow(rsPermScores[[1]]),

@@ -152,6 +152,7 @@ createCorFeatureMat = function(dataMat, featureMat,
                                centerDataMat=TRUE, centerFeatureMat = TRUE) {
     
     featureMat = as.matrix(featureMat)
+    featureNames = colnames(featureMat)
     
     if (centerDataMat) {
         cpgMeans = rowMeans(dataMat, na.rm = TRUE)
@@ -180,7 +181,7 @@ createCorFeatureMat = function(dataMat, featureMat,
     # if standard deviation of the data was zero, NA will be produced
     # set to 0 because no standard deviation means no correlation with attribute of interest
     featurePCCor[is.na(featurePCCor)] = 0
-    colnames(featurePCCor) <- colnames(featureMat)
+    colnames(featurePCCor) <- featureNames
     
     return(featurePCCor)
     # corLoadRatio = loadingMat[, PCsToAnnotate] / featurePCCor 
@@ -424,8 +425,12 @@ corPerm <- function(randomInd, genomicSignal,
                     signalCoord, GRList, calcCols,
                     sampleLabels) {
     
+    # because names are dropped for a single column data.frame when indexing
+    # single col data.frame is automatically converted to numeric
+    featureNames = colnames(sampleLabels)
     # reorder the sample labels
-    sampleLabels = sampleLabels[randomInd, ]
+    sampleLabels = data.frame(sampleLabels[randomInd, ])
+    colnames(sampleLabels) = featureNames
     
     # calculate correlation
     featureLabelCor = createCorFeatureMat(dataMat = genomicSignal, 
