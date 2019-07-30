@@ -118,4 +118,9 @@ colnames(sampleLabels) = colsToAnnotate
 source(ffProjCode("src/runPermTest.R"))
 
 ############################################################################
-
+# test whether cancer stages have genomewide differences in DNA methylation levels
+sampleMeanMethyl = colMeans(genomicSignal)
+sampleMeanDT = data.table(cancerStage= sampleLabels, meanMethyl=sampleMeanMethyl)
+sampleMeanDT[, .(mean(meanMethyl)), by=cancerStage]
+plot(sampleMeanDT$cancerStage, sampleMeanDT$meanMethyl)
+cor.test(sampleMeanDT$cancerStage, sampleMeanDT$meanMethyl)
