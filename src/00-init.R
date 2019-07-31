@@ -140,8 +140,12 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
 # (whatever you want to get correlation with: eg PC scores),
 # all columns in featureMat will be used (subset when passing to function
 # in order to not use all columns)
-# @param center logical object. Should rows in dataMat be centered based on
+# @param centerDataMat logical object. Should rows in dataMat be centered based on
 # their means? (subtracting row means from each row)
+# @param centerFeatureMat. logical.
+# @param testType character object. Can be "cor" (correlation), 
+# "pcor" (partial correlation), "cov" (covariance)
+# @param covariate
 #
 # If a row in dataMat has 0 stand. deviation, correlation will be set to 0
 # instead of NA as would be done by cor()
@@ -149,7 +153,8 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
 # returns a matrix where rows are the genomic signal (eg a CpG or region) and
 # columns are the columns of featureMat
 createCorFeatureMat = function(dataMat, featureMat, 
-                               centerDataMat=TRUE, centerFeatureMat = TRUE) {
+                               centerDataMat=TRUE, centerFeatureMat = TRUE, 
+                               testType="cor", covariate=NULL) {
     
     featureMat = as.matrix(featureMat)
     featureNames = colnames(featureMat)
@@ -171,12 +176,23 @@ createCorFeatureMat = function(dataMat, featureMat,
         featureMat = as.matrix(featureMat)
     }
     
+    if (testType == "cor") {
+        # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
+        # how much do features correlate with each PC?
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 1, 
+                                                                           FUN = function(x) cor(x = x, y, 
+                                                                                                 use="pairwise.complete.obs")))
+    } else if (testType == "pcor") {
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 1, 
+                                                                           FUN = function(x) pcor.test(x = x, y=y,
+                                                                                                       z=covariate)$estimate))
+        
+    } else if (testType == "cov") {
+        
+    } else {
+        stop("invalid testType")
+    }
     
-    # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
-    # how much do features correlate with each PC?
-    featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 1, 
-                                                                       FUN = function(x) cor(x = x, y, 
-                                                                                             use="pairwise.complete.obs")))
     
     # if standard deviation of the data was zero, NA will be produced
     # set to 0 because no standard deviation means no correlation with attribute of interest

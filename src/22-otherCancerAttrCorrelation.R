@@ -62,32 +62,37 @@ genomicSignal = methylMat[, trainDataInd]
 sampleLabels = as.numeric(allSampleLabels[trainDataInd])
 colsToAnnotate = "cancerStage"
 
-# days = seq(365, 365* 10, by = 0.5)
-# median(patientMetadata[patientMetadata$vital_status == "alive",]$days_to_last_follow_up, na.rm = TRUE)
-# hist(patientMetadata[patientMetadata$vital_status == "dead",]$days_to_death)
-# median(patientMetadata[patientMetadata$vital_status == "dead",]$days_to_death, na.rm = TRUE)
-# brcaSurv = patientMetadata$vital_status
-# sum(patientMetadata[patientMetadata$vital_status == "dead",]$days_to_death < 730)
+############################################################################
+# # test whether cancer stages have genomewide differences in DNA methylation levels
+# sampleMeanMethyl = colMeans(genomicSignal)
+# sampleMeanDT = data.table(cancerStage= sampleLabels, meanMethyl=sampleMeanMethyl)
+# meanByStage = sampleMeanDT[, .(meanStageMethyl = mean(meanMethyl)), by=cancerStage]
+# plot(sampleMeanDT$cancerStage, sampleMeanDT$meanMethyl)
+# cor.test(sampleMeanDT$cancerStage, sampleMeanDT$meanMethyl)
 # 
+# # normalize for average methylation level, by cancer stage
+# for (i in seq_along(unique(sampleLabels))) {
+#     
+#     # normalize one cancer stage
+#     genomicSignal[, sampleLabels == i] = genomicSignal[, sampleLabels == i] - meanByStage$meanStageMethyl[i]
+#     
+# }
 # 
-# nAlive = nrow(patientMetadata[patientMetadata$vital_status == "alive",])
-# totalDead = nrow(patientMetadata[patientMetadata$vital_status == "dead",])
-# numberDead = (ecdf(x = patientMetadata[patientMetadata$vital_status == "dead",]$days_to_death)(days) * totalDead)
-# numberKnownAlive = (1- ecdf(x = patientMetadata[patientMetadata$vital_status == "alive",]$days_to_last_follow_up)(days-1)) * nAlive
-# plot(days, 
-#      ecdf(x = patientMetadata[patientMetadata$vital_status == "dead",]$days_to_death )(days) * totalDead,  col = "red")
-# lines(days, 
-#       (1- ecdf(x = patientMetadata[patientMetadata$vital_status == "alive",]$days_to_last_follow_up)(days)) * nAlive, col="green")
-# # ratio of those known to be alive to those known to be dead
-# ratio = (numberKnownAlive + (totalDead - numberDead)) /
-#     numberDead
+# partCorMat = createCorFeatureMat(dataMat = genomicSignal,
+#                                    featureMat = as.matrix(sampleLabels),
+#                                    centerDataMat=FALSE, centerFeatureMat=TRUE, testType = "pcor",
+#                                  covariate = sampleMeanMethyl)
+# colnames(partCorMat) <- colsToAnnotate
 # 
-# plot(days, ratio)
+# #run COCOA
+# partCorResults = runCOCOA(signal=partCorMat, 
+#                          signalCoord=signalCoord, GRList=GRList, 
+#                          signalCol = colsToAnnotate, 
+#                          scoringMetric = "default", verbose = TRUE)
+# partCorResults = cbind(partCorResults, rsName=rsName, 
+#                       rsDescription=rsDescription)
 # 
-# daysCutoff = days[ratio <= 4][1]
-# ratio[ratio <= 4][1]
-# 
-
+# dataID = paste0(dataID, "Norm")
 ############################################################################
 # run COCOA
 
@@ -95,7 +100,7 @@ simpleCache(paste0("rsScores_", dataID, "Cor"), {
     # create ATAC-protein correlation matrix
     actualCorMat = createCorFeatureMat(dataMat = genomicSignal,
                                        featureMat = as.matrix(sampleLabels),
-                                       centerDataMat=TRUE, centerFeatureMat=TRUE)
+                                       centerDataMat=FALSE, centerFeatureMat=TRUE)
     colnames(actualCorMat) <- colsToAnnotate
     
     #run COCOA
@@ -117,10 +122,4 @@ sampleLabels = data.frame(sampleLabels)
 colnames(sampleLabels) = colsToAnnotate
 source(ffProjCode("src/runPermTest.R"))
 
-############################################################################
-# test whether cancer stages have genomewide differences in DNA methylation levels
-sampleMeanMethyl = colMeans(genomicSignal)
-sampleMeanDT = data.table(cancerStage= sampleLabels, meanMethyl=sampleMeanMethyl)
-sampleMeanDT[, .(mean(meanMethyl)), by=cancerStage]
-plot(sampleMeanDT$cancerStage, sampleMeanDT$meanMethyl)
-cor.test(sampleMeanDT$cancerStage, sampleMeanDT$meanMethyl)
+
