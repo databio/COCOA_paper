@@ -62,6 +62,8 @@ genomicSignal = methylMat[, trainDataInd]
 sampleLabels = as.numeric(allSampleLabels[trainDataInd])
 colsToAnnotate = "cancerStage"
 
+trainMeta = pMeta[trainDataInd, ]
+
 ############################################################################
 # # test whether cancer stages have genomewide differences in DNA methylation levels
 # sampleMeanMethyl = colMeans(genomicSignal)
@@ -100,7 +102,7 @@ simpleCache(paste0("rsScores_", dataID, "Cor"), {
     # create ATAC-protein correlation matrix
     actualCorMat = createCorFeatureMat(dataMat = genomicSignal,
                                        featureMat = as.matrix(sampleLabels),
-                                       centerDataMat=FALSE, centerFeatureMat=TRUE)
+                                       centerDataMat=TRUE, centerFeatureMat=TRUE)
     colnames(actualCorMat) <- colsToAnnotate
     
     #run COCOA

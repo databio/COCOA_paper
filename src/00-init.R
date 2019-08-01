@@ -98,7 +98,7 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
                                 binwidth=50, useGlobalTheme=TRUE) {
     # breaks
     rsScores = as.data.frame(rsScores)
-    rsRankInd = rsRankingIndex(rsScores=rsScores, PCsToAnnotate=scoreColName)
+    rsRankInd = rsRankingIndex(rsScores=rsScores, signalCol=scoreColName)
     
     
     rsInd = rep(FALSE, nrow(rsScores))
