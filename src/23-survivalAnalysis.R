@@ -6,10 +6,15 @@ library(survminer)
 
 dataID = "kircMethyl"
 
+sampleLabels = as.numeric(sampleLabels)
+
 #############################################################################
 simpleCache(paste0("rsScores_", dataID, "Cor"), assignToVariable = "realRSScores")
 
 topRSInd = rsRankingIndex(rsScores = realRSScores, signalCol = "cancerStage")$cancerStage
+orderedRSNames = rsName[topRSInd]
+orderedRSDes = rsDescription[topRSInd]
+thisRSInd = grep(pattern = "tcf7l2", x = orderedRSNames, ignore.case = TRUE)[1]
 
 actualCorMat = createCorFeatureMat(dataMat = genomicSignal,
                                    featureMat = as.matrix(sampleLabels),
@@ -20,7 +25,7 @@ colnames(actualCorMat) <- colsToAnnotate
 # are going in same (important for aggregating since a simple average
 # of the DNA methylation will run into problems if some CpGs go in opposite directions)
 mByRegion = averagePerRegion(signal = actualCorMat, signalCoord = signalCoord, 
-                             regionSet = GRList[[topRSInd[1]]], 
+                             regionSet = GRList[[topRSInd[thisRSInd]]], 
                              signalCol = colsToAnnotate, absVal = FALSE)
 hist(mByRegion$cancerStage)
 # first test whether DNA methylation is associated with cancer stage 
@@ -30,7 +35,7 @@ hist(mByRegion$cancerStage)
 colnames(genomicSignal) = gsub(pattern = "-", replacement = "_", x = colnames(genomicSignal))
 # average methylation per sample in these regions
 mBySample = runCOCOA(signal=genomicSignal, 
-                    signalCoord=signalCoord, GRList=GRList[topRSInd[1]], 
+                    signalCoord=signalCoord, GRList=GRList[topRSInd[thisRSInd]], 
                     signalCol = colnames(genomicSignal), 
                     scoringMetric = "regionMean", verbose = TRUE)
 mBySample = as.numeric(mBySample[1:ncol(genomicSignal)])
@@ -59,7 +64,7 @@ valMeta = pMeta[-trainDataInd, ]
 colnames(vGenomicSignal) = gsub(pattern = "-", replacement = "_", x = colnames(vGenomicSignal))
 
 mBySample = runCOCOA(signal=vGenomicSignal, 
-                     signalCoord=signalCoord, GRList=GRList[topRSInd[1]], 
+                     signalCoord=signalCoord, GRList=GRList[topRSInd[thisRSInd]], 
                      signalCol = colnames(vGenomicSignal), 
                      scoringMetric = "regionMean", verbose = TRUE)
 
@@ -94,7 +99,6 @@ covariateData$methylGroup[(covariateData$methylGroup >= 0.25) & (covariateData$m
 
 kmFit = survfit(patSurv ~ methylGroup, data=covariateData)
 ggsurvplot(kmFit)
-plot(kmFit)
 
 ###
 valMeta$lastDate = valMeta$days_to_last_followup
@@ -104,6 +108,7 @@ valMeta$lastDate[is.na(valMeta$lastDate)] = valMeta$days_to_death[is.na(valMeta$
 covariateData = valMeta
 patSurv = Surv(covariateData$lastDate, covariateData$vital_status)
 cModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
+cModel
 
 # create groups
 kmThresh = 0.25
@@ -114,6 +119,7 @@ covariateData$methylGroup[(covariateData$methylGroup >= kmThresh) & (covariateDa
 
 kmFit = survfit(patSurv ~ methylGroup, data=covariateData)
 kPlot = ggsurvplot(kmFit)
+kPlot
 svg(ffPlot(paste0(plotSubdir, "EZH2", "Kaplan", kmThresh, dataID, ".svg")))
 kPlot
 dev.off()

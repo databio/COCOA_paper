@@ -188,7 +188,9 @@ createCorFeatureMat = function(dataMat, featureMat,
                                                                                                        z=covariate)$estimate))
         
     } else if (testType == "cov") {
-        
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 1, 
+                                                                           FUN = function(x) cov(x = x, y, 
+                                                                                                 use="pairwise.complete.obs")))
     } else {
         stop("invalid testType")
     }
@@ -439,7 +441,7 @@ pGammaList <- function(scoreVec, fitDistrList) {
 # correlation and then to run COCOA on
 corPerm <- function(randomInd, genomicSignal, 
                     signalCoord, GRList, calcCols,
-                    sampleLabels) {
+                    sampleLabels, variationMetric = "cor") {
     
     # because names are dropped for a single column data.frame when indexing
     # single col data.frame is automatically converted to numeric
@@ -452,7 +454,8 @@ corPerm <- function(randomInd, genomicSignal,
     featureLabelCor = createCorFeatureMat(dataMat = genomicSignal, 
                                           featureMat = sampleLabels, 
                                           centerDataMat = TRUE, 
-                                          centerFeatureMat = TRUE)
+                                          centerFeatureMat = TRUE,
+                                          testType = variationMetric)
     
     # run COCOA
     thisPermRes = runCOCOA(signal=featureLabelCor, 

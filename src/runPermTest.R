@@ -12,9 +12,16 @@
 #' you want to test.
 #' @param dataID character. A unique identifier for this dataset 
 #' (for saving results)
+#' @param variationMetric character. Either "cor" (correlation), "pcor" (partial
+#' correlation), or "cov" (covariation)
 #' 
 # # for visualization
 #' @param realRSScores
+
+
+if (!exists("variationMetric")) {
+    variationMetric = "cor"
+}
 
 
 indList = list()
@@ -39,7 +46,8 @@ for (i in seq_along(indList)) {
                                 signalCoord=signalCoord, 
                                 GRList=GRList, 
                                 calcCols=colsToAnnotate,
-                                sampleLabels=sampleLabels)
+                                sampleLabels=sampleLabels,
+                                variationMetric = variationMetric)
     message(i)
     if ((i %% 50) == 0) {
         save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 

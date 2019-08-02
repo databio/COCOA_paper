@@ -17,6 +17,7 @@ if (!dir.exists(ffPlot(plotSubdir))) {
 set.seed(1234)
 nPerm = 300
 
+variationMetric = "cov" # COCOA based on covariance
 ######################################################################
 # load data
 
@@ -98,11 +99,11 @@ trainMeta = pMeta[trainDataInd, ]
 ############################################################################
 # run COCOA
 
-simpleCache(paste0("rsScores_", dataID, "Cor"), {
+simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
     # create ATAC-protein correlation matrix
     actualCorMat = createCorFeatureMat(dataMat = genomicSignal,
                                        featureMat = as.matrix(sampleLabels),
-                                       centerDataMat=TRUE, centerFeatureMat=TRUE)
+                                       centerDataMat=TRUE, centerFeatureMat=TRUE, testType = variationMetric)
     colnames(actualCorMat) <- colsToAnnotate
     
     #run COCOA
@@ -122,6 +123,8 @@ simpleCache(paste0("rsScores_", dataID, "Cor"), {
 # dataID
 sampleLabels = data.frame(sampleLabels)
 colnames(sampleLabels) = colsToAnnotate
+
+dataID = paste0(dataID, "_", variationMetric)
 source(ffProjCode("src/runPermTest.R"))
 
 
