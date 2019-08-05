@@ -202,7 +202,7 @@ createCorFeatureMat = function(dataMat, featureMat,
     colnames(featurePCCor) <- featureNames
     
     return(featurePCCor)
-    # corLoadRatio = loadingMat[, PCsToAnnotate] / featurePCCor 
+    # corLoadRatio = signal[, PCsToAnnotate] / featurePCCor 
     # hist(corLoadRatio[, "PC10"])
 }
 
@@ -486,12 +486,41 @@ extractNullDist <- function(resultsList, rsInd) {
 # convenience function to quickly make meta-region loading profiles
 # first calculates profiles, then normalizes and plots
 # output is marrangeGrob and should be saved with ggsave
-makeMetaRegionPlots <- function(loadingMat, signalCoord, GRList, rsNames, PCsToAnnotate, binNum, overlapMethod="single") {
+#' @param aggrMethod character. A character object with the aggregation method.
+#' Similar to `scoringMetric`.
+#' There are different aggregation methods available for 
+#' signalCoordType="singleBase" vs  signalCoordType="multiBase".
+#' For "singleBase", the available scoring methods are "regionMean" and
+#' "simpleMean". The default method is "regionMean".
+#' For "multiBase", the scoring methods are "proportionWeightedMean" and 
+#' "simpleMean". The default is "proportionWeightedMean".
+#' "regionMean" is a weighted
+#' average of the signal, weighted by region (absolute value of signal 
+#' if absVal=TRUE). First the signal is
+#' averaged within each regionSet region, 
+#' then all the regions are averaged. With
+#' "regionMean" score, be cautious in interpretation for
+#' region sets with low number of regions that overlap signalCoord. 
+#' The "simpleMean"
+#' method is just the unweighted average of all (absolute) signal values that
+#' overlap the given region set. For multiBase data, this includes
+#' signal regions that overlap a regionSet region at all (1 base
+#' overlap or more) and the signal for each overlapping region is
+#' given the same weight for the average regardless of how much it overlaps. 
+#' "proportionWeightedMean" is a weighted average of all signalCoord 
+#' regions that overlap with regionSet regions. For each signalCoord region
+#' that overlaps with a regionSet region, we calculate what proportion
+#' of the regionSet region is covered. Then this proportion is used to
+#' weight the signal value when calculating the mean. 
+#' The denominator of the mean
+#' is the sum of all the proportion overlaps. 
+
+makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, signalCol, binNum, aggrMethod="default") {
     
-    pcProf = lapply(X = GRList, function(x) getLoadingProfile(loadingMat = loadingMat, 
+    pcProf = lapply(X = GRList, function(x) getMetaRegionProfile(signal = signal, 
                                                               signalCoord = signalCoord, 
-                                                              regionSet = x, PCsToAnnotate = PCsToAnnotate,
-                                                              binNum = binNum, overlapMethod=overlapMethod))
+                                                              regionSet = x, signalCol = PCsToAnnotate,
+                                                              binNum = binNum, aggrMethod=aggrMethod))
     
     pcP = copy(pcProf)
     pcP = lapply(pcP,FUN = as.data.table)
@@ -501,7 +530,7 @@ makeMetaRegionPlots <- function(loadingMat, signalCoord, GRList, rsNames, PCsToA
     
     
     # average loading value from each PC to normalize so PCs can be compared with each other
-    avLoad = apply(X = loadingMat[, PCsToAnnotate], MARGIN = 2, FUN = function(x) mean(abs(x)))
+    avLoad = apply(X = signal[, PCsToAnnotate], MARGIN = 2, FUN = function(x) mean(abs(x)))
     
     # normalize
     # pcP = lapply(pcP, FUN = function(x) t(apply(X = x, MARGIN = 1, FUN = function(y) y - c(0, avLoad))))
@@ -527,7 +556,6 @@ makeMetaRegionPlots <- function(loadingMat, signalCoord, GRList, rsNames, PCsToA
         thisRS = pcP[[i]]
         
         
-        
         profilePList[[i]] = ggplot(data = thisRS, mapping = aes(x =regionGroupID , y = loading_value)) + 
             geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets = "PC") + 
             ggtitle(label = wrapper(rsNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
@@ -542,7 +570,10 @@ makeMetaRegionPlots <- function(loadingMat, signalCoord, GRList, rsNames, PCsToA
     }
     multiProfileP = marrangeGrob(profilePList, ncol = 2, nrow = 2)
     
-    return(list(multiProfileP, pcProf))
+    metaRegionProfileInfo = list(multiProfileP, pcProf)
+    setattr(metaRegionProfileInfo, "name", c("grob", "metaRegionData"))
+    
+    return(metaRegionProfileInfo)
 }
 
 ###################### visualization ##########################

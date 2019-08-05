@@ -6,7 +6,8 @@ library(ExperimentHub)
 library("SummarizedExperiment")
 library("FDb.InfiniumMethylation.hg19")
 library(MultiAssayExperiment)
-library(COCOA)
+# library(COCOA)
+devtools::load_all(ffCode("COCOA/"))
 library(MOFAdata)
 library(MOFA)
 
@@ -15,7 +16,8 @@ library(MOFA)
 
 plotSubdir = "08-MOFA_multiomics/"
 dataID = "CLL196" # 657 patients with both ER and PGR info in metadata, 692 total
-rsScoreCacheName = paste0("rsScore_Cor_", dataID, "MOFA")
+variationType = "cov" # covariance instead of correlation
+rsScoreCacheName = paste0("rsScore_", dataID, "MOFA", "_", variationType)
 overwriteRSScoreResultsCaches = TRUE
 
 
@@ -98,37 +100,40 @@ wilcox.test(latentFactors[maleID[maleID %in% row.names(latentFactors)], whichLF]
 plotFactorScatters(MOFAobject, factors = c(1,7, 9), color_by = "Gender")
 
 ######################################################################
-#### convert DNA methylation matrix to correlation matrix
+#### convert DNA methylation matrix to correlation matrix (or covariance matrix)
+
 
 # calculate correlation with each latent factor from MOFA
-simpleCache("inferredMethylWeightsMOFA", {
+simpleCache(paste0("inferredMethylWeightsMOFA", "_", variationType), {
     featurePCCor = createCorFeatureMat(dataMat = methData, 
                                        featureMat = latentFactors, 
                                        centerDataMat = TRUE, 
-                                       centerFeatureMat = TRUE)
+                                       centerFeatureMat = TRUE, testType = variationType)
     inferredMethylWeightsMOFA = featurePCCor
 })
 
 
 ##################################################################
 # load hg19 region set database
-
-source(paste0(Sys.getenv("CODE"), "aml_e3999/src/load_process_regionDB.R"))
+loadGRList(genomeV = "hg19")
 
 ##################################################################
 # run COCOA analysis
 
 scoringMetric = "regionMean"
 signalCoord = methCoord
-# only latent factors with no NA's
-PCsToAnnotate = paste0("LF", c(1:3, 5:7, 9))
+# # only latent factors with no NA's
+# PCsToAnnotate = paste0("LF", c(1:3, 5:7, 9))
+# include latent factors with NA's
+PCsToAnnotate = paste0("LF", 1:10)
 
 simpleCache(rsScoreCacheName, {
-    rsScore = runCOCOA(loadingMat=abs(featurePCCor), 
+    rsScore = runCOCOA(signal=abs(featurePCCor), 
                        signalCoord = signalCoord, 
                        GRList, 
-                       PCsToAnnotate = PCsToAnnotate, 
-                       scoringMetric=scoringMetric)
+                       signalCol = PCsToAnnotate, 
+                       scoringMetric=scoringMetric,
+                       signalCoordType = "singleBase")
     rsScore$rsName = rsName
     rsScore$rsDescription= rsDescription
     rsScore
