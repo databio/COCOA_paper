@@ -100,24 +100,51 @@ multiNiceHist(file = ffPlot(paste0(plotSubdir, "zScoreDist", dataID, ".pdf")), d
 
 topRSInd = rsRankingIndex(rsScores = rsZScores, signalCol = colsToAnnotate)
 
+################
+# get top region sets
+
+# sort region sets according to p-value/z-score groups (significant, trending 
+# toward significant, nonsignificant), then by average correlation score
+zScoreGroups = as.data.frame(rsZScores)[, colsToAnnotate]
+# 4.078 ~ abs(qnorm(0.05/2200))
+sigCutoff = 4.078
+# 1.645 ~ abs(qnorm(0.05))
+trendCutoff = 1.645
+
+zScoreGroups[zScoreGroups < trendCutoff] = -1
+zScoreGroups[(zScoreGroups >= trendCutoff) & (zScoreGroups < sigCutoff)] = 0
+zScoreGroups[zScoreGroups >= sigCutoff] = 1
+
+zScoreGroups = cbind(zScoreGroups, rsZScores[, c("rsName", "rsDescription")])
+colnames(zScoreGroups) = paste0(colnames(zScoreGroups), "_ZGroup")
+
+realRSScores = cbind(realRSScores, zScoreGroups)
+# View(dplyr::arrange(realRSScores, desc(LF4_Z), desc(LF4)))
+realRSScores$index = 1:nrow(realRSScores)
+rsZScoresDF = as.data.frame(rsZScores)[, colsToAnnotate]
+colnames(rsZScoresDF) <- paste0(colnames(rsZScoresDF), "_ZScore")
+realRSScores = cbind(realRSScores, rsZScoresDF)
 
 # get top region sets for each colsToAnnotate based on z score
 topRSZAnnoList = list()
+topRSN = 50 # this many top RS for each colsToAnnotate
 for (i in seq_along(colsToAnnotate)) {
-    topRSZAnnoList[[i]] = data.frame(rsName=rsZScores$rsName[topRSInd[1:20, colsToAnnotate[i]]], 
-                                     rsDescription=rsZScores$rsDescription[topRSInd[1:20, colsToAnnotate[i]]])
-    names(topRSZAnnoList[[i]]) <- paste0(names(topRSZAnnoList[[i]]), "_", colsToAnnotate[i])
+    
+    theseTopInd = dplyr::arrange(realRSScores, 
+                                 desc(get(paste0(colsToAnnotate[i], "_ZGroup"))), 
+                                 desc(get(colsToAnnotate[i])))$index[1:topRSN]
+    topRSZAnnoList[[i]] = data.frame(realRSScores[theseTopInd, c("rsName", "rsDescription", colsToAnnotate[i],
+                                                                 paste0(colsToAnnotate[i], "_ZGroup"),  
+                                                                 paste0(colsToAnnotate[i], "_ZScore"),
+                                                                 "signalCoverage", "regionSetCoverage", 
+                                                                 "total_region_number", "mean_region_size")])
+        
+    names(topRSZAnnoList[[i]]) <- paste0(colsToAnnotate[i], "_", c("rsName", "rsDescription", "rsScore",
+                                           "zGroup", "zScore", "signalCoverage", "regionSetCoverage", 
+                                           "total_region_number", "mean_region_size"))
 }
 
-write.csv(topRSZAnnoList, file = paste0(sheetsDir, "topRSPermZScores", dataID, ".csv"))
-
-# get top region sets based on p value
-
-
-
-
-
-
+write.csv(topRSZAnnoList, file = paste0(sheetsDir, "topRSPermZScores", dataID, ".csv"), row.names = FALSE)
 
 
 # # get score null distribution for each region set

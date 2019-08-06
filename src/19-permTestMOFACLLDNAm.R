@@ -9,6 +9,7 @@ options("mc.cores"=nCores)
 scriptID = "19-permMOFACLLDNAm"
 plotSubdir = "19-permMOFACLLDNAm/"
 dataID = "CLL196MOFA"
+sheetsDir = ffProc("COCOA_paper/analysis/sheets/")
 
 if (!dir.exists(ffPlot(plotSubdir))) {
     dir.create(ffPlot(plotSubdir))

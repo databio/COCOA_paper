@@ -119,6 +119,12 @@ nullDistList = lapply(nullDistList, FUN=function(x) as.data.frame(x)[, colsToAnn
 
 
 a = fitGammaNullDistr(nullDistList[[58]])
+pdf(ffPlot(paste0(plotSubdir, "gammaFitExamples58.pdf")))
+plot(a$NFKBP65_pS536)
+plot(a$GATA3)
+plot(a$CMYC)
+plot(a$FOXM1)
+dev.off()
 gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate], nullDistList = nullDistList)
 gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) %in% colsToAnnotate)]])
 
