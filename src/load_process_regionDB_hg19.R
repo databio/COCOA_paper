@@ -59,9 +59,17 @@ rsName = c(lolaCoreRegionAnno$filename, roadmapRegionAnno$filename,
            motifRegionAnno$filename, hemaATACRegionAnno$filename)
 rsDescription = c(lolaCoreRegionAnno$description, roadmapRegionAnno$description, 
                   motifRegionAnno$description, hemaATACRegionAnno$description)
+rsCollection = c(lolaCoreRegionAnno$collection, roadmapRegionAnno$collection, 
+                 motifRegionAnno$collection, hemaATACRegionAnno$collection)
 
 #################################################################
 # cleaning up since there were many large objects
-rm(list = c("GRList1", "GRList2", "GRList3", "regionSetDB", "regionSetDB2"))
+if (exists("GRList")) {
+    rm(list = c("GRList1", "GRList2", "GRList3", "regionSetDB", "regionSetDB2"))
+    gc()
+} else {
+    warning("Loading GRList was not successful.")
+}
+
 
 #################################################################

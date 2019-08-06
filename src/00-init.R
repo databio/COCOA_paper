@@ -519,7 +519,7 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, signalCol,
     
     pcProf = lapply(X = GRList, function(x) getMetaRegionProfile(signal = signal, 
                                                               signalCoord = signalCoord, 
-                                                              regionSet = x, signalCol = PCsToAnnotate,
+                                                              regionSet = x, signalCol = signalCol,
                                                               binNum = binNum, aggrMethod=aggrMethod))
     
     pcP = copy(pcProf)

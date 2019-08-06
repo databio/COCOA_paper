@@ -89,7 +89,8 @@ loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE,
     
 }
 
-loadBRCAatac <- function(signalMat=TRUE, signalCoord=TRUE, .env=currentEnv){
+loadBRCAatac <- function(signalMat=TRUE, signalCoord=TRUE, pcScores=FALSE, 
+                         loadingMat=FALSE, .env=currentEnv){
     
     # making sure parent.frame is evaluated inside function (not outside as 
     # when listed as default argument)
@@ -126,6 +127,16 @@ loadBRCAatac <- function(signalMat=TRUE, signalCoord=TRUE, .env=currentEnv){
         colnames(peaks) <- c("chr","start","end")
         pGR             <- makeGRangesFromDataFrame(peaks)
         assign("signalCoord", pGR, envir = .env)
+    }
+
+    if (pcScores | loadingMat) {
+        simpleCache("brcaATACPCA_73", assignToVariable = "aPCA")
+    }
+    if (pcScores) {
+        assign("pcScores", aPCA$x, envir = .env)
+    }
+    if (loadingMat) {
+        assign("loadingMat", aPCA$rotation, envir = .env)
     }
     
     

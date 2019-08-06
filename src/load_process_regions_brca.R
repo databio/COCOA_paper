@@ -58,7 +58,8 @@ rsName = c(lolaCoreRegionAnno$filename,
 rsDescription = c(lolaCoreRegionAnno$description,
                   roadmapRegionAnno$description,
                   motifRegionAnno$description)
-
+rsCollection = c(lolaCoreRegionAnno$collection, roadmapRegionAnno$collection, 
+                 motifRegionAnno$collection)
 
 #################################################################
 # cleaning up since there were many large objects
@@ -66,5 +67,5 @@ if (exists("GRList")) {
     rm(list = c("GRList1", "GRList2", "GRList3", "regionSetDB", "regionSetDB2"))
     gc()
 } else {
-    warning("Loading regions was not successful.")
+    warning("Loading GRList was not successful.")
 }
