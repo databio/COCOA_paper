@@ -374,15 +374,24 @@ getLowerBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage)
 #' are not required.The list is in order of the columns and will
 #' have the names of the data.frame columns. 
 
-fitGammaNullDistr <- function(nullDistDF) {
-    modelList = apply(X = nullDistDF, 
-                      MARGIN = 2, 
-                      FUN = function(x) tryCatch({fitdistrplus::fitdist(data=x, 
-                                                                       distr = "gamma", 
-                                                                       method="mle")}, 
-                                                 error = function(e) { fitdistrplus::fitdist(data=x, 
-                                                                                           distr = "gamma", 
-                                                                                           method="mme")}))
+fitGammaNullDistr <- function(nullDistDF, method="mme", force=FALSE) {
+    if (force) {
+        modelList = apply(X = nullDistDF, 
+                          MARGIN = 2, 
+                          FUN = function(x) fitdistrplus::fitdist(data=x, 
+                                                                            distr = "gamma", 
+                                                                            method=method))
+    } else {
+        # try "method". if it fails, do method = "mme"
+        modelList = apply(X = nullDistDF, 
+                          MARGIN = 2, 
+                          FUN = function(x) tryCatch({fitdistrplus::fitdist(data=x, 
+                                                                            distr = "gamma", 
+                                                                            method=method)}, 
+                                                     error = function(e) {fitdistrplus::fitdist(data=x, 
+                                                                                                 distr = "gamma", 
+                                                                                                 method="mme")}))   
+    }
     
     return(modelList)    
 }
@@ -395,17 +404,32 @@ fitGammaNullDistr <- function(nullDistDF) {
 #' @param scores a data.frame. Has same columns as nullDistDF. One row per
 #' region set (should be in same order as nullDistDF) The scores
 #' that will be used to get p values.
+#' @param realScoreInDist logical. Should the actual score (from 
+#' test with no permutations) be included in the null distribution 
+#' when fitting the gamma distribution
 #' 
 #' @return Returns a data.frame with p values, one column for each col in
 #' scores and nullDistDF 
 
-getGammaPVal <- function(scores, nullDistList) {
+getGammaPVal <- function(scores, nullDistList, method="mme", realScoreInDist=FALSE, force=FALSE) {
     
     # make sure the same columns are present/in the same order
     
+    
+    if (realScoreInDist) {
+        # to get a more accurate gamma distribution, include the score from unpermuted test.
+        # add to each null distribution
+        for (i in 1:nrow(scores)) {
+            nullDistList[[i]] = rbind(nullDistList[[i]], as.numeric(scores[i, ]))
+        }
+    }
+ 
+    
     # returns list, each item in list is also a list.
     # in sub list: each col in nullDistDF has one list item
-    fittedDistList = lapply(X = nullDistList, function(x) fitGammaNullDistr(nullDistDF = x))
+    fittedDistList = lapply(X = nullDistList, function(x) fitGammaNullDistr(nullDistDF = x, 
+                                                                            method=method, 
+                                                                            force=force))
     
     pValList = list()
     # once for each region set
@@ -414,7 +438,7 @@ getGammaPVal <- function(scores, nullDistList) {
         pValList[[i]] = as.data.frame(t(pGammaList(scoreVec = as.numeric(scores[i, ]), 
                                                    fitDistrList = fittedDistList[[i]])))
     }
-    pValDF = rbindlist(pValList)
+    pValDF = as.data.frame(rbindlist(pValList))
     
     
     return(pValDF)

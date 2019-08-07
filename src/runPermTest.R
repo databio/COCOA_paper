@@ -100,6 +100,68 @@ multiNiceHist(file = ffPlot(paste0(plotSubdir, "zScoreDist", dataID, ".pdf")), d
 
 topRSInd = rsRankingIndex(rsScores = rsZScores, signalCol = colsToAnnotate)
 
+#################
+# simpleCache(paste0("rsScore_", dataID), assignToVariable = "realRSScores")
+# p-values based on fitted gamma distributions
+gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate], nullDistList = nullDistList)
+gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) %in% colsToAnnotate)]])
+
+multiNiceHist(file = ffPlot(paste0(plotSubdir, "pValDist", dataID, ".pdf")), dataDF = -log10(gPValDF[colsToAnnotate]),
+              colsToPlot = colsToAnnotate, xLabels = "p-value",
+              binwidth = 1, boundary = 0, yLabel = "Number of region sets",
+              plotTitles = paste0("Distribution of region set p-values (-log10), ", colsToAnnotate),
+              ggExpr = "+ylim(0, 2270)")
+
+# p val cutoffs
+sigCutoff = 0.05 / nrow(realRSScores)
+trendCutoff = sigCutoff * 10
+
+# sort region sets according to p-value/z-score groups (significant, trending 
+# toward significant, nonsignificant), then by average correlation score
+pValGroups = as.data.frame(gPValDF)[, colsToAnnotate]
+
+sigInd = pValGroups <= sigCutoff
+notSigInd = pValGroups > trendCutoff
+trendInd = (pValGroups <= trendCutoff) & (pValGroups > sigCutoff)
+
+pValGroups[sigInd] = 1
+pValGroups[notSigInd] = -1
+pValGroups[trendInd] = 0
+
+
+pValGroups = cbind(pValGroups, gPValDF[, c("rsName", "rsDescription")])
+colnames(pValGroups) = paste0(colnames(pValGroups), "_PValGroup")
+
+realRSScores = cbind(realRSScores, pValGroups)
+# View(dplyr::arrange(realRSScores, desc(LF4_Z), desc(LF4)))
+realRSScores$index = 1:nrow(realRSScores)
+gPValDF2 = as.data.frame(gPValDF)[, colsToAnnotate]
+colnames(gPValDF2) <- paste0(colnames(gPValDF2), "_PVal")
+realRSScores = cbind(realRSScores, gPValDF2)
+
+# get top region sets for each colsToAnnotate based on p val
+topRSZAnnoList = list()
+topRSN = 50 # this many top RS for each colsToAnnotate
+for (i in seq_along(colsToAnnotate)) {
+    
+    theseTopInd = dplyr::arrange(realRSScores, 
+                                 desc(get(paste0(colsToAnnotate[i], "_PValGroup"))), 
+                                 desc(get(colsToAnnotate[i])))$index[1:topRSN]
+    thesePValRanks = order(realRSScores[, paste0(colsToAnnotate[i], "_PVal")], decreasing = FALSE)
+    realRSScores$index[thesePValRanks]
+    topRSZAnnoList[[i]] = data.frame(realRSScores[theseTopInd, c("rsName", "rsDescription", colsToAnnotate[i],
+                                                                 paste0(colsToAnnotate[i], "_PValGroup"),  
+                                                                 paste0(colsToAnnotate[i], "_PVal"),
+                                                                 "signalCoverage", "regionSetCoverage", 
+                                                                 "total_region_number", "mean_region_size")])
+    
+    names(topRSZAnnoList[[i]]) <- paste0(colsToAnnotate[i], "_", c("rsName", "rsDescription", "rsScore",
+                                                                   "PValGroup", "pVal", "signalCoverage", "regionSetCoverage", 
+                                                                   "total_region_number", "mean_region_size"))
+}
+
+write.csv(topRSZAnnoList, file = paste0(sheetsDir, "topRSPermpVals", dataID, ".csv"), row.names = FALSE)
+
 ################
 # get top region sets
 
