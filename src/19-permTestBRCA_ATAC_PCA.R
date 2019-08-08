@@ -19,7 +19,7 @@ nPerm = 250
 
 ######################################################################
 # required inputs to permutation test
-
+dataID = "brcaATACPCAPerm"
 
 # loads signalMat and signalCoord
 loadBRCAatac()
@@ -41,7 +41,7 @@ loadGRList(genomeV="hg38")
 
 
 
-dataID = "brcaATACPCAPerm"
+
 
 # get the "true" COCOA scores before doing the permutation test
 simpleCache("rsScores_brcaATACPCACor", {
@@ -69,6 +69,8 @@ source(ffProjCode("src/runPermTest.R"))
 
 ############################################################################
 
-
+load( ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
+                    dataID, ".RData")))
+addRankCol()
 
 

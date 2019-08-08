@@ -17,6 +17,7 @@ nPerm = 250
 
 ######################################################################
 # required inputs to permutation test
+dataID = "brcaDNAm657"
 
 # assigns signalMat, signalCoord, loadingMat, pcScores
 loadBRCADNAm()
@@ -29,8 +30,13 @@ loadGRList(genomeV="hg38")
 
 colsToAnnotate = paste0("PC", 1:10)
 
-dataID = "brcaDNAm657"
+variationMetric = "cov"
 
 ############################################################################
 
 source(ffProjCode("src/runPermTest.R"))
+
+############################################################################
+
+load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
+                                        dataID, ".RData")))

@@ -1,5 +1,6 @@
 # load libraries and prepare environment for other scripts
 
+library(dplyr)
 library(LOLA)
 library(simpleCache)
 library(data.table)
@@ -99,6 +100,17 @@ addRankCol = function(dataDF, colToRank, newColName="rank", decreasing=FALSE) {
     colnames(dataDF) = c(origColNames, newColName)
     # updated DF
     return(dataDF)
+}
+
+# rows in rsScores should correspond to rsCollection
+screenOutRoadmap = function(rsScores, rsCollection, patternSearchCol="rsName", keepPattern=NULL) {
+    if (!is.null(keepPattern)) {
+        fRSScores = filter(rsScores, (rsCollection == "roadmap_epigenomics") & (!grepl(pattern = keepPattern, x = patternSearchCol, ignore.case = TRUE)))
+    } else {
+        fRSScores = filter(rsScores, (rsCollection == "roadmap_epigenomics"))
+    }
+    
+    return(fRSScores)
 }
 
 ############ functions to add to COCOA ##############################

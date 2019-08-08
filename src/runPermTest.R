@@ -61,7 +61,7 @@ save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_",
 
 
 
-nullDistList = lapply(X = seq_along(GRList),
+nullDistList = lapply(X = 1:nrow(rsPermScores[[1]]),
                       FUN = function(x) extractNullDist(resultsList=rsPermScores, rsInd = x))
 
 # just an example of the null distributions for a single region set (arbitrarily rs1)
@@ -98,7 +98,7 @@ multiNiceHist(file = ffPlot(paste0(plotSubdir, "zScoreDist", dataID, ".pdf")), d
               ggExpr = "+xlim(-3,40)")
 
 
-topRSInd = rsRankingIndex(rsScores = rsZScores, signalCol = colsToAnnotate)
+#topRSInd = rsRankingIndex(rsScores = rsZScores, signalCol = colsToAnnotate)
 
 #################
 # simpleCache(paste0("rsScore_", dataID), assignToVariable = "realRSScores")
@@ -106,7 +106,7 @@ topRSInd = rsRankingIndex(rsScores = rsZScores, signalCol = colsToAnnotate)
 gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate], nullDistList = nullDistList)
 gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) %in% colsToAnnotate)]])
 
-multiNiceHist(file = ffPlot(paste0(plotSubdir, "pValDist", dataID, ".pdf")), dataDF = -log10(gPValDF[colsToAnnotate]),
+multiNiceHist(file = ffPlot(paste0(plotSubdir, "pValLog10Dist", dataID, ".pdf")), dataDF = -log10(gPValDF[colsToAnnotate]),
               colsToPlot = colsToAnnotate, xLabels = "p-value",
               binwidth = 1, boundary = 0, yLabel = "Number of region sets",
               plotTitles = paste0("Distribution of region set p-values (-log10), ", colsToAnnotate),
@@ -161,6 +161,27 @@ for (i in seq_along(colsToAnnotate)) {
 }
 
 write.csv(topRSZAnnoList, file = paste0(sheetsDir, "topRSPermpVals", dataID, ".csv"), row.names = FALSE)
+
+pValColsToRank = paste0(colsToAnnotate, "_PVal")
+scoreColsToRank = colsToAnnotate
+for (i in seq_along(colsToAnnotate)) {
+    
+    realRSScores = addRankCol(realRSScores, 
+                              colToRank = pValColsToRank[i], 
+                              newColName = paste0(pValColsToRank[i], "Rank"),
+                              decreasing = FALSE)
+    realRSScores = addRankCol(realRSScores, 
+                              colToRank = scoreColsToRank[i], 
+                              newColName = paste0(scoreColsToRank[i], "_Rank"),
+                              decreasing = TRUE)
+    
+    newRankCols = c(paste0(pValColsToRank[i], "Rank"), paste0(scoreColsToRank[i], "_Rank"))
+    realRSScores[, paste0(colsToAnnotate[i], "_meanRank")] = apply(realRSScores[, newRankCols], MARGIN = 1, FUN = mean)
+    realRSScores[, paste0(colsToAnnotate[i], "_maxRank")] = apply(realRSScores[, newRankCols], MARGIN = 1, FUN = max)
+}
+
+# View(arrange(realRSScores, PC1_meanRank))
+# View(arrange(realRSScores, desc(PC1)))
 
 ################
 # get top region sets
