@@ -84,6 +84,22 @@ theme_set(theme_classic() +
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 
+#######################################################################
+# function to add rank col
+
+addRankCol = function(dataDF, colToRank, newColName="rank", decreasing=FALSE) {
+    
+    origColNames = colnames(dataDF)
+    origInd = 1:nrow(dataDF)
+    indDF = data.frame(origInd = origInd[order(dataDF[, colToRank], 
+                                               decreasing = decreasing)])
+    indDF$rank = 1:nrow(indDF)
+    indDF = indDF[order(indDF$origInd, decreasing=FALSE), ]
+    dataDF = cbind(dataDF, indDF$rank)
+    colnames(dataDF) = c(origColNames, newColName)
+    # updated DF
+    return(dataDF)
+}
 
 ############ functions to add to COCOA ##############################
 # ggplot version of rs concentration
