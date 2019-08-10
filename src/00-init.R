@@ -180,6 +180,8 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
 #
 # returns a matrix where rows are the genomic signal (eg a CpG or region) and
 # columns are the columns of featureMat
+# @examples dataMat = matrix(rnorm(50), 5, 10)
+# featureMat = matrix(rnorm(20), 10, 2)
 createCorFeatureMat = function(dataMat, featureMat, 
                                centerDataMat=TRUE, centerFeatureMat = TRUE, 
                                testType="cor", covariate=NULL) {
@@ -197,26 +199,29 @@ createCorFeatureMat = function(dataMat, featureMat,
     if (centerFeatureMat) {
         featureMeans = colMeans(featureMat, na.rm = TRUE)
         # centering before calculating correlation
-        featureMat = t(apply(X = featureMat, MARGIN = 1, function(x) x - featureMeans))
+        featureMat = t(apply(X = t(featureMat), MARGIN = 2, function(x) x - featureMeans))
         if (dim(featureMat)[1] == 1) {
             featureMat = t(featureMat)
         }
         featureMat = as.matrix(featureMat)
     }
     
+    dataMat = data.table::copy(as.data.frame(t(dataMat)))
+    
+    
     if (testType == "cor") {
         # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
         # how much do features correlate with each PC?
-        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 1, 
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
                                                                            FUN = function(x) cor(x = x, y, 
                                                                                                  use="pairwise.complete.obs")))
     } else if (testType == "pcor") {
-        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 1, 
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
                                                                            FUN = function(x) pcor.test(x = x, y=y,
                                                                                                        z=covariate)$estimate))
         
     } else if (testType == "cov") {
-        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 1, 
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
                                                                            FUN = function(x) cov(x = x, y, 
                                                                                                  use="pairwise.complete.obs")))
     } else {

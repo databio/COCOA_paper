@@ -18,6 +18,7 @@ nPerm = 250
 ######################################################################
 # required inputs to permutation test
 dataID = "brcaDNAm657"
+devtools::load_all(ffCode("COCOA/"))
 
 # assigns signalMat, signalCoord, loadingMat, pcScores
 loadBRCADNAm()
