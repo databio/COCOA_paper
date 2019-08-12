@@ -1,25 +1,20 @@
 # 
 
 source(paste0(Sys.getenv("CODE"),"COCOA_paper/src/00-init.R"))
-Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
-
-# a cache is created in the script
-setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/")) 
 #####################################################################
 
 # parameters for COCOA_vis_pipeline.R
-plotSubdir = "09_MOFA_Vis"
-dataID = "CLL196MOFA" # 657 patients with both ER and PGR info in metadata, 692 total
-rsScoreCacheName = paste0("rsScore_Cor_", dataID)
+plotSubdir = "09_MOFA_Vis/"
+dataID = "CLL196MOFA"
+variationMetric = "cov"
+rsScoreCacheName = paste0("rsScore_", dataID, "_", variationMetric)
 
 #################################################################
 # load hg19 database
-source(paste0(Sys.getenv("CODE"), "aml_e3999/src/load_process_regionDB.R"))
+loadGRList(genomeV = "hg19")
 
 #################################################################
-
-
-
+# load MOFA CLL data
 cllMethyl = prepareCLLMethyl()
 methylData = cllMethyl$methylProp
 methCoord = cllMethyl$methylCoord
@@ -28,35 +23,46 @@ inputID = dataID
 
 # GRList # from load_process_regions pipeline
 coordinateDT = cllMethyl$methylCoord
-# allMPCAString = "allMPCA_657"
+coordinateDT = COCOA:::grToDt(coordinateDT)
+
 # simpleCache(allMPCAString, assignToVariable = "mPCA", reload = TRUE)
-simpleCache("inferredMethylWeightsMOFA", assignToVariable = "loadingMat")
+simpleCache(paste0("inferredMethylWeightsMOFA", "_", variationMetric), assignToVariable = "loadingMat")
 simpleCache("cllMOFAFactors", assignToVariable = "latentFactors")
 # use rsEnString to specify?
 simpleCache(rsScoreCacheName, assignToVariable = "rsEnrichment", reload = TRUE)
+rsEnrichment = cbind(rsEnrichment, rsCollection)
 
 # screen out region sets with low coverage of the data
-lowCov = rsEnrichment$cytosine_coverage < 100
+lowCov = rsEnrichment$signalCoverage < 100
 rsEnrichment = rsEnrichment[!lowCov, ]
 GRList = GRList[!lowCov]
+
+# screen out roadmap epigenomics sets since they aren't very interpretable
+keepInd = screenOutRoadmap(rsScores = rsEnrichment, 
+                 rsCollection = rsEnrichment$rsCollection, patternSearchCol="rsName", keepPattern="H3K4me1") 
+rsEnrichment = rsEnrichment[keepInd, ]
+GRList = GRList[keepInd]
+
+simpleCache()
 
 # the latent factors
 mPCA = list()
 mPCA$x = latentFactors
+mPCA$center = rep(0, nrow(methylData))
+mPCA$rotation = loadingMat
 if (!all(row.names(latentFactors) == colnames(methylData))) {
     stop("samples are not ordered consistently")
 }
-
-
 
 # TODO make sure GRList and rsEnrichment are both in the same order/with same data
 names(GRList) <- paste0(rsEnrichment$rsName, " : ", rsEnrichment$rsDescription)
 GRList = GRList[!is.na(rsEnrichment$LF1)]
 rsEnrichment=rsEnrichment[!is.na(rsEnrichment$LF1), ]
-rsEnSortedInd= rsRankingIndex(rsScores = rsEnrichment, PCsToAnnotate = paste0("LF", c(1:3, 5:7, 9)))
+rsEnSortedInd= rsRankingIndex(rsScores = rsEnrichment, PCsToAnnotate = paste0("LF", 1:10))
 
-PCSTOANNOTATE = paste0("LF", c(1:3, 5:7, 9))
-
+################################################################################
+# PCSTOANNOTATE = paste0("LF", c(1:3, 5:7, 9))
+PCSTOANNOTATE = paste0("LF", 1:10)
 
 ### plots that will be created and script specific parameters for them 
 # "comparePCHeatmap"
@@ -77,10 +83,12 @@ topRSInd_rsOLCP = unique(unlist(rsEnSortedInd[1:10, ]))
 topRSInd_mrLP = unique(unlist(rsEnSortedInd[1:10, ]))
 PCsToAnnotate_mrLP = PCSTOANNOTATE
 
+###################
+
 # the pipeline
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_vis_pipeline.R")) 
 
-
+################################################################################
 # creating figures for presentation that only include a few PCs
 plotSubdir = "03_brca_pres_figures"
 inputID = "sharedC_figures"
@@ -106,6 +114,7 @@ topRSInd_rsOLCP = unique(unlist(rsEnSortedInd[1:15, c("PC1", "PC2", "PC3", "PC4"
 topRSInd_mrLP = unique(unlist(rsEnSortedInd[1:15, c(paste0("PC", 1:4)), with=FALSE]))
 PCsToAnnotate_mrLP = PCSTOANNOTATE
 
+##################
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_vis_pipeline.R"))
 
 ###############################################################################

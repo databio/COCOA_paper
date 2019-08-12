@@ -13,7 +13,7 @@ if (!dir.exists(ffPlot(plotSubdir))) {
 }
 
 set.seed(1234)
-nPerm = 250
+nPerm = 300
 
 ######################################################################
 # required inputs to permutation test

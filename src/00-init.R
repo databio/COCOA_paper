@@ -105,12 +105,12 @@ addRankCol = function(dataDF, colToRank, newColName="rank", decreasing=FALSE) {
 # rows in rsScores should correspond to rsCollection
 screenOutRoadmap = function(rsScores, rsCollection, patternSearchCol="rsName", keepPattern=NULL) {
     if (!is.null(keepPattern)) {
-        fRSScores = filter(rsScores, (rsCollection == "roadmap_epigenomics") & (!grepl(pattern = keepPattern, x = patternSearchCol, ignore.case = TRUE)))
+        keepInd =  (rsCollection != "roadmap_epigenomics") | (grepl(pattern = keepPattern, x = rsScores[, patternSearchCol], ignore.case = TRUE))
     } else {
-        fRSScores = filter(rsScores, (rsCollection == "roadmap_epigenomics"))
+        keepInd = (rsCollection != "roadmap_epigenomics")
     }
     
-    return(fRSScores)
+    return(keepInd)
 }
 
 ############ functions to add to COCOA ##############################
@@ -188,6 +188,8 @@ createCorFeatureMat = function(dataMat, featureMat,
     
     featureMat = as.matrix(featureMat)
     featureNames = colnames(featureMat)
+    nFeatures = ncol(featureMat)
+    nDataDims = nrow(dataMat)
     
     if (centerDataMat) {
         cpgMeans = rowMeans(dataMat, na.rm = TRUE)
@@ -212,8 +214,16 @@ createCorFeatureMat = function(dataMat, featureMat,
     if (testType == "cor") {
         # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
         # how much do features correlate with each PC?
-        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
-                                                                           FUN = function(x) cor(x = x, y, 
+        
+        # featurePCCor = as.data.frame(matrix(rep(0, nFeatures * nDataDims), nrow=nDataDims, ncol=nFeatures))
+        # for (i in 1:nFeatures) {
+        #     for (j in 1:nDataDims) {
+        #         featurePCCor[j, i] = cor(x = featureMat[, i], y = dataMat[, j], use="pairwise.complete.obs")
+        #     }
+        #     
+        # }
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2,
+                                                                           FUN = function(x) cor(x = x, y,
                                                                                                  use="pairwise.complete.obs")))
     } else if (testType == "pcor") {
         featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
@@ -221,8 +231,16 @@ createCorFeatureMat = function(dataMat, featureMat,
                                                                                                        z=covariate)$estimate))
         
     } else if (testType == "cov") {
-        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
-                                                                           FUN = function(x) cov(x = x, y, 
+        # featurePCCor = as.data.frame(matrix(rep(0, nFeatures * nDataDims), nrow=nDataDims, ncol=nFeatures))
+        # for (i in 1:nFeatures) {
+        #     for (j in 1:nDataDims) {
+        #         featurePCCor[j, i] = cov(x = featureMat[, i], y = dataMat[, j], use="pairwise.complete.obs")
+        #     }
+        #     
+        # }
+        
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2,
+                                                                           FUN = function(x) cov(x = x, y,
                                                                                                  use="pairwise.complete.obs")))
     } else {
         stop("invalid testType")
@@ -490,15 +508,28 @@ pGammaList <- function(scoreVec, fitDistrList) {
 
 # @param genomicSignal columns of dataMat should be samples/patients, rows should be genomic signal
 # (each row corresponds to one genomic coordinate/range)
-# @param sampleLabels Rows should be samples, columns should be "features" 
+# @param sampleLabels Matrix or data.frame. Rows should be samples, 
+# columns should be "features" 
 # (whatever you want to get correlation with: eg PC scores),
 # all columns in featureMat will be used (subset when passing to function
 # in order to not use all columns)
-# @param calcCols character. the columns for which to calculate
+# @param calcCols character. the columns in `sampleLabels` for which to calculate
 # correlation and then to run COCOA on
 corPerm <- function(randomInd, genomicSignal, 
                     signalCoord, GRList, calcCols,
                     sampleLabels, variationMetric = "cor") {
+    
+    # if vector is given, return error
+    if (is.null(dim(sampleLabels))) {
+        stop("`sampleLabels` should be a matrix or data.frame")
+    }
+    
+    if (any(!(calcCols %in% colnames(sampleLabels)))) {
+        stop("Not all specified columns are present in `sampleLabels`")
+    }
+    
+    # subset to only calcCols
+    sampleLabels = sampleLabels[, calcCols]
     
     # because names are dropped for a single column data.frame when indexing
     # single col data.frame is automatically converted to numeric

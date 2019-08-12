@@ -150,6 +150,8 @@ loadBRCAatac <- function(signalMat=TRUE, signalCoord=TRUE, pcScores=FALSE,
 # that has corresponding genomic coordinates
 # filters out X and Y chromosomes
 prepareCLLMethyl = function(removeXY=TRUE) {
+    library(ExperimentHub)
+    library(FDb.InfiniumMethylation.hg19)
     
     # get microarray data
     eh = ExperimentHub()

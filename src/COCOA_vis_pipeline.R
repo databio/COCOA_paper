@@ -1,5 +1,4 @@
 
-
 # TODO make script do plots for top10 or just take that out and run script twice
 # once for rsEnrichment and once for rsEnrichmentTop10
 
@@ -72,8 +71,11 @@ if (!dir.exists(paste0(Sys.getenv("PLOTS"), plotSubdir))) {
     dir.create(paste0(Sys.getenv("PLOTS"), plotSubdir), recursive = TRUE)
 }
 
+devtools::load_all(ffCode("COCOA/"))
 source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R"))
 source(paste0(Sys.getenv("CODE"), "PCRSA_extra/R/visualization.R"))
+source(paste0(Sys.getenv("CODE"), "PCRSA_extra/R/analysis.R"))
+
 
 inputID = addUnderscore(inputID, side = "left")
 
@@ -150,14 +152,11 @@ if (makeRQBPC) {
     # if there are too many regions, will try to cluster and cause memory error:
     # cannot allocate vector of size X Gb,
     # fix this by decreasing maxRegionsToPlot or use cluster_rows=FALSE
-    for (.i in seq_along(topRSInd_rQBPC)) {
-        regionQuantileByPC(loadingMat=loadingMat, signalCoord=coordinateDT, 
-                           regionSet=GRList[[topRSInd_rQBPC[.i]]], 
-                           rsName=paste0(rsEnrichment$rsName[topRSInd_rQBPC[.i]], " : ", rsEnrichment$rsDescription[topRSInd_rQBPC[.i]]), 
-                           PCsToAnnotate=PCsToAnnotate_rQBPC, maxRegionsToPlot = 5000,
-                           cluster_rows = TRUE)
-    }
-    
+        multiRegionQuantileByPC(signal=loadingMat, signalCoord=coordinateDT, 
+                           GRList=GRList[topRSInd_rQBPC], 
+                           rsNames=paste0(rsEnrichment$rsName[topRSInd_rQBPC], " : ", rsEnrichment$rsDescription[topRSInd_rQBPC]), 
+                            signalCol=PCsToAnnotate_rQBPC, maxRegionsToPlot = 5000,
+                           cluster_rows = TRUE, absVal = TRUE)
     
     dev.off()
 }
@@ -172,10 +171,10 @@ if (makePCFSCH) {
     regionSetName = paste0(rsEnrichment$rsName[topRSInd_pcFSCH], " : ", rsEnrichment$rsDescription[topRSInd_pcFSCH])
     names(.regionSetList) <-  regionSetName
     subsetCorList = lapply(X = as.list(.regionSetList), FUN = function(x) pcFromSubset(regionSet = x, 
-                                                                                       pca = mPCA, 
+                                                                                       mPCA = mPCA, 
                                                                                        methylData = methylData, 
-                                                                                       coordinateDT = coordinateDT, 
-                                                                                       PCofInterest = PCsToAnnotate_pcFSCH,
+                                                                                       mCoord = coordinateDT, 
+                                                                                       pc = PCsToAnnotate_pcFSCH,
                                                                                        returnCor = TRUE))
     subsetCorMat = do.call(rbind, subsetCorList)
     colnames(subsetCorMat) <- PCsToAnnotate_pcFSCH
@@ -196,10 +195,10 @@ if (makePCFSCH) {
 # seeing how much overlap there is between region sets
 # based on overlap of covered cytosines, not the regions themselves
 
-if (makerRSOLCP) {
+if (makeRSOLCP) {
     # total regions in column region sets are the denominator for the proportion
     .regionSetList = GRList[topRSInd_rsOLCP] 
-    pOL = percentCOverlap(coordGR = MIRA:::dtToGr(coordinateDT), 
+    pOL = percentCOverlap(mCoord = MIRA:::dtToGr(coordinateDT), 
                           GRList = .regionSetList) 
     
     grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "topRSOverlap", inputID, ".pdf"), width = 25, height = 25)
