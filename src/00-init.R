@@ -67,6 +67,7 @@ setff("Proc", Sys.getenv("PROCESSED"))
 setff("Code", paste0(Sys.getenv("CODE")))
 setff("ProjCode", paste0(Sys.getenv("CODE"), "COCOA_paper/"))
 setff("Data", Sys.getenv("DATA"))
+setff("Sheets", paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/"))
 dirCode = function(.file="") {
     return(paste0(Sys.getenv("CODE"), "COCOA_paper/", .file))
 }
@@ -253,7 +254,7 @@ createCorFeatureMat = function(dataMat, featureMat,
     colnames(featurePCCor) <- featureNames
     
     return(featurePCCor)
-    # corLoadRatio = signal[, PCsToAnnotate] / featurePCCor 
+    # corLoadRatio = signal[, signalCol] / featurePCCor 
     # hist(corLoadRatio[, "PC10"])
 }
 
@@ -618,21 +619,21 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, signalCol,
     
     
     # average loading value from each PC to normalize so PCs can be compared with each other
-    avLoad = apply(X = signal[, PCsToAnnotate], MARGIN = 2, FUN = function(x) mean(abs(x)))
+    avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(abs(x)))
     
     # normalize
     # pcP = lapply(pcP, FUN = function(x) t(apply(X = x, MARGIN = 1, FUN = function(y) y - c(0, avLoad))))
-    pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=PCsToAnnotate, z = avLoad)])
+    pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=signalCol, z = avLoad)])
     pcP = lapply(pcP, FUN = function(x) data.table(regionGroupID=1:nrow(x), x))
     
     # for the plot scale
-    maxVal = max(sapply(pcP, FUN = function(x) max(x[, .SD, .SDcols=PCsToAnnotate])))
-    minVal = min(sapply(pcP, FUN = function(x) min(x[, .SD, .SDcols=PCsToAnnotate])))
+    maxVal = max(sapply(pcP, FUN = function(x) max(x[, .SD, .SDcols=signalCol])))
+    minVal = min(sapply(pcP, FUN = function(x) min(x[, .SD, .SDcols=signalCol])))
     
     # convert to long format for plots
-    pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", PCsToAnnotate))
+    pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))
     pcP = lapply(X = pcP, as.data.table)
-    pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = PCsToAnnotate)])
+    pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
     
     # stack overflow for wrapping plot title
     wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n") 
@@ -659,7 +660,7 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, signalCol,
     multiProfileP = marrangeGrob(profilePList, ncol = 2, nrow = 2)
     
     metaRegionProfileInfo = list(multiProfileP, pcProf)
-    setattr(metaRegionProfileInfo, "name", c("grob", "metaRegionData"))
+    setattr(metaRegionProfileInfo, "names", c("grob", "metaRegionData"))
     
     return(metaRegionProfileInfo)
 }

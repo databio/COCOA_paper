@@ -225,6 +225,7 @@ if (makeMRLP) {
     .regionSetList = lapply(.regionSetList, resize, width = 14000, fix="center")
     .rsNames = paste0(rsEnrichment$rsName[topRSInd_mrLP], " : ", rsEnrichment$rsDescription[topRSInd_mrLP])
     
+    # returns a list: one item is grob, one item is list of binned data tables
     mrPlotOutput = makeMetaRegionPlots(signal = loadingMat, signalCoord = coordinateDT, GRList = .regionSetList, 
                         rsNames = .rsNames, signalCol = PCsToAnnotate_mrLP, binNum = 21, 
                         aggrMethod = "default")

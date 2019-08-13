@@ -43,8 +43,6 @@ keepInd = screenOutRoadmap(rsScores = rsEnrichment,
 rsEnrichment = rsEnrichment[keepInd, ]
 GRList = GRList[keepInd]
 
-simpleCache()
-
 # the latent factors
 mPCA = list()
 mPCA$x = latentFactors
