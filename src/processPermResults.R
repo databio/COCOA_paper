@@ -44,6 +44,7 @@ multiNiceHist(file = ffPlot(paste0(plotSubdir, "zScoreDist", dataID, ".pdf")), d
 # simpleCache(paste0("rsScore_", dataID), assignToVariable = "realRSScores")
 # p-values based on fitted gamma distributions
 gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate], nullDistList = nullDistList)
+gPValDF = apply(X = gPValDF, MARGIN = 2, FUN = function(x) p.adjust(p = x, method = "BH"))
 gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) %in% colsToAnnotate)]])
 
 multiNiceHist(file = ffPlot(paste0(plotSubdir, "pValLog10Dist", dataID, ".pdf")), dataDF = -log10(gPValDF[colsToAnnotate]),
@@ -53,8 +54,8 @@ multiNiceHist(file = ffPlot(paste0(plotSubdir, "pValLog10Dist", dataID, ".pdf"))
               ggExpr = "+ylim(0, 2270)")
 
 # p val cutoffs
-sigCutoff = 0.05 / nrow(realRSScores)
-trendCutoff = sigCutoff * 10
+sigCutoff = 0.05
+trendCutoff = 0.1
 
 # sort region sets according to p-value/z-score groups (significant, trending 
 # toward significant, nonsignificant), then by average correlation score
