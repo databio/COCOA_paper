@@ -124,7 +124,6 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
 sampleLabels = data.frame(sampleLabels)
 colnames(sampleLabels) = colsToAnnotate
 
-dataID = paste0(dataID, "_", variationMetric)
-source(ffProjCode("src/runPermTest.R"))
+source(ffProjCode("runPermTest.R"))
 
 

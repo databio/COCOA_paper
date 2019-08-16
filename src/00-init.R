@@ -65,7 +65,7 @@ Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"
 setff("Plot", Sys.getenv("PLOTS"))
 setff("Proc", Sys.getenv("PROCESSED"))
 setff("Code", paste0(Sys.getenv("CODE")))
-setff("ProjCode", paste0(Sys.getenv("CODE"), "COCOA_paper/"))
+setff("ProjCode", paste0(Sys.getenv("CODE"), "COCOA_paper/src/"))
 setff("Data", Sys.getenv("DATA"))
 setff("Sheets", paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/"))
 dirCode = function(.file="") {
@@ -468,6 +468,8 @@ getGammaPVal <- function(scores, nullDistList, method="mme", realScoreInDist=FAL
     # make sure the same columns are present/in the same order
     
     
+    colsToAnnotate = colnames(scores)
+    
     if (realScoreInDist) {
         # to get a more accurate gamma distribution, include the score from unpermuted test.
         # add to each null distribution
@@ -479,7 +481,7 @@ getGammaPVal <- function(scores, nullDistList, method="mme", realScoreInDist=FAL
     
     # returns list, each item in list is also a list.
     # in sub list: each col in nullDistDF has one list item
-    fittedDistList = lapply(X = nullDistList, function(x) fitGammaNullDistr(nullDistDF = x, 
+    fittedDistList = lapply(X = nullDistList, function(x) fitGammaNullDistr(nullDistDF = x[, colsToAnnotate, drop=FALSE], 
                                                                             method=method, 
                                                                             force=force))
     
@@ -566,7 +568,7 @@ corPerm <- function(randomInd, genomicSignal,
 # @param rsInd numeric. The row number for the region set of interest.
 extractNullDist <- function(resultsList, rsInd) {
     rowList = lapply(resultsList, FUN = function(x) x[rsInd, ])
-    rsNullDist = rbindlist(rowList)
+    rsNullDist = as.data.frame(rbindlist(rowList))
     return(rsNullDist)
 }
 

@@ -20,6 +20,7 @@ nPerm = 250
 ######################################################################
 # required inputs to permutation test
 dataID = "brcaATACPCAPerm"
+variationMetric = "cor"
 
 # loads signalMat and signalCoord
 loadBRCAatac()
@@ -65,12 +66,11 @@ simpleCache("rsScores_brcaATACPCACor", {
 
 # requires: nPerm, sampleLabels, genomicSignal, signalCoord, GRList, colsToAnnotate
 # dataID
-source(ffProjCode("src/runPermTest.R"))
+source(ffProjCode("runPermTest.R"))
 
 ############################################################################
 
-load( ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
-                    dataID, ".RData")))
-addRankCol()
+load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", nPerm, "_", variationMetric, 
+                   "_", dataID, ".RData")))
 
 

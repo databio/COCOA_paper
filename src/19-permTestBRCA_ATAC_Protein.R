@@ -15,7 +15,8 @@ if (!dir.exists(ffPlot(plotSubdir))) {
 }
 
 set.seed(1234)
-nPerm = 250
+nPerm = 300
+variationMetric = "cor"
 
 ######################################################################
 # load protein data
@@ -41,7 +42,7 @@ row.names(prot) = prot$subject_ID
 
 ######################################################################
 # required inputs to permutation test
-
+dataID = "brcaATACProteinPerm"
 
 
 # loads signalMat and signalCoord
@@ -58,7 +59,7 @@ loadGRList(genomeV="hg38")
 
 colsToAnnotate = proteinOfInterest #protein columns
 
-dataID = "brcaATACProteinPerm"
+
 
 
 # get the "true" COCOA scores before doing the permutation test
@@ -127,17 +128,5 @@ plot(a$FOXM1)
 dev.off()
 gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate], nullDistList = nullDistList)
 gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) %in% colsToAnnotate)]])
-
-# for (i in seq_along(nullDistList)) {
-#     thisI = i
-#     message(i)
-#     test = getGammaPVal(scores = realRSScores[, colsToAnnotate], nullDistList = nullDistList[i])
-#     
-# }
-# for (i in 1:ncol(nullDistList[[58]])) {
-#     thisI = i
-#     message(i)
-#     test=fitdistrplus::fitdist(data=nullDistList[[58]][, i], distr = "gamma", method="mme")
-# }
 
 View(gPValDF[order(gPValDF$NFKBP65_pS536, decreasing=FALSE), ])

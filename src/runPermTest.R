@@ -38,25 +38,38 @@ for (i in 1:nPerm) {
 #                                                         calcCols=colsToAnnotate,
 #                                                         sampleLabels=latentFactors))
 
-rsPermScores = list()
-for (i in seq_along(indList)) {
-    
-    rsPermScores[[i]] = corPerm(randomInd=indList[[i]], 
-                                genomicSignal=genomicSignal, 
-                                signalCoord=signalCoord, 
-                                GRList=GRList, 
-                                calcCols=colsToAnnotate,
-                                sampleLabels=sampleLabels,
-                                variationMetric = variationMetric)
-    message(i)
-    if ((i %% 50) == 0) {
-        save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
-                                                dataID, ".RData")))
+simpleCache(paste0("rsPermScores_", nPerm, "_", variationMetric, "_", dataID), {
+    rsPermScores = list()
+    for (i in seq_along(indList)) {
+        
+        rsPermScores[[i]] = corPerm(randomInd=indList[[i]], 
+                                    genomicSignal=genomicSignal, 
+                                    signalCoord=signalCoord, 
+                                    GRList=GRList, 
+                                    calcCols=colsToAnnotate,
+                                    sampleLabels=sampleLabels,
+                                    variationMetric = variationMetric)
+        message(i)
+        if ((i %% 50) == 0) {
+            save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
+                                                    dataID, ".RData")))
+        }
+        
     }
     
-}
+    save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
+                                            "_", variationMetric, "_", 
+                                            dataID, ".RData")))
+    rsPermScores
+    
+}, assignToVariable="rsPermScores")
 
-save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
-                                        dataID, ".RData")))
 
-source(ffCode("COCOA_paper/src/processPermResults.R"))
+source(ffProjCode("processPermResults.R"))
+
+## renaming objects that were created manually to make them compatible with simpleCache
+# rm(rsPermScores)
+# rm(ret)
+# load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", nPerm, "_", variationMetric, "_", dataID, ".RData")))
+# ret = rsPermScores
+# save(ret, file =ffProc(paste0("COCOA_paper/RCache/rsPermScores_", nPerm, "_", variationMetric, "_", dataID, ".RData")))
