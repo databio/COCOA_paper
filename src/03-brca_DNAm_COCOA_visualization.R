@@ -11,7 +11,7 @@ inputID = "sharedC"
 # a cache is created in the script
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/")) 
 ########################################
-source(paste0(Sys.getenv("CODE"), "/COCOA_paper/src/load_process_regions_brca.R"))
+loadGRList(genomeV = "hg38")
 
 #################################################################
 
@@ -28,8 +28,7 @@ allMPCAString = "allMPCA_657"
 simpleCache(allMPCAString, assignToVariable = "mPCA", reload = TRUE)
 loadingMat = mPCA$rotation
 # use rsEnString to specify?
-simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsEnrichment", reload = TRUE)
-simpleCache("rsEnrichmentTop10_657", assignToVariable = "rsEnrichmentTop10", reload = TRUE)
+                                simpleCache("rsEnrichmentRSMean_657", assignToVariable = "rsEnrichment", reload = TRUE)
 # TODO make sure GRList and rsEnrichment are both in the same order/with same data
 names(GRList) <- paste0(rsEnrichment$rsName, " : ", rsEnrichment$rsDescription)
 GRList = GRList[!is.na(rsEnrichment$PC1)]

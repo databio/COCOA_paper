@@ -15,7 +15,7 @@
 # rsEnrichment
 # rsEnrichmentTop10
 # mPCA
-# plotSubdir # one directory per PCA. This script generates plots for one PCA.
+# plotSubdir # directory for this analysis. A sub directory in plotSubdir will be added for the specific data input (inputID)
 # methylData
 # inputID # since a cache is saved, this marks what the methylation data source was
 # Sys.getenv("PLOTS") should be set
@@ -71,13 +71,19 @@ if (!dir.exists(paste0(Sys.getenv("PLOTS"), plotSubdir))) {
     dir.create(paste0(Sys.getenv("PLOTS"), plotSubdir), recursive = TRUE)
 }
 
+inputID = addUnderscore(inputID, side = "left")
+
+thisPlotSubdir = paste0(plotSubdir, "COCOA_plots", inputID, "/")
+createPlotSubdir(thisPlotSubdir)
+
+
 devtools::load_all(ffCode("COCOA/"))
 source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R"))
 source(paste0(Sys.getenv("CODE"), "PCRSA_extra/R/visualization.R"))
 source(paste0(Sys.getenv("CODE"), "PCRSA_extra/R/analysis.R"))
 
 
-inputID = addUnderscore(inputID, side = "left")
+
 
 library(grid)
 library(ggplot2)
@@ -98,7 +104,7 @@ if (makeCPCH) {
     comparePCHeatmap(rsScores=rsEnrichment, 
                      PCsToRankBy=PCsToAnnotate_cPCH, 
                      PCsToInclude=PCsToAnnotate_cPCH,
-                     fileName=paste0(Sys.getenv("PLOTS"), plotSubdir, 
+                     fileName=paste0(Sys.getenv("PLOTS"), thisPlotSubdir, 
                                      "rsEnrichHeatmap", inputID, ".pdf"))
 }
 
@@ -117,7 +123,7 @@ if (makeMAPC) {
         # top region sets for this PC
         rsInd = as.numeric(as.matrix(rsEnSortedInd[1:topRSToPlotNum, PCsToAnnotate_mAPC[i]])) # original index
         
-        grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "regionMethylHeatmaps", PCsToAnnotate_mAPC[i], inputID, ".pdf"), width = 11, height = 8.5 * topRSToPlotNum)
+        grDevices::pdf(paste0(Sys.getenv("PLOTS"), thisPlotSubdir, "regionMethylHeatmaps", PCsToAnnotate_mAPC[i], inputID, ".pdf"), width = 11, height = 8.5 * topRSToPlotNum)
         
         # heatmap
         methylAlongPC(loadingMat=loadingMat, loadingThreshold=0.95,
@@ -140,11 +146,11 @@ if (makeMAPC) {
 # need region sets and PCA loadings
 
 if (makeRQBPC) {
-    if (!dir.exists(paste0(Sys.getenv("PLOTS"), plotSubdir, "regionByPC/"))) {
-        dir.create(paste0(Sys.getenv("PLOTS"), plotSubdir, "regionByPC/"))
+    if (!dir.exists(paste0(Sys.getenv("PLOTS"), thisPlotSubdir, "regionByPC/"))) {
+        dir.create(paste0(Sys.getenv("PLOTS"), thisPlotSubdir, "regionByPC/"))
     }
     
-    grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, 
+    grDevices::pdf(paste0(Sys.getenv("PLOTS"), thisPlotSubdir, 
                           "regionByPC/regionPercentileByPC", inputID, ".pdf"), 
                    width = 11, height = 8.5 * length(topRSInd_rQBPC))
     
@@ -181,7 +187,7 @@ if (makePCFSCH) {
     
     simpleCache(paste0("subsetCorMat", inputID), {subsetCorMat}, recreate=TRUE)
     
-    grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "subsetCorRSbyPC", inputID, ".pdf"), width = 8.5, 11)
+    grDevices::pdf(paste0(Sys.getenv("PLOTS"), thisPlotSubdir, "subsetCorRSbyPC", inputID, ".pdf"), width = 8.5, 11)
     
     # don't use i for index since it is defined as something else in cell_fun
     Heatmap(matrix = subsetCorMat, col = c("black", "orange"), cluster_rows = FALSE, cluster_columns = FALSE, 
@@ -189,7 +195,45 @@ if (makePCFSCH) {
                 grid.text(sprintf("%.2f", mat[i, j]), x, y, gp = gpar(fontsize = 10))
             })
     dev.off()
+    
+    
+    # plotting correlation between a PC and the "PC-subset" score 
+    # derived from only loading values of CpGs within a certain region set 
+    # do this for top few region sets (i in the loop) for each PC
+    for (j in seq_along(PCsToAnnotate_pcFSCH)) {
+        grDevices::pdf(paste0(Sys.getenv("PLOTS"), 
+                              thisPlotSubdir, "/subsetPC_PC_Scatter_", 
+                              PCsToAnnotate_pcFSCH[j], addUnderscore(inputID, side="left"), ".pdf"))
+        for (i in 1:10) {
+            # returns a "PC-subset" score for each sample
+            subScores = pcFromSubset(regionSet = GRList[as.numeric(as.data.frame(rsEnSortedInd)[i, PCsToAnnotate_pcFSCH[j]])], 
+                                     mPCA = mPCA, 
+                                     methylData = methylData, 
+                                     mCoord = coordinateDT, 
+                                     pc = PCsToAnnotate_pcFSCH[j],
+                                     returnCor = FALSE)    
+            
+            plot(x = subScores, y = mPCA$x[, PCsToAnnotate_pcFSCH[j]], xlab= "Scores from only CpGs in this region set",
+                 ylab = PCsToAnnotate_pcFSCH[j], main = paste0(as.data.frame(rsEnrichment)$rsName[as.numeric(rsEnSortedInd[i, PCsToAnnotate_pcFSCH[j]])], 
+                                                       " : ", as.data.table(rsEnrichment)$rsDescription[as.numeric(rsEnSortedInd[i, PCsToAnnotate_pcFSCH[j]])]))   
+            
+        }
+        dev.off()
+        
+    }
+    
+    
+    
+    
+    
+    
+    
 }
+
+
+
+
+
 
 ################################################################################
 # seeing how much overlap there is between region sets
@@ -201,7 +245,7 @@ if (makeRSOLCP) {
     pOL = percentCOverlap(mCoord = MIRA:::dtToGr(coordinateDT), 
                           GRList = .regionSetList) 
     
-    grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "topRSOverlap", inputID, ".pdf"), width = 25, height = 25)
+    grDevices::pdf(paste0(Sys.getenv("PLOTS"), thisPlotSubdir, "topRSOverlap", inputID, ".pdf"), width = 25, height = 25)
     
     Heatmap(matrix = pOL[[1]], col = c("black", "yellow"), cluster_rows = FALSE, cluster_columns = FALSE, 
             cell_fun = function(j, i, x, y, width, height, fill, mat=pOL[[1]]) {
@@ -235,11 +279,11 @@ if (makeMRLP) {
         pcProf
     }, recreate = TRUE)
    
-    ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir,
+    ggsave(filename = paste0(Sys.getenv("PLOTS"), thisPlotSubdir,
                              "/metaRegionLoadingProfiles", 
                              inputID, ".pdf"), plot = mrPlotOutput$grob, device = "pdf", limitsize = FALSE)
     
     # check PPARG.bed, Jaspar motifs (had 18 rows instead of 21)
 }
 
-
+#####################################################################

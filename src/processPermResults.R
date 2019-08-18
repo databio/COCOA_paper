@@ -1,4 +1,4 @@
-.analysisID = paste0("_", nPerm, "_", variationMetric, "_", dataID)
+.analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
 
 
 nullDistList = lapply(X = 1:nrow(rsPermScores[[1]]),

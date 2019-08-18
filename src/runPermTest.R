@@ -38,7 +38,7 @@ for (i in 1:nPerm) {
 #                                                         calcCols=colsToAnnotate,
 #                                                         sampleLabels=latentFactors))
 
-simpleCache(paste0("rsPermScores_", nPerm, "_", variationMetric, "_", dataID), {
+simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
     rsPermScores = list()
     for (i in seq_along(indList)) {
         
@@ -58,7 +58,7 @@ simpleCache(paste0("rsPermScores_", nPerm, "_", variationMetric, "_", dataID), {
     }
     
     save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
-                                            "_", variationMetric, "_", 
+                                            variationMetric, "_", 
                                             dataID, ".RData")))
     rsPermScores
     
