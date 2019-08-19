@@ -43,7 +43,7 @@ realRSScores = realRSScores[sharedRSNames, ]
 # permutation test for significance
 # requires: nPerm, sampleLabels, genomicSignal, signalCoord, GRList, colsToAnnotate
 # dataID, variationMetric (optional, default="cor")
-source(ffProjCode("src/runPermTest.R"))
+source(ffProjCode("runPermTest.R"))
 
 ####################################################################
 

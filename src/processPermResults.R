@@ -44,7 +44,7 @@ multiNiceHist(file = ffPlot(paste0(plotSubdir, "zScoreDist", .analysisID, ".pdf"
 # simpleCache(paste0("rsScore_", dataID), assignToVariable = "realRSScores")
 # p-values based on fitted gamma distributions
 correctionMethod = "BH" # input to p.adjust
-gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate, drop=FALSE], nullDistList = nullDistList, method = "mme")
+gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate, drop=FALSE], nullDistList = nullDistList, method = "mme", realScoreInDist = TRUE)
 gPValDF = apply(X = gPValDF, MARGIN = 2, FUN = function(x) p.adjust(p = x, method = correctionMethod))
 gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) %in% colsToAnnotate)]])
 
@@ -71,7 +71,7 @@ trendCutoff = 0.1
 
 # sort region sets according to p-value/z-score groups (significant, trending 
 # toward significant, nonsignificant), then by average correlation score
-pValGroups = as.data.frame(gPValDF)[, colsToAnnotate]
+pValGroups = as.data.frame(gPValDF)[, colsToAnnotate, drop=FALSE]
 
 sigInd = pValGroups <= sigCutoff
 notSigInd = pValGroups > trendCutoff
@@ -88,7 +88,7 @@ colnames(pValGroups) = paste0(colnames(pValGroups), "_PValGroup")
 realRSScores = cbind(realRSScores, pValGroups)
 # View(dplyr::arrange(realRSScores, desc(LF4_Z), desc(LF4)))
 realRSScores$index = 1:nrow(realRSScores)
-gPValDF2 = as.data.frame(gPValDF)[, colsToAnnotate]
+gPValDF2 = as.data.frame(gPValDF)[, colsToAnnotate, drop=FALSE]
 colnames(gPValDF2) <- paste0(colnames(gPValDF2), "_PVal")
 realRSScores = cbind(realRSScores, gPValDF2)
 
