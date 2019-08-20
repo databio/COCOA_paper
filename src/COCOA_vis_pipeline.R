@@ -131,7 +131,8 @@ if (makeMAPC) {
                       signalCoord=coordinateDT,
                       genomicSignal=methylData,
                       GRList=GRList[rsInd], orderByPC=PCsToAnnotate_mAPC[i],
-                      topXRegions=50)
+                      topXRegions=50,
+                      cluster_columns = TRUE)
         
         # draw(Heatmap(matrix = methylData[1:1000, 1:10]))
         # plot(methylData[1:1000, 1])

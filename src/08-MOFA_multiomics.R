@@ -89,12 +89,45 @@ if (!all(colnames(methData) == row.names(latentFactors))) {
 apply(X = latentFactors, MARGIN = 2, FUN = function(x) any(is.na(x)))
 simpleCache("cllMOFAFactors", {cllMOFAFactors = latentFactors})
 
-#####################################################################\
+##################################################################
+# load hg19 region set database
+loadGRList(genomeV = "hg19")
+
+#####################################################################
+
+loadMOFAData(methylMat = FALSE, signalCoord=FALSE, latentFactorMat = FALSE,
+             cllMultiOmics=TRUE)
+
+mutDF = cllMultiOmics$Mutation
+# same order
+mutDF = mutDF[colnames(mutDF), ]
+IGHV = mutDF["IGHV", ]
+IGHV[IGHV == 1] = "mutated"
+IGHV[IGHV == 0] = "unmutated"
+IGHV = as.factor(IGHV)
+
+######################################################################
 # analysis of gender and latent factors
+gata3RS =  GRList[["wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak"]]
+# GRList[["wgEncodeAwgTfbsHaibT47dEraaV0416102Bpa1hUniPk.narrowPeak"]]#
+# runCOCOA(signal = )
+sharedSamples = row.names(CLL_covariates)[row.names(CLL_covariates) %in% colnames(methData)]
+IGHV = mutDF[, sharedSamples]["IGHV", ]
+unmutSamples = sharedSamples[IGHV==0 & !is.na(IGHV)]
+g3PCA = dimRedOnRS(regionSet = gata3RS, methylData = methData[, unmutSamples], mCoord = methCoord, drMethod = "pca")
+g3X = g3PCA$x
+g3X = cbind(g3X[unmutSamples, ], CLL_covariates[unmutSamples, ], t(mutDF[,unmutSamples]))
+# g3X = cbind(g3X[sharedSamples, ], CLL_covariates[sharedSamples, ], t(mutDF[,sharedSamples]))
+colorClusterPlots(g3X, plotCols = paste0("PC", c(1,2)), colorByCols = c("Gender", "IGHV"))
 maleID = row.names(CLL_covariates[CLL_covariates$Gender=="m",]) 
 femaleID = row.names(CLL_covariates[CLL_covariates$Gender=="f",])
+whichPC = "PC1"
+whichPC = "PC2"
+wilcox.test(g3X[maleID[maleID %in% row.names(g3X)], whichPC], g3X[femaleID[femaleID %in% row.names(g3X)], whichPC])
+
 whichLF = "LF7"
 whichLF = "LF1"
+whichLF = "LF9"
 wilcox.test(latentFactors[maleID[maleID %in% row.names(latentFactors)], whichLF], latentFactors[femaleID[femaleID %in% row.names(latentFactors)], whichLF])
 
 plotFactorScatters(MOFAobject, factors = c(1,7, 9), color_by = "Gender")
@@ -113,9 +146,6 @@ simpleCache(paste0("inferredMethylWeightsMOFA", "_", variationType), {
 })
 
 
-##################################################################
-# load hg19 region set database
-loadGRList(genomeV = "hg19")
 
 ##################################################################
 # run COCOA analysis

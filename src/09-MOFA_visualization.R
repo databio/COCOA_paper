@@ -9,7 +9,7 @@ plotSubdir = "09_MOFA_Vis/"
 # variationMetric = "cov"
 # nPerm = 300
 rsScoreCacheName = paste0("rsScore_", dataID, "_", variationMetric)
-inputID = paste0(nPerm, "_", dataID, "_", variationMetric) # used by COCOA vis script
+inputID = paste0(nPerm, "Perm_", dataID, "_", variationMetric) # used by COCOA vis script
 
 #################################################################
 # load hg19 database
@@ -56,7 +56,7 @@ if (!all(row.names(latentFactors) == colnames(methylData))) {
 names(GRList) <- paste0(rsEnrichment$rsName, " : ", rsEnrichment$rsDescription)
 GRList = GRList[!is.na(rsEnrichment$LF1)]
 rsEnrichment=rsEnrichment[!is.na(rsEnrichment$LF1), ]
-rsEnSortedInd= rsRankingIndex(rsScores = rsEnrichment, PCsToAnnotate = paste0("LF", 1:10))
+rsEnSortedInd= rsRankingIndex(rsScores = rsEnrichment, signalCol = paste0("LF", 1:10))
 
 ################################################################################
 # PCSTOANNOTATE = paste0("LF", c(1:3, 5:7, 9))

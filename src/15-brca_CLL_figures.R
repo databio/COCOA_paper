@@ -193,7 +193,7 @@ plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9),
 # factor 1: cell type/differentiation, factor 7: chemo-immunotherapy treatment prior to sample collection
 # factor 7: del17p, TP53 mutations, methylation of oncogenes
 
-loadMOFAData(methylMat = TRUE, signalCoord=TRUE, latentFactors = TRUE,
+loadMOFAData(methylMat = TRUE, signalCoord=TRUE, latentFactorMat = TRUE,
              cllMultiOmics=TRUE)
 simpleCache("mofaPermZScoresCor", assignToVariable = "rsZScores")
 simpleCache("rsScore_Cor_CLL196MOFA", assignToVariable = "rsScores")

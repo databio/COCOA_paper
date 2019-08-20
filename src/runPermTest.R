@@ -50,10 +50,12 @@ simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID
                                     sampleLabels=sampleLabels,
                                     variationMetric = variationMetric)
         message(i)
-        if ((i %% 50) == 0) {
-            save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
-                                                    dataID, ".RData")))
-        }
+        save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
+                                                dataID, ".RData")))
+        # if ((i %% 50) == 0) {
+        #     save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
+        #                                             dataID, ".RData")))
+        # }
         
     }
     
