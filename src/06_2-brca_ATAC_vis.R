@@ -108,7 +108,7 @@ plot(as.matrix(pcScoreAnno[,c("PC1", "PC2")]))
 # source(ffProjCode("load_process_regions_brca.R"))
 
 
-topInd = rsRankingIndex(rsScores = rsScores, PCsToAnnotate = c("PC1", "PC2"))
+topInd = rsRankingIndex(rsScores = rsScores, signalCol = c("PC1", "PC2"))
 topPC1Ind = topInd[, "PC1"][1:15]
 topPC2Ind = topInd[, "PC2"][1:15]
 uTopInd = unique(c(topPC1Ind, topPC2Ind))
@@ -118,14 +118,14 @@ topRSList = lapply(X = GRList[uTopInd], FUN = function(x) resize(x = x, width = 
 topRSNames = rsScores$rsName[uTopInd]
 
 
-multiProfileP = makeMetaRegionPlots(loadingMat=pca$rotation, 
+multiProfileP = makeMetaRegionPlots(signal=pca$rotation, 
                                     signalCoord=peaks, GRList=topRSList, 
                                     rsNames=topRSNames, 
-                                    PCsToAnnotate=PCsToAnnotate, binNum=21, overlapMethod="total") 
-multiProfileP2 = makeMetaRegionPlots(loadingMat=pca$rotation, 
+                                    signalCol=PCsToAnnotate, binNum=21, aggrMethod ="simpleMean") 
+multiProfileP2 = makeMetaRegionPlots(signal=pca$rotation, 
                                     signalCoord=peaks, GRList=topRSList, 
                                     rsNames=topRSNames, 
-                                    PCsToAnnotate=PCsToAnnotate, binNum=21, overlapMethod="regionWeightedMean") 
+                                    signalCol=PCsToAnnotate, binNum=21, aggrMethod ="proportionWeightedMean") 
 
 inputID = paste0("brcaATAC", nrow(merged))
 ggsave(filename = ffPlot(paste0(plotSubdir,

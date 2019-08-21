@@ -172,8 +172,10 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
 # @param centerDataMat logical object. Should rows in dataMat be centered based on
 # their means? (subtracting row means from each row)
 # @param centerFeatureMat. logical.
-# @param testType character object. Can be "cor" (correlation), 
-# "pcor" (partial correlation), "cov" (covariance)
+# @param testType character object. Can be "cor" (Pearson correlation),
+# "spearmanCor (Spearman correlation)
+# "pcor" (partial correlation), "cov" (covariance (Pearson)), "spearmanCov" 
+# (Spearman covariance)
 # @param covariate
 #
 # If a row in dataMat has 0 stand. deviation, correlation will be set to 0
@@ -225,7 +227,13 @@ createCorFeatureMat = function(dataMat, featureMat,
         # }
         featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2,
                                                                            FUN = function(x) cor(x = x, y,
-                                                                                                 use="pairwise.complete.obs")))
+                                                                                                 use="pairwise.complete.obs",
+                                                                                                 method="pearson")))
+    } else if (testType == "spearmanCor") {
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2,
+                                                                           FUN = function(x) cor(x = x, y,
+                                                                                                 use="pairwise.complete.obs",
+                                                                                                 method="spearman")))
     } else if (testType == "pcor") {
         featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
                                                                            FUN = function(x) pcor.test(x = x, y=y,
@@ -619,6 +627,16 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, signalCol,
     pcP = pcP[notNull]
     rsNames = rsNames[notNull]
     
+    
+    # # for single columns?
+    # # average loading value from each PC to normalize so PCs can be compared with each other
+    # if (is.numeric(brcaLoadings[, PCsToAnnotate])) {
+    #     avLoad = mean(abs(brcaLoadings[, PCsToAnnotate]))
+    # } else {
+    #     avLoad <- apply(X=brcaLoadings[, PCsToAnnotate], 
+    #                     MARGIN=2, 
+    #                     FUN=function(x) mean(abs(x)))
+    # }
     
     # average loading value from each PC to normalize so PCs can be compared with each other
     avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(abs(x)))

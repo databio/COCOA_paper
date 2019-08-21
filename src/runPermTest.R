@@ -41,6 +41,7 @@ for (i in 1:nPerm) {
 simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
     rsPermScores = list()
     for (i in seq_along(indList)) {
+        # for (i in (length(rsPermScores) + 1):nPerm) {
         
         rsPermScores[[i]] = corPerm(randomInd=indList[[i]], 
                                     genomicSignal=genomicSignal, 
