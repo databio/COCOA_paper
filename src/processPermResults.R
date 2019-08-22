@@ -92,6 +92,10 @@ gPValDF2 = as.data.frame(gPValDF)[, colsToAnnotate, drop=FALSE]
 colnames(gPValDF2) <- paste0(colnames(gPValDF2), "_PVal")
 pRankedScores = cbind(pRankedScores, gPValDF2)
 
+
+simpleCache(paste0("pRankedScores", .analysisID), {
+  pRankedScores  
+})
 # get top region sets for each colsToAnnotate based on p val
 topRSZAnnoList = list()
 topRSN = 50 # this many top RS for each colsToAnnotate
@@ -163,6 +167,10 @@ zRankedScores$index = 1:nrow(zRankedScores)
 rsZScoresDF = as.data.frame(rsZScores)[, colsToAnnotate, drop=FALSE]
 colnames(rsZScoresDF) <- paste0(colnames(rsZScoresDF), "_ZScore")
 zRankedScores = cbind(zRankedScores, rsZScoresDF)
+
+# simpleCache(paste0("zRankedScores", .analysisID), {
+#     zRankedScores  
+# })
 
 # get top region sets for each colsToAnnotate based on z score
 topRSZAnnoList = list()

@@ -32,26 +32,34 @@ loadGRList(genomeV = "hg38")
 devtools::load_all(ffCode("COCOA/"))
 loadBRCAatac(signalMat = TRUE, signalCoord = TRUE, 
              pcScores = TRUE, loadingMat = TRUE)
+# nPerm = 300
+inputID = paste0("_", nPerm, "Perm_", variationMetric, 
+                                     "_", "brcaATAC", ncol(signalMat))
+simpleCache(paste0("pRankedScores", .analysisID), assignToVariable = "rsScores", reload = TRUE)
+rsEnSortedInd = rsRankingIndex(rsScores = rsScores, 
+                               signalCol = list(paste0(paste0("PC", 1:10), "_PValGroup"), 
+                                                paste0("PC", 1:10)), 
+                               decreasing = c(TRUE, TRUE), newColName = paste0("PC", 1:10))
 
 ##############################################################################
 
-rsScoreHeatmap(rssTotalComplete, PCsToAnnotate=paste0("PC", 1:4), rsNameCol = "rsName", orderByPC = "PC1", column_title = "Region sets ordered by score for PC1")
+rsScoreHeatmap(rsScores, signalCol=paste0("PC", 1:4), rsNameCol = "rsName", orderByCol = "PC1", column_title = "Region sets ordered by score for PC1")
 
-plotRSConcentration(rssTotalComplete, colsToSearch = c("rsName", "rsDescription"), 
+plotRSConcentration(rsScores, colsToSearch = c("rsName", "rsDescription"), 
                     scoreColName = paste0("PC", 1:10), pattern="esr1|eralpha|eraa")
-plotRSConcentration(rssTotalComplete, colsToSearch = c("rsName", "rsDescription"), 
+plotRSConcentration(rsScores, colsToSearch = c("rsName", "rsDescription"), 
                     scoreColName = paste0("PC", 1:10), pattern="esr1|eralpha|eraa|gata3|foxa1|H3R17me")
-plotRSConcentration(rssTotalComplete, colsToSearch = c("rsName", "rsDescription"), 
+plotRSConcentration(rsScores, colsToSearch = c("rsName", "rsDescription"), 
                     scoreColName = paste0("PC", 1:10), pattern="ezh2|suz12")
-plotRSConcentration(rssTotalComplete, colsToSearch = c("rsName", "rsDescription"), 
+plotRSConcentration(rsScores, colsToSearch = c("rsName", "rsDescription"), 
                     scoreColName = paste0("PC", 1:10), pattern="h3k9me3")
 
 
 pdf("TCGA-ATAC_BRCA_regionSetScoresTotal_load-process-regions_rsConcentration_esr-eraa-eralpha.pdf", width=10, height=10)
-plotRSConcentration(rssTotalComplete, scoreColName = "PC1", colsToSearch = "rsName", pattern="esr|eraa|eralpha")
+plotRSConcentration(rsScores, scoreColName = "PC1", colsToSearch = "rsName", pattern="esr|eraa|eralpha")
 dev.off()
 
-erPC1Hist = plotRSConcentration(rssTotalComplete, 
+erPC1Hist = plotRSConcentration(rsScores, 
                     scoreColName = "PC1", 
                     colsToSearch = c("rsName"), 
                     pattern="esr|eraa|eralpha") + theme_get() + theme(axis.text.y= element_text(size=15),
@@ -108,9 +116,8 @@ plot(as.matrix(pcScoreAnno[,c("PC1", "PC2")]))
 # source(ffProjCode("load_process_regions_brca.R"))
 
 
-topInd = rsRankingIndex(rsScores = rsScores, signalCol = c("PC1", "PC2"))
-topPC1Ind = topInd[, "PC1"][1:15]
-topPC2Ind = topInd[, "PC2"][1:15]
+topPC1Ind = rsEnSortedInd[, "PC1"][1:15]
+topPC2Ind = rsEnSortedInd[, "PC2"][1:15]
 uTopInd = unique(c(topPC1Ind, topPC2Ind))
 
 # topRSList = GRList[uTopInd]
@@ -133,4 +140,36 @@ ggsave(filename = ffPlot(paste0(plotSubdir,
                          inputID, ".pdf")), plot = multiProfileP[[1]], device = "pdf", limitsize = FALSE)
 ggsave(filename = ffPlot(paste0(plotSubdir, "/metaRegionLoadingProfilesWeightedMean", inputID, ".pdf")), plot = multiProfileP2[[1]], device = "pdf", limitsize = FALSE)
 
-    
+############################################################################
+rsEnrichment = rsScores
+coordinateDT = COCOA::grToDt(signalCoord)
+mPCA = list()
+mPCA$rotation = loadingMat
+mPCA$x = pcScores
+methylData = signalMat
+
+PCSTOANNOTATE = paste0("PC", 1:10)
+
+
+### plots that will be created and script specific parameters for them 
+# "comparePCHeatmap"
+PCsToAnnotate_cPCH = PCSTOANNOTATE
+# "methylAlongPC"
+topRSToPlotNum = 15
+PCsToAnnotate_mAPC = PCSTOANNOTATE[1:10]
+# "regionQuantileByPC"
+PCsToAnnotate_rQBPC = PCSTOANNOTATE
+topRSInd_rQBPC = unique(unlist(rsEnSortedInd[1:15, ])) # get top region sets from each PC
+# pcFromSubset Correlation Heatmap
+PCsToAnnotate_pcFSCH = PCSTOANNOTATE
+topRSInd_pcFSCH = unique(unlist(rsEnSortedInd[1:15, ])) # get top region sets from each 
+## "region set Overlapping Cytosine Proportion" (rsOLCP)
+## proportion of cytosines from region set that are shared with other region set
+topRSInd_rsOLCP = unique(unlist(rsEnSortedInd[1:10, ]))
+## "meta region loading profiles" (mrLP)
+topRSInd_mrLP = unique(unlist(rsEnSortedInd[1:10, ]))
+PCsToAnnotate_mrLP = PCSTOANNOTATE
+
+# the pipeline
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_vis_pipeline.R")) 
+

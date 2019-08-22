@@ -113,7 +113,7 @@ source(ffProjCode("src/runPermTest.R"))
 
 #############################################################################
 
-load(paste0(getCacheDir(),"rsPermScores_", dataID, ".RData"))
+simpleCache(paste0("rsPermScores", .analysisID, ".RData"), assignToVariable = "rsPermScores")
 nullDistList = lapply(X = 1:nrow(rsPermScores[[1]]),
                       FUN = function(x) extractNullDist(resultsList=rsPermScores, rsInd = x))
 nullDistList = lapply(nullDistList, FUN=function(x) as.data.frame(x)[, colsToAnnotate])

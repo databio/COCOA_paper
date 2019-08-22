@@ -119,6 +119,10 @@ loadBRCAatac <- function(signalMat=TRUE, signalCoord=TRUE, pcScores=FALSE,
         # merged    <- merge(merged, metadata, by.x="id", by.y="subject_ID")
         # row.names(merged) <- merged$id
         # merged = merged[, 2:215921]
+        
+        # filter out samples that we do not have metadata for
+        metadata <- fread(ffProc("COCOA_paper/analysis/atac/scores/brca/tcga_brca_metadata.csv"))
+        counts = counts[, colnames(counts) %in% metadata$subject_ID]
         assign("signalMat", counts, envir = .env)
     }
     
@@ -140,7 +144,9 @@ loadBRCAatac <- function(signalMat=TRUE, signalCoord=TRUE, pcScores=FALSE,
     }
     
     
-    message(paste0(paste(c("signalMat", "signalCoord")[c(signalMat, signalCoord)], 
+    message(paste0(paste(c("signalMat", "signalCoord", 
+                           "pcScores", "loadingMat")[c(signalMat, signalCoord, 
+                                                       pcScores, loadingMat)], 
                          collapse =" "), 
                    " loaded into the environment."))
 }
