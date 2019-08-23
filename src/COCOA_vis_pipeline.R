@@ -77,7 +77,7 @@ thisPlotSubdir = paste0(plotSubdir, "COCOA_plots", inputID, "/")
 createPlotSubdir(thisPlotSubdir)
 
 
-devtools::load_all(ffCode("COCOA/"))
+
 source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R"))
 source(paste0(Sys.getenv("CODE"), "PCRSA_extra/R/visualization.R"))
 source(paste0(Sys.getenv("CODE"), "PCRSA_extra/R/analysis.R"))
@@ -89,6 +89,7 @@ library(grid)
 library(ggplot2)
 library(COCOA)
 library(ComplexHeatmap)
+devtools::load_all(ffCode("COCOA/"))
 
 ##################################################################################
 # comparePCHeatmap
@@ -190,11 +191,10 @@ if (makePCFSCH) {
     
     grDevices::pdf(paste0(Sys.getenv("PLOTS"), thisPlotSubdir, "subsetCorRSbyPC", inputID, ".pdf"), width = 8.5, 11)
     
-    # don't use i for index since it is defined as something else in cell_fun
-    Heatmap(matrix = subsetCorMat, col = c("black", "orange"), cluster_rows = FALSE, cluster_columns = FALSE, 
-            column_title = , cell_fun = function(j, i, x, y, width, height, fill, mat=subsetCorMat) {
-                grid.text(sprintf("%.2f", mat[i, j]), x, y, gp = gpar(fontsize = 10))
-            })
+    draw(Heatmap(matrix = subsetCorMat, col = c("black", "orange"), cluster_rows = FALSE, cluster_columns = FALSE, 
+            column_title = , cell_fun = function(.j, .i, x, y, width, height, fill, mat=subsetCorMat) {
+                grid.text(sprintf("%.2f", mat[.i, .j]), x, y, gp = gpar(fontsize = 10))
+            }))
     dev.off()
     
     
@@ -220,20 +220,8 @@ if (makePCFSCH) {
             
         }
         dev.off()
-        
     }
-    
-    
-    
-    
-    
-    
-    
 }
-
-
-
-
 
 
 ################################################################################
@@ -248,10 +236,10 @@ if (makeRSOLCP) {
     
     grDevices::pdf(paste0(Sys.getenv("PLOTS"), thisPlotSubdir, "topRSOverlap", inputID, ".pdf"), width = 25, height = 25)
     
-    Heatmap(matrix = pOL[[1]], col = c("black", "yellow"), cluster_rows = FALSE, cluster_columns = FALSE, 
+    draw(Heatmap(matrix = pOL[[1]], col = c("black", "yellow"), cluster_rows = FALSE, cluster_columns = FALSE, 
             cell_fun = function(j, i, x, y, width, height, fill, mat=pOL[[1]]) {
                 grid.text(sprintf("%.2f", mat[i, j]), x, y, gp = gpar(fontsize = 10))
-            })
+            }))
     
     # numbers not included on plot squares
     # Heatmap(matrix = pOL[[1]], col = c("gray14", "gold"), cluster_rows = FALSE, cluster_columns = FALSE)

@@ -17,7 +17,7 @@ if (!dir.exists(ffPlot(plotSubdir))) {
 set.seed(1234)
 nPerm = 300
 
-variationMetric = "cov" # COCOA based on covariance
+variationMetric = "spearmanCor" 
 ######################################################################
 # load data
 

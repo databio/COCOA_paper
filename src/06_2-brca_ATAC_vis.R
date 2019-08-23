@@ -32,10 +32,13 @@ loadGRList(genomeV = "hg38")
 devtools::load_all(ffCode("COCOA/"))
 loadBRCAatac(signalMat = TRUE, signalCoord = TRUE, 
              pcScores = TRUE, loadingMat = TRUE)
-# nPerm = 300
+# nPerm = 250
+# dataID =paste0("brcaATAC", ncol(signalMat))
 inputID = paste0("_", nPerm, "Perm_", variationMetric, 
                                      "_", "brcaATAC", ncol(signalMat))
+# .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
 simpleCache(paste0("pRankedScores", .analysisID), assignToVariable = "rsScores", reload = TRUE)
+
 rsEnSortedInd = rsRankingIndex(rsScores = rsScores, 
                                signalCol = list(paste0(paste0("PC", 1:10), "_PValGroup"), 
                                                 paste0("PC", 1:10)), 
@@ -146,6 +149,7 @@ coordinateDT = COCOA::grToDt(signalCoord)
 mPCA = list()
 mPCA$rotation = loadingMat
 mPCA$x = pcScores
+mPCA$center = rowMeans(methylData)
 methylData = signalMat
 
 PCSTOANNOTATE = paste0("PC", 1:10)

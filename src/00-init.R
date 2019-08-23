@@ -622,12 +622,15 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, signalCol,
                                                               binNum = binNum, aggrMethod=aggrMethod))
     
     pcP = copy(pcProf)
-    pcP = lapply(pcP,FUN = as.data.table)
+    # this check must be done before converting items of list to data.table
+    # otherwise NULL will be converted to a data.table
     notNull = !vapply(X = pcP, FUN = is.null, FUN.VALUE = TRUE)
     pcP = pcP[notNull]
     rsNames = rsNames[notNull]
+    pcP = lapply(pcP,FUN = as.data.table)
     
     
+    # emptyInd = sapply()
     # # for single columns?
     # # average loading value from each PC to normalize so PCs can be compared with each other
     # if (is.numeric(brcaLoadings[, PCsToAnnotate])) {
@@ -643,6 +646,10 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, signalCol,
     
     # normalize
     # pcP = lapply(pcP, FUN = function(x) t(apply(X = x, MARGIN = 1, FUN = function(y) y - c(0, avLoad))))
+    # for (i in seq_along(signalCol)) {
+    #     # by reference
+    #     lapply(pcP, FUN = function(x) x[, 1])
+    # }
     pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=signalCol, z = avLoad)])
     pcP = lapply(pcP, FUN = function(x) data.table(regionGroupID=1:nrow(x), x))
     
