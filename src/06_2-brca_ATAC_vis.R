@@ -34,15 +34,19 @@ loadBRCAatac(signalMat = TRUE, signalCoord = TRUE,
              pcScores = TRUE, loadingMat = TRUE)
 # nPerm = 250
 # dataID =paste0("brcaATAC", ncol(signalMat))
+# dataID = "brcaATACPCAPerm"
+# variationMetric = "cor"
+# .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
 inputID = paste0("_", nPerm, "Perm_", variationMetric, 
                                      "_", "brcaATAC", ncol(signalMat))
-# .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
 simpleCache(paste0("pRankedScores", .analysisID), assignToVariable = "rsScores", reload = TRUE)
 
 rsEnSortedInd = rsRankingIndex(rsScores = rsScores, 
                                signalCol = list(paste0(paste0("PC", 1:10), "_PValGroup"), 
                                                 paste0("PC", 1:10)), 
                                decreasing = c(TRUE, TRUE), newColName = paste0("PC", 1:10))
+dataID =paste0("brcaATAC", ncol(signalMat))
+.analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
 
 ##############################################################################
 

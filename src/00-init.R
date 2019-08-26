@@ -540,7 +540,7 @@ corPerm <- function(randomInd, genomicSignal,
     }
     
     # subset to only calcCols
-    sampleLabels = sampleLabels[, calcCols]
+    sampleLabels = sampleLabels[, calcCols, drop=FALSE]
     
     # because names are dropped for a single column data.frame when indexing
     # single col data.frame is automatically converted to numeric
