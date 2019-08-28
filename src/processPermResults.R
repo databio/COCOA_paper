@@ -110,11 +110,11 @@ for (i in seq_along(colsToAnnotate)) {
                                                                  paste0(colsToAnnotate[i], "_PValGroup"),  
                                                                  paste0(colsToAnnotate[i], "_PVal"),
                                                                  "signalCoverage", "regionSetCoverage", 
-                                                                 "total_region_number", "mean_region_size")])
+                                                                 "totalRegionNumber", "meanRegionSize")])
     
     names(topRSZAnnoList[[i]]) <- paste0(colsToAnnotate[i], "_", c("rsName", "rsDescription", "rsScore",
                                                                    "PValGroup", "pVal", "signalCoverage", "regionSetCoverage", 
-                                                                   "total_region_number", "mean_region_size"))
+                                                                   "totalRegionNumber", "meanRegionSize"))
 }
 
 write.csv(topRSZAnnoList, file = ffSheets(paste0("topRSPermpVals", .analysisID, ".csv")), row.names = FALSE)
@@ -184,11 +184,11 @@ for (i in seq_along(colsToAnnotate)) {
                                                                  paste0(colsToAnnotate[i], "_ZGroup"),  
                                                                  paste0(colsToAnnotate[i], "_ZScore"),
                                                                  "signalCoverage", "regionSetCoverage", 
-                                                                 "total_region_number", "mean_region_size")])
+                                                                 "totalRegionNumber", "meanRegionSize")])
     
     names(topRSZAnnoList[[i]]) <- paste0(colsToAnnotate[i], "_", c("rsName", "rsDescription", "rsScore",
                                                                    "zGroup", "zScore", "signalCoverage", "regionSetCoverage", 
-                                                                   "total_region_number", "mean_region_size"))
+                                                                   "totalRegionNumber", "meanRegionSize"))
 }
 
 write.csv(topRSZAnnoList, file = ffSheets(paste0("topRSPermZScores", .analysisID, ".csv")), row.names = FALSE)
