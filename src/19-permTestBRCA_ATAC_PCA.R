@@ -15,7 +15,7 @@ if (!dir.exists(ffPlot(plotSubdir))) {
 }
 
 set.seed(1234)
-nPerm = 250
+nPerm = 300
 
 ######################################################################
 # required inputs to permutation test
@@ -70,7 +70,7 @@ source(ffProjCode("runPermTest.R"))
 
 ############################################################################
 
-load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", nPerm, "_", variationMetric, 
+load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", nPerm, "Perm_", variationMetric, 
                    "_", dataID, ".RData")))
 
 
