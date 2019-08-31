@@ -1,4 +1,7 @@
 
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
+library(MIRA)
+
 ##############################################################################
 # Fig. 4, MOFA CLL
 # http://msb.embopress.org/content/14/6/e8124
@@ -129,3 +132,82 @@ signalAlongPC(genomicSignal=methylMat,
               topXVariables=50,
               variableScores = abs(as.numeric(featureLFCor[, lfCols[i]])),
               cluster_columns = TRUE, column_title = "Individual cytosines")
+
+##############################################################################
+# figure connecting LF2 and chr12 trisomy to NANOG
+# NANOG is ENSG00000111704
+library(BloodCancerMultiOmics2017)
+loadMOFAData(methylMat = TRUE, signalCoord=TRUE, latentFactorMat = TRUE,
+             cllMultiOmics=TRUE)
+data("dds", package = "BloodCancerMultiOmics2017")
+cllRNA = assay(dds)
+colnames(cllRNA) <- colData(dds)$PatID
+head(cllRNA)
+
+thisRegionSet = "GSM1124068_SOX2.bed"
+thisGeneInd = grep(pattern = "ENSG00000181449", x = row.names(cllRNA))
+# thisRegionSet = "GSM1124071_NANOG.bed"
+# thisGeneInd = grep(pattern = "ENSG00000111704", x = row.names(cllRNA))
+
+hist(cllRNA[thisGeneInd, ])
+rnaIDs = colnames(cllRNA)
+
+# match ID's 
+sharedIDs = rnaIDs[rnaIDs %in% row.names(latentFactorMat)]
+
+# test association of LF2 and NANOG expression
+cor.test(cllRNA[thisGeneInd, sharedIDs], latentFactorMat[sharedIDs, "LF2"])
+plot(cllRNA[thisGeneInd, sharedIDs], latentFactorMat[sharedIDs, "LF2"])
+
+# also chr12 trisomy and NANOG expression
+muts = cllMultiOmics$Mutations
+sharedIDs = rnaIDs[rnaIDs %in% colnames(muts)]
+trisomyStatus = muts["trisomy12", sharedIDs]
+wilcox.test(x = cllRNA[thisGeneInd, sharedIDs], y = trisomyStatus)
+plot(trisomyStatus, cllRNA[thisGeneInd, sharedIDs])
+ggplot(data = data.frame(trisomyStatus, nanogExpr = cllRNA[thisGeneInd, sharedIDs]), 
+       mapping = aes(x=trisomyStatus, y=nanogExpr)) + geom_jitter()
+#####
+# test association of LF2 and NANOG binding region methylation
+sharedIDs = colnames(methylMat)[colnames(methylMat) %in% row.names(latentFactorMat)]
+meanMethylThisRS=runCOCOA(signal = methylMat, signalCoord = signalCoord, 
+                    GRList = GRList[thisRegionSet], 
+                    signalCol = colnames(methylMat))
+cor.test(latentFactorMat[sharedIDs, "LF2"], as.numeric(meanMethylThisRS[, sharedIDs]))
+plot(latentFactorMat[sharedIDs, "LF2"], as.numeric(meanMethylThisRS[, sharedIDs]))
+# also test assocation of methylation with chr12 trisomy
+sharedIDs = colnames(methylMat)[colnames(methylMat) %in% colnames(muts)]
+trisomyStatus = muts["trisomy12", sharedIDs]
+wilcox.test(x = as.numeric(meanMethylThisRS[, sharedIDs]), y = trisomyStatus, conf.int = TRUE)
+
+# test whether NANOG expression is associated with methylation in NANOG regions
+sharedIDs = rnaIDs[rnaIDs %in% colnames(methylMat)]
+plot(as.numeric(meanMethylThisRS[, sharedIDs]), cllRNA[thisGeneInd, sharedIDs]) 
+cor.test(as.numeric(meanMethylThisRS[, sharedIDs]), cllRNA[thisGeneInd, sharedIDs], method = "spearman")
+
+# see if MIRA scores are similar
+expNanogGRList = GRangesList(resize(GRList[[thisRegionSet]], width=5000, fix="center"))
+methylDTList = list()
+for (i in 1:ncol(methylMat)) {
+    methylDTList[[i]] = as.data.table(cbind(COCOA:::grToDt(signalCoord), methylProp=methylMat[, i]))
+}
+names(methylDTList) = colnames(methylMat)
+
+miraProfile = lapply(X = methylDTList, FUN = function(x) aggregateMethyl(BSDT = x, 
+                                                                         GRList = expNanogGRList, 
+                                                                         binNum = 21,
+                                                                         minBaseCovPerBin = 0))
+nMIRAProfile = rbindNamedList(miraProfile)
+miraScores = MIRA::calcMIRAScore(binnedDT = nMIRAProfile)
+miraScores = as.data.frame(miraScores)
+row.names(miraScores) = miraScores$sampleName
+sharedIDs = colnames(methylMat)[colnames(methylMat) %in% row.names(miraScores)]
+plot(as.numeric(meanMethylThisRS[, sharedIDs]), miraScores[sharedIDs, ]$score)
+
+
+sharedIDs = rnaIDs[rnaIDs %in% row.names(miraScores)]
+plot(miraScores[sharedIDs, ]$score, cllRNA[thisGeneInd, sharedIDs])
+# figure: boxplot of NANOG expression in chr12+,-? correlation plot of NANOG
+# expression and LF2?
+
+
