@@ -70,7 +70,7 @@ source(ffProjCode("runPermTest.R"))
 
 ############################################################################
 
-load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", nPerm, "Perm_", variationMetric, 
-                   "_", dataID, ".RData")))
-
+# load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", nPerm, "Perm_", variationMetric, 
+#                    "_", dataID, ".RData")))
+# rsPermScores = ret
 

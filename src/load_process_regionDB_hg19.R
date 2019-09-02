@@ -46,10 +46,9 @@ GRList3 = GRangesList(regionSetDB2$regionGRL[loRegionAnno2$collection == "jaspar
 # GRList3 = GRangesList(GRList3)
 #I'm not sure that center is where motif is: GRList3 = resize(GRList3, width = 200, fix="center") 
 
-prjRes = paste0(Sys.getenv("PROCESSED"), "aml_e3999/prjResources")
-regionSetDB3 = loadRegionDB(paste0(prjRes, "/hg19/"))
-hemaATACRegionAnno = regionSetDB3$regionAnno
-GRList4 = regionSetDB3$regionGRL
+hemaATACRegionAnno = loRegionAnno2[loRegionAnno2$collection == "hematopoietic_ATACseq_GSE75384", ]
+GRList4 = GRangesList(regionSetDB2$regionGRL[loRegionAnno2$collection == "hematopoietic_ATACseq_GSE75384"])
+
 
 # combine into one GRList
 GRList = c(GRList1, GRList2, GRList3, GRList4)
