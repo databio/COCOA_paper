@@ -144,10 +144,10 @@ cllRNA = assay(dds)
 colnames(cllRNA) <- colData(dds)$PatID
 head(cllRNA)
 
-thisRegionSet = "GSM1124068_SOX2.bed"
-thisGeneInd = grep(pattern = "ENSG00000181449", x = row.names(cllRNA))
-# thisRegionSet = "GSM1124071_NANOG.bed"
-# thisGeneInd = grep(pattern = "ENSG00000111704", x = row.names(cllRNA))
+# thisRegionSet = "GSM1124068_SOX2.bed"
+# thisGeneInd = grep(pattern = "ENSG00000181449", x = row.names(cllRNA))
+thisRegionSet = "GSM1124071_NANOG.bed"
+thisGeneInd = grep(pattern = "ENSG00000111704", x = row.names(cllRNA))
 
 hist(cllRNA[thisGeneInd, ])
 rnaIDs = colnames(cllRNA)
@@ -163,7 +163,7 @@ plot(cllRNA[thisGeneInd, sharedIDs], latentFactorMat[sharedIDs, "LF2"])
 muts = cllMultiOmics$Mutations
 sharedIDs = rnaIDs[rnaIDs %in% colnames(muts)]
 trisomyStatus = muts["trisomy12", sharedIDs]
-wilcox.test(x = cllRNA[thisGeneInd, sharedIDs], y = trisomyStatus)
+wilcox.test(x = cllRNA[thisGeneInd, sharedIDs][trisomyStatus == 0], y = cllRNA[thisGeneInd, sharedIDs][trisomyStatus == 1])
 plot(trisomyStatus, cllRNA[thisGeneInd, sharedIDs])
 ggplot(data = data.frame(trisomyStatus, nanogExpr = cllRNA[thisGeneInd, sharedIDs]), 
        mapping = aes(x=trisomyStatus, y=nanogExpr)) + geom_jitter()
@@ -178,7 +178,7 @@ plot(latentFactorMat[sharedIDs, "LF2"], as.numeric(meanMethylThisRS[, sharedIDs]
 # also test assocation of methylation with chr12 trisomy
 sharedIDs = colnames(methylMat)[colnames(methylMat) %in% colnames(muts)]
 trisomyStatus = muts["trisomy12", sharedIDs]
-wilcox.test(x = as.numeric(meanMethylThisRS[, sharedIDs]), y = trisomyStatus, conf.int = TRUE)
+wilcox.test(x = as.numeric(meanMethylThisRS[, sharedIDs])[trisomyStatus == 0], y = as.numeric(meanMethylThisRS[, sharedIDs])[trisomyStatus == 1], conf.int = TRUE)
 
 # test whether NANOG expression is associated with methylation in NANOG regions
 sharedIDs = rnaIDs[rnaIDs %in% colnames(methylMat)]

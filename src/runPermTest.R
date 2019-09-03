@@ -39,8 +39,18 @@ for (i in 1:nPerm) {
 #                                                         sampleLabels=latentFactors))
 
 simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
-    rsPermScores = list()
+    if (!exists("rsPermScores")) {
+        rsPermScores = list()    
+        
+    # if some other object with name rsPermScores is in the env but not a list, reset
+    } else if (!is(rsPermScores, "list")) {
+        rsPermScores = list()
+    }
+    print(length(rsPermScores))
+    print(head(rsPermScores), 2)
+    print(i)
     #for (i in seq_along(indList)) {
+    # for (i in (length(rsPermScores) + 1):nPerm) {
     for (i in (length(rsPermScores) + 1):nPerm) {
         
         rsPermScores[[i]] = corPerm(randomInd=indList[[i]], 

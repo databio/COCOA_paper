@@ -60,7 +60,7 @@ simpleCache("rsScores_brcaATACPCACor", {
     actualResults = cbind(actualResults, rsName=rsName, 
                           rsDescription=rsDescription)
     actualResults
-}, assignToVariable = "realRSScores")
+}, assignToVariable = "realRSScores", recreate=TRUE)
 
 ############################################################################
 
@@ -74,3 +74,9 @@ source(ffProjCode("runPermTest.R"))
 #                    "_", dataID, ".RData")))
 # rsPermScores = ret
 
+# function requirements:
+# loads existing object
+# starts script/code at specified point
+# adds new object to existing object
+# resume=TRUE simpleCache
+# 
