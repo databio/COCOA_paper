@@ -20,8 +20,8 @@ nPerm = 300
 
 ######################################################################
 variationMetric = "cov"
-simpleCache(paste0("rsScore_", paste0(dataID, "_", variationMetric)), assignToVariable = "realRSScores")
 colsToAnnotate = paste0("LF", 1:10)
+# colsToAnnotate = paste0("LF", c(1:3, 5:7, 9))
 
 # assigns methylMat, signalCoord, latentFactorMat to global environment
 loadMOFAData()
@@ -32,12 +32,36 @@ sampleLabels = data.frame(latentFactorMat)
 # (assigns GRList, rsName, rsDescription, rsCollection to global environment)
 loadGRList(genomeV="hg19")
 
-row.names(realRSScores) = realRSScores$rsName
-sharedRSNames = names(GRList)[names(GRList) %in% realRSScores$rsName]
-GRList = GRList[sharedRSNames]
-realRSScores = realRSScores[sharedRSNames, ]
+# row.names(realRSScores) = realRSScores$rsName
+# sharedRSNames = names(GRList)[names(GRList) %in% realRSScores$rsName]
+# GRList = GRList[sharedRSNames]
+# realRSScores = realRSScores[sharedRSNames, ]
+rsScoreCacheName = paste0("rsScore_", paste0(dataID, "_", variationMetric))
 
-# colsToAnnotate = paste0("LF", c(1:3, 5:7, 9))
+############################################################################
+# create the actual MOFA scores
+
+simpleCache(rsScoreCacheName, {
+    
+    # calculate correlation/covariation with each latent factor from MOFA
+    featurePCCor = createCorFeatureMat(dataMat = genomicSignal, 
+                                       featureMat = sampleLabels, 
+                                       centerDataMat = TRUE, 
+                                       centerFeatureMat = TRUE, 
+                                       testType = variationMetric)
+    # run COCOA analysis
+
+    rsScore = runCOCOA(signal=abs(featurePCCor), 
+                       signalCoord = signalCoord, 
+                       GRList, 
+                       signalCol = colsToAnnotate, 
+                       signalCoordType = "singleBase")
+    rsScore$rsName = rsName
+    rsScore$rsDescription= rsDescription
+    rsScore$rsCollection = rsCollection
+    rsScore
+}, recreate=overwriteRSScoreResultsCaches, assignToVariable = "realRSScores")
+# rsScores = as.data.table(rsScore)
 
 #####################################################################
 # permutation test for significance

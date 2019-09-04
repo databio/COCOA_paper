@@ -177,7 +177,7 @@ View(rsScore[order(rsScore$LF7, decreasing = TRUE), ])
 hist(rsScore$LF7)
 
 write.csv(x = rsScore, 
-          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/rsScore_methylCor_", dataID, ".csv"),
+          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/rsScore_", "methyl_"variationType "_", dataID, ".csv"),
           quote = FALSE, row.names = FALSE)
 
 

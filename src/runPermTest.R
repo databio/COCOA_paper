@@ -38,41 +38,47 @@ for (i in 1:nPerm) {
 #                                                         calcCols=colsToAnnotate,
 #                                                         sampleLabels=latentFactors))
 
+# create the main permutation cache
 simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
-    if (!exists("rsPermScores")) {
-        rsPermScores = list()    
-        
-    # if some other object with name rsPermScores is in the env but not a list, reset
-    } else if (!is(rsPermScores, "list")) {
-        rsPermScores = list()
-    }
-    print(length(rsPermScores))
-    print(head(rsPermScores), 2)
-    print(i)
-    #for (i in seq_along(indList)) {
-    # for (i in (length(rsPermScores) + 1):nPerm) {
-    for (i in (length(rsPermScores) + 1):nPerm) {
-        
-        rsPermScores[[i]] = corPerm(randomInd=indList[[i]], 
-                                    genomicSignal=genomicSignal, 
-                                    signalCoord=signalCoord, 
-                                    GRList=GRList, 
-                                    calcCols=colsToAnnotate,
-                                    sampleLabels=sampleLabels,
-                                    variationMetric = variationMetric)
-        message(i)
-        save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
-                                                dataID, ".RData")))
-        # if ((i %% 50) == 0) {
-        #     save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
-        #                                             dataID, ".RData")))
-        # }
-        
+    
+    rsPermScores = list()
+    for (i in seq_along(indList)) {
+        # for (i in (length(rsPermScores) + 1):nPerm) {
+        onePermCacheName = paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID, "_Cache", i)
+        # create sub caches, one for each permutation
+        simpleCache(onePermCacheName, cacheSubDir = paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
+            
+            tmp = corPerm(randomInd=indList[[i]], 
+                          genomicSignal=genomicSignal, 
+                          signalCoord=signalCoord, 
+                          GRList=GRList, 
+                          calcCols=colsToAnnotate,
+                          sampleLabels=sampleLabels,
+                          variationMetric = variationMetric)
+            message(i) # must be ahead of object that is saved as cache, not after
+            tmp
+            
+            # save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
+            #                                         dataID, ".RData")))
+            # if ((i %% 50) == 0) {
+            #     save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
+            #                                             dataID, ".RData")))
+            # }
+            
+            
+            
+            # save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
+            #                                         variationMetric, "_", 
+            #                                         dataID, ".RData")))
+            
+        })
     }
     
-    save(rsPermScores, file = ffProc(paste0("COCOA_paper/RCache/rsPermScores_", 
-                                            variationMetric, "_", 
-                                            dataID, ".RData")))
+    # combining all individual permutations/caches into one object
+    for (i in seq_along(indList)) {
+        onePermCacheName = paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID, "_Cache", i)
+        rsPermScores[[i]] = get(onePermCacheName)
+    }
     rsPermScores
     
 }, assignToVariable="rsPermScores")

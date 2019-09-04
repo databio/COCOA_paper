@@ -53,7 +53,7 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
 
 ############################################################################
 
-source(ffProjCode("src/runPermTest.R"))
+source(ffProjCode("runPermTest.R"))
 
 ############################################################################
 

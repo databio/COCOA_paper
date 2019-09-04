@@ -41,11 +41,8 @@ sampleLabels = sampleLabels[sharedSamples, colsToAnnotate]
 loadGRList(genomeV="hg38")
 
 
-
-
-
 # get the "true" COCOA scores before doing the permutation test
-simpleCache("rsScores_brcaATACPCACor", {
+simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
     # create ATAC-protein correlation matrix
     actualCorMat = createCorFeatureMat(dataMat = genomicSignal,
                                        featureMat = as.matrix(sampleLabels[, colsToAnnotate]),
