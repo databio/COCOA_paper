@@ -1,11 +1,22 @@
 .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
+.plotSubdir = paste0(plotSubdir, "StatsPlots", .analysisID, "/")
+if (!dir.exists(ffPlot(.plotSubdir))) {
+    dir.create(ffPlot(.plotSubdir))
+}
 
+# remove region sets that had no overlap
+keepInd = apply(rsPermScores[[1]], MARGIN = 1, FUN = function(x) !any(is.na(x)))
 
 nullDistList = lapply(X = 1:nrow(rsPermScores[[1]]),
                       FUN = function(x) extractNullDist(resultsList=rsPermScores, rsInd = x))
 
+# screen out region sets with no overlap
+nullDistList = nullDistList[keepInd]
+realRSScores = realRSScores[keepInd, ]
+
+
 # just an example of the null distributions for a single region set (arbitrarily rs1)
-multiNiceHist(file = ffPlot(paste0(plotSubdir, "nullDistRS1", .analysisID, ".pdf")), dataDF = nullDistList[[1]], 
+multiNiceHist(file = ffPlot(paste0(.plotSubdir, "nullDistRS1", .analysisID, ".pdf")), dataDF = nullDistList[[1]], 
               colsToPlot = colsToAnnotate, xLabels = "COCOA score (absolute correlation)", 
               binwidth = 0.001, yLabel = "Number of permutation results", 
               plotTitles = paste0("Null distribution of COCOA scores, ", colsToAnnotate),
@@ -17,7 +28,7 @@ simpleCache(paste0("permPValsUncorrected", .analysisID), {
                           calcCols=colsToAnnotate, whichMetric = "pval")
     rsPVals
 }, recreate = TRUE, reload = TRUE)
-multiNiceHist(file = ffPlot(paste0(plotSubdir, "pValDistUncorrected", .analysisID, ".pdf")), dataDF = rsPVals, 
+multiNiceHist(file = ffPlot(paste0(.plotSubdir, "pValDistUncorrected", .analysisID, ".pdf")), dataDF = rsPVals, 
               colsToPlot = colsToAnnotate, xLabels = "p-value", 
               binwidth = 0.005, yLabel = "Number of region sets", 
               plotTitles = paste0("Distribution of region set p-values, ", colsToAnnotate),
@@ -31,7 +42,7 @@ simpleCache(paste0("permZScores", .analysisID), {
 }, recreate = TRUE, reload=TRUE)
 # View(rsZScores[which(rsZScores$ > 7), ])
 
-multiNiceHist(file = ffPlot(paste0(plotSubdir, "zScoreDist", .analysisID, ".pdf")), dataDF = rsZScores, 
+multiNiceHist(file = ffPlot(paste0(.plotSubdir, "zScoreDist", .analysisID, ".pdf")), dataDF = rsZScores, 
               colsToPlot = colsToAnnotate, xLabels = "z score", 
               binwidth = 1, yLabel = "Number of region sets", 
               plotTitles = paste0("Distribution of region set z scores, ", colsToAnnotate),
@@ -52,13 +63,13 @@ simpleCache(paste0("permPValsCorrected", .analysisID), {
     gPValDF
 }, recreate = TRUE, reload = TRUE)
 
-multiNiceHist(file = ffPlot(paste0(plotSubdir, "corrected", correctionMethod, 
+multiNiceHist(file = ffPlot(paste0(.plotSubdir, "corrected", correctionMethod, 
                                    "PValDist", .analysisID, ".pdf")), dataDF = gPValDF[colsToAnnotate],
               colsToPlot = colsToAnnotate, xLabels = "p-value",
               binwidth = .01, boundary = 0, yLabel = "Number of region sets",
               plotTitles = paste0("Distribution of region set p-values, ", colsToAnnotate),
               ggExpr = "+ylim(0, 2270) + xlim(0, 1)")
-multiNiceHist(file = ffPlot(paste0(plotSubdir, "corrected", correctionMethod, 
+multiNiceHist(file = ffPlot(paste0(.plotSubdir, "corrected", correctionMethod, 
                                    "PValLog10Dist", .analysisID, ".pdf")), dataDF = -log10(gPValDF[colsToAnnotate]),
               colsToPlot = colsToAnnotate, xLabels = "p-value (-log10)",
               binwidth = 1, boundary = 0, yLabel = "Number of region sets",
