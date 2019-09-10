@@ -19,15 +19,17 @@ nPerm = 300
 
 ######################################################################
 # required inputs to permutation test
-dataID = "brcaATACPCAPerm"
+
 variationMetric = "cor"
 
 # loads signalMat and signalCoord
 loadBRCAatac()
 genomicSignal = signalMat
-simpleCache(paste0("brcaATACPCA_73"))
+simpleCache(paste0("brcaATACPCA_", ncol(genomicSignal)))
 # the PC scores
 sampleLabels = brcaATACPCA_73$x
+
+dataID = paste0("brcaATAC", ncol(genomicSignal))
 
 colsToAnnotate = paste0("PC", 1:10)
 

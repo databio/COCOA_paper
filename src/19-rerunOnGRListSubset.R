@@ -1,4 +1,44 @@
-# permutation test by shuffling sample labels
+# running COCOA perm test on new region sets and adding to existing results
+
+###############################################################################
+# functions to append new caches to old caches
+
+
+# append realRSscores
+appendRealRSScores = function(realRSScores1, realRSScores2) {
+    if (ncol(realRSScores1) != ncol(realRSScores2)) {
+        stop()
+    }
+    # assuming more recent col names are correct
+    if (any(colnames(realRSScores1) != colnames(realRSScores2))) {
+        colnames(realRSScores1) = colnames(realRSScores2)
+    }
+    
+    return(rbind(realRSScores1, realRSScores2))
+}
+
+# append rsPermScores
+# @param rsPermScores1 list.
+appendRSPermScores = function(rsPermScores1, rsPermScores2) {
+    if (ncol(rsPermScores1[[1]]) != ncol(rsPermScores2[[1]])) {
+        stop()
+    }
+    # assuming more recent col names are correct
+    if (any(colnames(rsPermScores1[[1]]) != colnames(rsPermScores2[[1]]))) {
+        for (i in seq_along(rsPermScores1)) {
+            colnames(rsPermScores1[[i]]) = colnames(rsPermScores2[[i]])
+        }
+    }
+    
+    
+    combRSPermScores = list()
+    # add to each list item
+    for (i in seq_along(rsPermScores1)) {
+        combRSPermScores[[i]] = rbind(rsPermScores1[[i]], rsPermScores2[[i]])
+    }
+    return(combRSPermScores)
+}
+
 
 #############################################################################
 # BRCA DNA methylation PCA
@@ -44,6 +84,8 @@ rsCollection = rsCollection[hemaATACInd]
 
 ############################################################################
 
+
+                
 simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
     # create ATAC-protein correlation matrix
     actualCorMat = createCorFeatureMat(dataMat = genomicSignal,
@@ -61,9 +103,33 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
     actualResults
 }, assignToVariable = "realRSScores")
 
+simpleCache(paste0("rsScores_", 
+                   sub(pattern = "_hemaATAC", replacement = "", x = dataID), 
+                   "_", variationMetric), 
+            assignToVariable = "realRSScores1")
+
+simpleCache(paste0("rsScores_", 
+                   sub(pattern = "_hemaATAC", replacement = "", x = dataID), 
+                   "_", variationMetric), {    
+                       combRealRSScores = appendRealRSScores(realRSScores1 = realRSScores1, realRSScores2 = realRSScores)
+                       combRealRSScores
+        }, recreate=TRUE)
+
+
+
 ############################################################################
 
 source(ffProjCode("runPermTest.R"))
+
+simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), assignToVariable = "rsPermScores")
+simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", 
+                   sub(pattern = "_hemaATAC", replacement = "", x = dataID)), assignToVariable = "rsPermScores1")
+
+simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", 
+                   sub(pattern = "_hemaATAC", replacement = "", x = dataID)), {
+                       combRSPermScores = appendRSPermScores(rsPermScores1 = rsPermScores1, rsPermScores2 = rsPermScores)
+                       combRSPermScores
+                   }, recreate = TRUE)
 
 ############################################################################
 
@@ -142,13 +208,35 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
     actualResults = cbind(actualResults, rsName=rsName, 
                           rsDescription=rsDescription)
     actualResults
-}, assignToVariable = "realRSScores", recreate=TRUE)
+}, assignToVariable = "realRSScores")
+
+simpleCache(paste0("rsScores_", 
+                   sub(pattern = "_hemaATAC", replacement = "", x = dataID), 
+                   "_", variationMetric), 
+            assignToVariable = "realRSScores1")
+
+simpleCache(paste0("rsScores_", 
+                   sub(pattern = "_hemaATAC", replacement = "", x = dataID), 
+                   "_", variationMetric), {    
+                       combRealRSScores = appendRealRSScores(realRSScores1 = realRSScores1, realRSScores2 = realRSScores)
+                       combRealRSScores
+                   }, recreate=TRUE)
 
 ############################################################################
 
 # requires: nPerm, sampleLabels, genomicSignal, signalCoord, GRList, colsToAnnotate
 # dataID
 source(ffProjCode("runPermTest.R"))
+
+simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), assignToVariable = "rsPermScores")
+simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", 
+                   sub(pattern = "_hemaATAC", replacement = "", x = dataID)), assignToVariable = "rsPermScores1")
+
+simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", 
+                   sub(pattern = "_hemaATAC", replacement = "", x = dataID)), {
+                       combRSPermScores = appendRSPermScores(rsPermScores1 = rsPermScores1, rsPermScores2 = rsPermScores)
+                       combRSPermScores
+                   }, recreate = TRUE)
 
 
 #############################################################################
@@ -229,6 +317,18 @@ simpleCache(rsScoreCacheName, {
     rsScore
 }, recreate=overwriteRSScoreResultsCaches, assignToVariable = "realRSScores")
 # rsScores = as.data.table(rsScore)
+
+simpleCache(paste0("rsScores_", 
+                   sub(pattern = "_hemaATAC", replacement = "", x = dataID), 
+                   "_", variationMetric), 
+            assignToVariable = "realRSScores1")
+
+simpleCache(paste0("rsScores_", 
+                   sub(pattern = "_hemaATAC", replacement = "", x = dataID), 
+                   "_", variationMetric), {    
+                       combRealRSScores = appendRealRSScores(realRSScores1 = realRSScores1, realRSScores2 = realRSScores)
+                       combRealRSScores
+                   }, recreate=TRUE)
 
 
 #####################################################################
@@ -330,6 +430,18 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
 }, assignToVariable = "realRSScores")
 # View(realRSScores[order(realRSScores$cancerStage, decreasing=TRUE), ])
 
+simpleCache(paste0("rsScores_", 
+                   sub(pattern = "_hemaATAC", replacement = "", x = dataID), 
+                   "_", variationMetric), 
+            assignToVariable = "realRSScores1")
+
+simpleCache(paste0("rsScores_", 
+                   sub(pattern = "_hemaATAC", replacement = "", x = dataID), 
+                   "_", variationMetric), {    
+                       combRealRSScores = appendRealRSScores(realRSScores1 = realRSScores1, realRSScores2 = realRSScores)
+                       combRealRSScores
+                   }, recreate=TRUE)
+
 ##########################################################################
 # permutation test for significance
 # requires: nPerm, sampleLabels, genomicSignal, signalCoord, GRList, colsToAnnotate
@@ -339,15 +451,8 @@ colnames(sampleLabels) = colsToAnnotate
 
 source(ffProjCode("runPermTest.R"))
 
-
-
 ###############################################################################
-###############################################################################
-# append new caches to old caches
-
-# append realRSscores
 
 
-# append rsPermScores
-# add to each list item
+
 

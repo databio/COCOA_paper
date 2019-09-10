@@ -11,7 +11,7 @@ source(ffProjCode("04-brca_DNAm_figures.R"))
 ##############################################################################
 # BRCA ATAC analysis
 source(ffProjCode("19-permTestBRCA_ATAC_PCA.R"))
-source(ffProjCode("06_2-brca_ATAC_vis")) # self-contained (doesn't run main visualization pipeline)
+source(ffProjCode("06_2-brca_ATAC_vis")) # self-contained
 
 ##############################################################################
 # MOFA analysis
