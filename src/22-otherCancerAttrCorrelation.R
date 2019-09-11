@@ -16,7 +16,7 @@ if (!dir.exists(ffPlot(plotSubdir))) {
 
 set.seed(1234)
 nPerm = 300
-
+dataID = "kircMethyl"
 variationMetric = "spearmanCor" 
 ######################################################################
 # load data
@@ -26,7 +26,6 @@ loadTCGAMethylation(cancerID = "KIRC")
 patientMetadata = pMeta
 methylMat = methylList$methylProp
 signalCoord = methylList$coordinates
-dataID = paste0("kircMethyl", ncol(methylMat))
 
 sampleType = substr(colnames(methylMat), start = 14, stop = 15)
 # 01 is primary solid tumor, 11 is solid normal tissue, 05 is new primary tumor
@@ -65,6 +64,7 @@ sampleLabels = as.numeric(allSampleLabels[trainDataInd])
 colsToAnnotate = "cancerStage"
 
 trainMeta = pMeta[trainDataInd, ]
+dataID = paste0(dataID, ncol(genomicSignal))
 
 ############################################################################
 # # test whether cancer stages have genomewide differences in DNA methylation levels

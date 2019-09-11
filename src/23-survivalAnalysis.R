@@ -5,6 +5,7 @@ library(survminer)
 
 
 # dataID = "kircMethyl"
+# .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
 
 sampleLabels = as.numeric(sampleLabels$cancerStage)
 
@@ -46,13 +47,23 @@ mBySampleDF = runCOCOA(signal=genomicSignal,
                     signalCoord=signalCoord, GRList=GRList[topRSInd[thisRSInd]], 
                     signalCol = colnames(genomicSignal), 
                     scoringMetric = "regionMean", verbose = TRUE)
+# convert to long format for plotting
+longMByS = transpose(mBySampleDF) 
+colnames(longMByS) = abbrevName
+longMByS$subjectID = colnames(mBySampleDF)
+longMByS = longMByS[1:ncol(genomicSignal), ]
+longMByS = cbind(longMByS, cancerStage=as.factor(sampleLabels))
+longMByS = gather(data = longMByS, "regionSetName", "methylScore", abbrevName)
+ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
+    geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Methylation proportion")
 
 # data.frame to store results 
 tmp = rep(-999, nrow(mBySampleDF))
 trainResDF = data.frame(corPVal=tmp, 
                         corCoef=tmp, 
                         coxPVal=tmp, 
-                        coxEffect=tmp)
+                        coxEffect=tmp, 
+                        coxModel=tmp)
 
 # once for each region set
 for (i in 1:nrow(mBySampleDF)) {
@@ -106,6 +117,15 @@ mBySampleDF = runCOCOA(signal=vGenomicSignal,
                      signalCoord=signalCoord, GRList=GRList[topRSInd[thisRSInd]], 
                      signalCol = colnames(vGenomicSignal), 
                      scoringMetric = "regionMean", verbose = TRUE)
+# convert to long format for plotting
+longMByS = transpose(mBySampleDF) 
+colnames(longMByS) = abbrevName
+longMByS$subjectID = colnames(mBySampleDF)
+longMByS = longMByS[1:ncol(vGenomicSignal), ]
+longMByS = cbind(longMByS, cancerStage=as.factor(vSampleLabels))
+longMByS = gather(data = longMByS, "regionSetName", "methylScore", abbrevName)
+ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
+    geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Methylation proportion")
 
 tmp = rep(-999, nrow(mBySampleDF))
 testResDF = data.frame(corPVal=tmp, 
