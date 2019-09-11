@@ -47,6 +47,13 @@ mBySampleDF = runCOCOA(signal=genomicSignal,
                     signalCol = colnames(genomicSignal), 
                     scoringMetric = "regionMean", verbose = TRUE)
 
+# data.frame to store results 
+tmp = rep(-999, nrow(mBySampleDF))
+trainResDF = data.frame(corPVal=tmp, 
+                        corCoef=tmp, 
+                        coxPVal=tmp, 
+                        coxEffect=tmp)
+
 # once for each region set
 for (i in 1:nrow(mBySampleDF)) {
     mBySample = as.numeric(mBySampleDF[i, 1:ncol(genomicSignal)])
@@ -99,6 +106,12 @@ mBySampleDF = runCOCOA(signal=vGenomicSignal,
                      signalCoord=signalCoord, GRList=GRList[topRSInd[thisRSInd]], 
                      signalCol = colnames(vGenomicSignal), 
                      scoringMetric = "regionMean", verbose = TRUE)
+
+tmp = rep(-999, nrow(mBySampleDF))
+testResDF = data.frame(corPVal=tmp, 
+                        corCoef=tmp, 
+                        coxPVal=tmp, 
+                        coxEffect=tmp)
 
 for (i in 1:nrow(mBySampleDF)) {
     mBySample = as.numeric(mBySampleDF[i, 1:ncol(vGenomicSignal)])

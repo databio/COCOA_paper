@@ -8,7 +8,7 @@ library(caret)
 scriptID = "22-tcgaCorCOCOA"
 plotSubdir = "22-tcgaCorCOCOA/"
 sheetsDir = ffProc("COCOA_paper/analysis/sheets/")
-dataID = "kircMethyl"
+
 
 if (!dir.exists(ffPlot(plotSubdir))) {
     dir.create(ffPlot(plotSubdir))
@@ -26,6 +26,7 @@ loadTCGAMethylation(cancerID = "KIRC")
 patientMetadata = pMeta
 methylMat = methylList$methylProp
 signalCoord = methylList$coordinates
+dataID = paste0("kircMethyl", ncol(methylMat))
 
 sampleType = substr(colnames(methylMat), start = 14, stop = 15)
 # 01 is primary solid tumor, 11 is solid normal tissue, 05 is new primary tumor
