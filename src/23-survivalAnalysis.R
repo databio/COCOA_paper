@@ -16,12 +16,19 @@ simpleCache(paste0("pRankedScores", .analysisID), assignToVariable="pRankedScore
 topRSInd = rsRankingIndex(rsScores = pRankedScores, 
                           signalCol = list( "cancerStage_PValGroup", "cancerStage"), 
                           newColName="cancerStage")$cancerStage
-orderedRSNames = rsName[topRSInd]
-orderedRSDes = rsDescription[topRSInd]
+orderedRSNames = pRankedScores$rsName[topRSInd]
+orderedRSDes = pRankedScores$rsDescription[topRSInd]
+# names to search for 
+topRSSearchNames = c("ezh2", "jund", "tcf7l2")
+# topRSSearchNames = c("ezh2", "jund", "tcf7l2", "stemNotDiff", "P300", "Ctbp2", "H1hesc_E")
 thisRSInd = grep(pattern = "ezh2", x = orderedRSNames, ignore.case = TRUE)[1]
-thisRSInd = c(thisRSInd, grep(pattern = "jund", x = orderedRSNames, ignore.case = TRUE)[1])
-thisRSInd = c(thisRSInd, grep(pattern = "tcf7l2", x = orderedRSNames, ignore.case = TRUE)[1])
+for (i in 2:length(topRSSearchNames)) {
+    thisRSInd = c(thisRSInd, grep(pattern = topRSSearchNames[i], x = orderedRSNames, ignore.case = TRUE)[1])
+}
+
 abbrevName = c("EZH2", "JUND", "TCF7L2")
+# abbrevName = c("EZH2", "JUND", "TCF7L2", "stemNotDiff", "P300", "Ctbp2", "H1hesc_E")
+# interesting: stemNotDiff, P300, Ctbp2, H1hesc_E
 
 actualCorMat = createCorFeatureMat(dataMat = genomicSignal,
                                    featureMat = as.matrix(sampleLabels),
@@ -54,8 +61,14 @@ longMByS$subjectID = colnames(mBySampleDF)
 longMByS = longMByS[1:ncol(genomicSignal), ]
 longMByS = cbind(longMByS, cancerStage=as.factor(sampleLabels))
 longMByS = gather(data = longMByS, "regionSetName", "methylScore", abbrevName)
-ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
-    geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Methylation proportion")
+mByStagePlot = ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
+    geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
+ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStageTraining.svg")), plot = mByStagePlot, device = "svg")
+
+# test how much methylation level in each region set is correlated with
+# methylation level in other region sets
+corMat = cor(t(mBySampleDF[, 1:ncol(genomicSignal)]))
+
 
 # data.frame to store results 
 tmp = rep(-999, nrow(mBySampleDF))
@@ -124,8 +137,9 @@ longMByS$subjectID = colnames(mBySampleDF)
 longMByS = longMByS[1:ncol(vGenomicSignal), ]
 longMByS = cbind(longMByS, cancerStage=as.factor(vSampleLabels))
 longMByS = gather(data = longMByS, "regionSetName", "methylScore", abbrevName)
-ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
-    geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Methylation proportion")
+mByStagePlot = ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
+    geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
+ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStageValidation.svg")), plot = mByStagePlot, device = "svg")
 
 tmp = rep(-999, nrow(mBySampleDF))
 testResDF = data.frame(corPVal=tmp, 

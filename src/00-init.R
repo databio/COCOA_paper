@@ -69,6 +69,7 @@ setff("Code", paste0(Sys.getenv("CODE")))
 setff("ProjCode", paste0(Sys.getenv("CODE"), "COCOA_paper/src/"))
 setff("Data", Sys.getenv("DATA"))
 setff("Sheets", paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/"))
+
 dirCode = function(.file="") {
     return(paste0(Sys.getenv("CODE"), "COCOA_paper/", .file))
 }
