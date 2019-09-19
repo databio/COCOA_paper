@@ -28,7 +28,7 @@ genomicSignal = signalMat
 sampleLabels = pcScores
 
 # loads database of region sets 
-# (assigns GRList, rsName, rsDescription to global environment)
+# (assigns GRList, rsName, rsDescription, rsCollection to global environment)
 loadGRList(genomeV="hg38")
 
 
