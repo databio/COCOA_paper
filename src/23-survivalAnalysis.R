@@ -1,4 +1,9 @@
 # create survival plots
+# ideas for figures and what information is included in survival plots:
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6245494/
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3008568/
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6676410/
+
 
 library(survival)
 library(survminer)
