@@ -9,7 +9,6 @@ library(survival)
 library(survminer)
 
 
-# dataID = "kircMethyl"
 # .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
 
 sampleLabels = as.numeric(sampleLabels$cancerStage)
@@ -68,6 +67,7 @@ longMByS = cbind(longMByS, cancerStage=as.factor(sampleLabels))
 longMByS = gather(data = longMByS, "regionSetName", "methylScore", abbrevName)
 mByStagePlot = ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
     geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
+mByStagePlot
 ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStageTraining.svg")), plot = mByStagePlot, device = "svg")
 
 # test how much methylation level in each region set is correlated with

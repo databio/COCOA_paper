@@ -62,6 +62,8 @@ trainDataInd = as.numeric(createDataPartition(allSampleLabels, p = (2/3), list=F
 genomicSignal = methylMat[, trainDataInd]
 sampleLabels = as.numeric(allSampleLabels[trainDataInd])
 colsToAnnotate = "cancerStage"
+sampleLabels = data.frame(sampleLabels)
+colnames(sampleLabels) = colsToAnnotate
 
 trainMeta = pMeta[trainDataInd, ]
 dataID = paste0(dataID, ncol(genomicSignal))
@@ -122,8 +124,6 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
 # permutation test for significance
 # requires: nPerm, sampleLabels, genomicSignal, signalCoord, GRList, colsToAnnotate
 # dataID
-sampleLabels = data.frame(sampleLabels)
-colnames(sampleLabels) = colsToAnnotate
 
 source(ffProjCode("runPermTest.R"))
 

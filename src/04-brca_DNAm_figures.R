@@ -17,7 +17,6 @@ loadGRList(genomeV = "hg38")
 #################################################################
 
 allMPCAString = "allMPCA_657" #  "allMPCA_657"
-top10MPCAString = "top10MPCA_657"
 
 simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaSharedC", reload = TRUE)
 
@@ -94,6 +93,12 @@ plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9),
 plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "mcf7|mcf-7")
+####################
+# annoScoreDist
+a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC1", pattern = "esr1|eralpha")
+a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC1", pattern = c("gata3|foxa1|H3R17me2", "esr1|eralpha"))
+a
+a
 ###################
 # Fig. 2c, meta region loading profile plots, DNA methylation BRCA
 
