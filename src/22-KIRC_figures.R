@@ -41,14 +41,14 @@ plotAnnoScoreDist <- function(rsScores, colsToPlot, pattern, patternName=pattern
     
     rsCorP = ggplot(data = realRSScores, 
                     mapping = aes(x=rank, y=get(colsToPlot), 
-                                  col=Group), alpha=0.1) + # alpha=Group
-        geom_point() +
+                                  col=Group)) + # alpha=Group
+        geom_point(alpha=0.5, shape=3) +
         ylab("Region set score") + xlab("Region set rank")
     # add each group (Other and pattern) sequentially so they will be plotted on top
     # of other points ('Other' plotted first)
 
     for (i in 2:(length(pattern) + 1)) {
-        rsCorP = rsCorP + geom_point(data = realRSScores[as.numeric(realRSScores$Group) == i, ])
+        rsCorP = rsCorP + geom_point(data = realRSScores[as.numeric(realRSScores$Group) == i, ], alpha=0.5, shape=3)
     }
     
     # rsCorP + coord_flip()

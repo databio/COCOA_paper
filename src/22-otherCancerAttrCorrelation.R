@@ -21,30 +21,9 @@ variationMetric = "spearmanCor"
 ######################################################################
 # load data
 
-# loads methylList, pMeta (patient metadata)
-loadTCGAMethylation(cancerID = "KIRC")
-patientMetadata = pMeta
-methylMat = methylList$methylProp
-signalCoord = methylList$coordinates
-
-sampleType = substr(colnames(methylMat), start = 14, stop = 15)
-# 01 is primary solid tumor, 11 is solid normal tissue, 05 is new primary tumor
-# https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/sample-type-codes
-# https://docs.gdc.cancer.gov/Encyclopedia/pages/TCGA_Barcode/
-normalSampleInd = (sampleType == "11")
-tumorSampleInd = (sampleType == "01") # exclude the extra sample 05
-methylMat = methylMat[, tumorSampleInd]
-# now I only need patient ID
-colnames(methylMat) = substr(colnames(methylMat), start = 1, stop = 12)
-
-## order samples consistently
-pMeta = pMeta[colnames(methylMat), ]
-# screen out patients without stage
-naInd = is.na(pMeta$pathologic_stage)
-methylMat = methylMat[, !naInd]
-pMeta = pMeta[!naInd, ]
-
-allSampleLabels = factor(pMeta$pathologic_stage, levels = c("stage i", "stage ii", "stage iii", "stage iv"))
+# loads the following variables to current environment:
+# 
+loadProcessKIRCMethyl()
 
 loadGRList(genomeV = "hg19")
 

@@ -309,6 +309,49 @@ loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactorMat=TRUE,
 
 # loads GRList, rsName, rsDescription
 
+loadProcessKIRCMethyl <- function(.env=currentEnv) {
+    # making sure parent.frame is evaluated inside function (not outside as 
+    # when listed as default argument)
+    currentEnv = parent.frame(n=1) # env where function was called
+    .env = currentEnv
+    
+    # loads methylList, pMeta (patient metadata)
+    loadTCGAMethylation(cancerID = "KIRC")
+    methylMat = methylList$methylProp
+    signalCoord = methylList$coordinates
+    
+    sampleType = substr(colnames(methylMat), start = 14, stop = 15)
+    # 01 is primary solid tumor, 11 is solid normal tissue, 05 is new primary tumor
+    # https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/sample-type-codes
+    # https://docs.gdc.cancer.gov/Encyclopedia/pages/TCGA_Barcode/
+    normalSampleInd = (sampleType == "11")
+    tumorSampleInd = (sampleType == "01") # exclude the extra sample 05
+    methylMat = methylMat[, tumorSampleInd]
+    # now I only need patient ID
+    colnames(methylMat) = substr(colnames(methylMat), start = 1, stop = 12)
+    
+    ## order samples consistently
+    pMeta = pMeta[colnames(methylMat), ]
+    # screen out patients without stage
+    naInd = is.na(pMeta$pathologic_stage)
+    methylMat = methylMat[, !naInd]
+    pMeta = pMeta[!naInd, ]
+    
+    allSampleLabels = factor(pMeta$pathologic_stage, levels = c("stage i", "stage ii", "stage iii", "stage iv"))
+    
+    
+    assign(x = "methylMat", methylMat, envir = .env)
+    assign(x = "signalCoord", rsCollection, envir = .env)
+    assign(x = "pMeta", pMeta, envir = .env)
+    assign(x = "allSampleLabels", allSampleLabels, envir = .env)
+    
+    
+    message(paste0(paste(c("methylMat", "signalCoord", "pMeta", 
+                           "allSampleLabels"), 
+                         collapse =" "), 
+                   " loaded into the environment."))
+}
+
 loadGRList <- function(genomeV = "hg38", .env=currentEnv) {
     # making sure parent.frame is evaluated inside function (not outside as 
     # when listed as default argument)
