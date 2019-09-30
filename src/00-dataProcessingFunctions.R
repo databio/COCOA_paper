@@ -341,7 +341,7 @@ loadProcessKIRCMethyl <- function(.env=currentEnv) {
     
     
     assign(x = "methylMat", methylMat, envir = .env)
-    assign(x = "signalCoord", rsCollection, envir = .env)
+    assign(x = "signalCoord", signalCoord, envir = .env)
     assign(x = "pMeta", pMeta, envir = .env)
     assign(x = "allSampleLabels", allSampleLabels, envir = .env)
     

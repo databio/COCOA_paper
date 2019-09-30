@@ -22,7 +22,7 @@ variationMetric = "spearmanCor"
 # load data
 
 # loads the following variables to current environment:
-# 
+# c("methylMat", "signalCoord", "pMeta", "allSampleLabels"),
 loadProcessKIRCMethyl()
 
 loadGRList(genomeV = "hg19")
@@ -102,7 +102,7 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
 ##########################################################################
 # permutation test for significance
 # requires: nPerm, sampleLabels, genomicSignal, signalCoord, GRList, colsToAnnotate
-# dataID
+# dataID, optional: recreate (for simpleCache)
 
 source(ffProjCode("runPermTest.R"))
 

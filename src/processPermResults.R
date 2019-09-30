@@ -27,7 +27,7 @@ simpleCache(paste0("permPValsUncorrected", .analysisID), {
     rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
                           calcCols=colsToAnnotate, whichMetric = "pval")
     rsPVals
-}, recreate = TRUE, reload = TRUE)
+}, recreate = recreate, reload = TRUE, assignToVariable = "rsPVals")
 multiNiceHist(file = ffPlot(paste0(.plotSubdir, "pValDistUncorrected", .analysisID, ".pdf")), dataDF = rsPVals, 
               colsToPlot = colsToAnnotate, xLabels = "p-value", 
               binwidth = 0.005, yLabel = "Number of region sets", 
@@ -39,7 +39,7 @@ simpleCache(paste0("permZScores", .analysisID), {
                             calcCols=colsToAnnotate, whichMetric = "zscore")
     rsZScores
     
-}, recreate = TRUE, reload=TRUE)
+}, recreate = recreate, reload=TRUE, assignToVariable = "rsZScores")
 # View(rsZScores[which(rsZScores$ > 7), ])
 
 multiNiceHist(file = ffPlot(paste0(.plotSubdir, "zScoreDist", .analysisID, ".pdf")), dataDF = rsZScores, 
@@ -61,7 +61,7 @@ gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRS
 
 simpleCache(paste0("permPValsCorrected", .analysisID), {
     gPValDF
-}, recreate = TRUE, reload = TRUE)
+}, recreate = recreate, reload = TRUE)
 
 multiNiceHist(file = ffPlot(paste0(.plotSubdir, "corrected", correctionMethod, 
                                    "PValDist", .analysisID, ".pdf")), dataDF = gPValDF[colsToAnnotate],
@@ -106,7 +106,7 @@ pRankedScores = cbind(pRankedScores, gPValDF2)
 
 simpleCache(paste0("pRankedScores", .analysisID), {
   pRankedScores  
-})
+}, recreate = recreate)
 # get top region sets for each colsToAnnotate based on p val
 topRSZAnnoList = list()
 topRSN = 50 # this many top RS for each colsToAnnotate
