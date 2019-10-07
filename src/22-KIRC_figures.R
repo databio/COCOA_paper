@@ -8,7 +8,8 @@ library(ROCR)
 
 ################################################################################
 # figures for KIRC supervised example
-# dataID = paste0("kircMethyl", training)
+
+# simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), assignToVariable = "rsPermScores")
 simpleCache(paste0("rsScores_",  dataID, "_", variationMetric), assignToVariable = "realRSScores")
 p = plotRSConcentration(rsScores = realRSScores, scoreColName = "cancerStage", pattern = "EZH2|SUZ12")
 ggsave(filename = ffPlot(paste0(plotSubdir, "cancerStage", 
@@ -150,13 +151,22 @@ plotAnnoScoreDist(rsScores = realRSScores, colsToPlot = "cancerStage", pattern =
 # have a color bar beside plot marking whether each RS was statistically significant or not?
 
 ########
+simpleCache(paste0("rsPermScores_",  nPerm, "Perm_", variationMetric, "_", dataID), 
+            assignToVariable = "rsPermScores")
+
+# include null distributions
+permResultsMat = do.call(cbind, lapply(rsPermScores, function(x) x$cancerStage))
+
 # make a ROC curve plot for EZH2/Suz12
-pred = realRSScores$cancerStage / max(realRSScores$cancerStage, na.rm = TRUE)
-rocPreds = ROCR::prediction(pred, grepl(pattern = "EZH2|SUZ12", 
+# pred = realRSScores$cancerStage / max(realRSScores$cancerStage, na.rm = TRUE)
+pred = cbind(realRSScores$cancerStage, permResultsMat)
+rocPreds = ROCR::prediction(pred, labels = matrix(grepl(pattern = "EZH2|SUZ12", 
                                         x = realRSScores$rsName, 
-                                        ignore.case = TRUE))
+                                        ignore.case = TRUE), nrow=nrow(pred), ncol=ncol(pred)))
 testAUC = ROCR::performance(rocPreds, measure="auc")@y.values[[1]]
+allTestAUC = unlist(ROCR::performance(rocPreds, measure="auc")@y.values)
 testAUC
 perf = ROCR::performance(rocPreds, measure = "tpr", x.measure = "fpr")
 plot(perf)
 title(main= "ROC curve for EZH2 and SUZ12")
+

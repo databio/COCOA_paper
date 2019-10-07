@@ -471,3 +471,62 @@ loadTCGAMethylation <- function(cancerID, methylList=TRUE, pMeta=TRUE,
     }
     
 }
+
+
+
+loadBRCAGeneExpression <- function(exprList=TRUE, pMeta=TRUE,
+                                removeXY=TRUE, removeCpGWithNA=TRUE, 
+                                genomeV="hg19", .env=currentEnv) {
+    # making sure parent.frame is evaluated inside function (not outside as 
+    # when listed as default argument)
+    currentEnv = parent.frame(n=1) # env where function was called
+    .env = currentEnv
+    
+    library(curatedTCGAData)
+    library(TCGAutils)
+    cancerID = "BRCA"
+    
+    geData = curatedTCGAData(diseaseCode = cancerID, assays = c("*RNASeq2GeneNorm*"), dry.run = FALSE)
+    
+    if (exprList) {
+        testM = assays(geData)[[1]]
+        testM = as.matrix(testM)
+        
+        
+        simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
+        
+        #restrict patients included in this analysis
+        
+        brcaMetadata = fread(paste0(Sys.getenv("CODE"), "COCOA_paper/metadata/brca_metadata.csv"))
+        # only keep patients who have definitive status for ER and PGR
+        brcaMetadata = brcaMetadata[brcaMetadata$ER_status %in% 
+                                        c("Positive", "Negative"), ]
+        brcaMetadata = brcaMetadata[brcaMetadata$PGR_status %in% 
+                                        c("Positive", "Negative"), ]
+        brcaMetadata = brcaMetadata[brcaMetadata$subject_ID %in% 
+                                        colnames(brcaMList[["methylProp"]]), ]
+        
+        
+        
+        # brcaMetadata should have already screened out patients without ER/PGR status
+        # resulting in 657 patients
+        hasER_PGR_IDs = as.character(brcaMetadata[, subject_ID])
+        methylSamples = colnames(brcaMList$methylProp)[colnames(brcaMList$methylProp) %in% hasER_PGR_IDs]
+        colnames(testM) = substr(colnames(testM), start = 1, stop=12)
+        sharedSamples = methylSamples[methylSamples %in% colnames(testM)]
+        
+        
+        filteredData = testM[, sharedSamples]
+        
+        assign("exprMat", filteredData, envir = .env)
+    }
+    
+    # if (pMeta) {
+    #     # get patient metadata, stored in colData(curatedTCGAData())
+    #     metaDataCols = getClinicalNames(cancerID)
+    #     allMeta = colData(geData) 
+    #     tcgaMetadata = allMeta[, metaDataCols]
+    #     assign("pMeta", tcgaMetadata, envir = .env)
+    # }
+    
+}

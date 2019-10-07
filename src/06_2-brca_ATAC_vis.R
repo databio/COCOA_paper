@@ -1,10 +1,10 @@
-# below is based off code by Jason Smith
 
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 library(COCOA)
 library("ComplexHeatmap")
 library(ggbiplot)
 library(readr)
+devtools::load_all(ffCode("COCOA/"))
 
 # 
 setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
@@ -28,8 +28,8 @@ cocoa_dir <- ffCode("COCOA/R/") # feat-atac branch
 data_dir  <- ffProc("COCOA_paper/analysis/atac/")
 tcga_dir  <- "/scores/brca/tcga_brca_peaks-log2counts-dedup/"
 
-loadGRList(genomeV = "hg38")
-devtools::load_all(ffCode("COCOA/"))
+
+
 loadBRCAatac(signalMat = TRUE, signalCoord = TRUE, 
              pcScores = TRUE, loadingMat = TRUE)
 # nPerm = 250
@@ -47,7 +47,10 @@ rsEnSortedInd = rsRankingIndex(rsScores = rsScores,
                                decreasing = c(TRUE, TRUE), newColName = paste0("PC", 1:10))
 #dataID =paste0("brcaATAC", ncol(signalMat))
 .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
+simpleCache(paste0("rsPermScores", .analysisID), assignToVariable = "rsPermScores")
 
+
+loadGRList(genomeV = "hg38")
 ##############################################################################
 
 rsScoreHeatmap(rsScores, signalCol=paste0("PC", 1:4), rsNameCol = "rsName", orderByCol = "PC1", column_title = "Region sets ordered by score for PC1")
@@ -146,6 +149,82 @@ ggsave(filename = ffPlot(paste0(plotSubdir,
                          "/metaRegionLoadingProfiles", 
                          inputID, ".pdf")), plot = multiProfileP[[1]], device = "pdf", limitsize = FALSE)
 ggsave(filename = ffPlot(paste0(plotSubdir, "/metaRegionLoadingProfilesWeightedMean", inputID, ".pdf")), plot = multiProfileP2[[1]], device = "pdf", limitsize = FALSE)
+
+############################################################################
+
+realRSScores = rsScores
+# include null distributions
+permResultsMat = do.call(cbind, lapply(rsPermScores, function(x) x$PC1))
+
+# make a ROC curve plot for EZH2/Suz12
+# pred = realRSScores$cancerStage / max(realRSScores$cancerStage, na.rm = TRUE)
+pred = cbind(realRSScores$PC1, permResultsMat)
+rocPreds = ROCR::prediction(pred, labels = matrix(grepl(pattern = "esr1|eralpha", 
+                                                        x = realRSScores$rsName, 
+                                                        ignore.case = TRUE), nrow=nrow(pred), ncol=ncol(pred)))
+testAUC = ROCR::performance(rocPreds, measure="auc")@y.values[[1]]
+allTestAUC = unlist(ROCR::performance(rocPreds, measure="auc")@y.values)
+testAUC
+perf = ROCR::performance(rocPreds, measure = "tpr", x.measure = "fpr")
+plot(perf)
+title(main= "ROC curve for estrogen receptor")
+
+# add real score
+pred = realRSScores$PC1
+rocPreds = ROCR::prediction(pred, labels =grepl(pattern = "esr1|eralpha", 
+                                                x = realRSScores$rsName, 
+                                                ignore.case = TRUE) )
+perf = ROCR::performance(rocPreds, measure = "tpr", x.measure = "fpr")
+plot(perf, add=TRUE, col="red", lwd=3)
+
+sort(allTestAUC)
+hist(allTestAUC)
+dev.off()
+
+plot(perf, col="red", lwd=3)
+# shuffling ER label of region sets
+erLabel = grepl(pattern = "esr1|eralpha", 
+                x = realRSScores$rsName, 
+                ignore.case = TRUE)
+for (i in 1:1000) {
+    rocPreds = ROCR::prediction(pred, labels =sample(x = erLabel, size = length(erLabel), replace=FALSE))
+    perf = ROCR::performance(rocPreds, measure = "tpr", x.measure = "fpr")
+    plot(perf, add=TRUE)
+}
+
+################################################################
+# add real score
+pred = rsPermScores[[which.max(allTestAUC) - 1]]$PC1
+rocPreds = ROCR::prediction(pred, labels =grepl(pattern = "esr1|eralpha", 
+                                                x = realRSScores$rsName, 
+                                                ignore.case = TRUE) )
+perf = ROCR::performance(rocPreds, measure = "tpr", x.measure = "fpr")
+plot(perf, col="red", lwd=3)
+
+sort(allTestAUC)
+hist(allTestAUC)
+dev.off()
+
+plot(perf, col="red", lwd=3)
+# shuffling ER label of region sets
+erLabel = grepl(pattern = "esr1|eralpha", 
+                x = realRSScores$rsName, 
+                ignore.case = TRUE)
+for (i in 1:1000) {
+    rocPreds = ROCR::prediction(pred, labels =sample(x = erLabel, size = length(erLabel), replace=FALSE))
+    perf = ROCR::performance(rocPreds, measure = "tpr", x.measure = "fpr")
+    plot(perf, add=TRUE)
+}
+
+# mPCA
+
+############################################################################
+
+# # testing if macrophage marker is correlated with PC2
+# sharedSamples = intersect(row.names(pcScores), colnames(exprMat))
+# cor.test(x = pcScores[sharedSamples, "PC2"], y = exprMat["CD68", sharedSamples]) # general marker
+# cor.test(x = pcScores[sharedSamples, "PC2"], y = exprMat["CD163L1", sharedSamples], method="spearman") # 
+# grep("CD1", row.names(exprMat), value=TRUE)
 
 ############################################################################
 rsEnrichment = rsScores

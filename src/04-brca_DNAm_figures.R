@@ -132,3 +132,24 @@ plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9),
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "h3k9|h3k27me|suz12|ezh2")
 # meta-region loading profile
+
+########################################################################################
+# ROC curve
+simpleCache(paste0("rsPermScores_",  nPerm, "Perm_", variationMetric, "_", dataID), 
+            assignToVariable = "rsPermScores")
+realRSScores = rsScores
+# include null distributions
+permResultsMat = do.call(cbind, lapply(rsPermScores, function(x) x$PC1))
+
+# make a ROC curve plot for EZH2/Suz12
+# pred = realRSScores$cancerStage / max(realRSScores$cancerStage, na.rm = TRUE)
+pred = cbind(realRSScores$PC1, permResultsMat)
+rocPreds = ROCR::prediction(pred, labels = matrix(grepl(pattern = "esr1|eralpha", 
+                                                        x = realRSScores$rsName, 
+                                                        ignore.case = TRUE), nrow=nrow(pred), ncol=ncol(pred)))
+testAUC = ROCR::performance(rocPreds, measure="auc")@y.values[[1]]
+allTestAUC = unlist(ROCR::performance(rocPreds, measure="auc")@y.values)
+testAUC
+perf = ROCR::performance(rocPreds, measure = "tpr", x.measure = "fpr")
+plot(perf)
+title(main= "ROC curve for estrogen receptor")
