@@ -1,6 +1,9 @@
 
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 library(MIRA)
+library(MultiAssayExperiment)
+library(ensembldb)
+library(EnsDb.Hsapiens.v75)
 
 ##############################################################################
 # Fig. 4, MOFA CLL
@@ -9,14 +12,22 @@ library(MIRA)
 # factor 1: cell type/differentiation, factor 7: chemo-immunotherapy treatment prior to sample collection
 # factor 7: del17p, TP53 mutations, methylation of oncogenes
 
+# dataID = "CLL196MOFA"
+# variationMetric = "cov"
+
 loadMOFAData(methylMat = TRUE, signalCoord=TRUE, latentFactorMat = TRUE,
              cllMultiOmics=TRUE)
 simpleCache("mofaPermZScoresCor", assignToVariable = "rsZScores")
-simpleCache("rsScore_Cor_CLL196MOFA", assignToVariable = "rsScores")
+simpleCache(paste0("rsScore_", dataID, "_", variationMetric), assignToVariable = "rsScores")
 
-mutDF = cllMultiOmics$Mutation
-# same order
-latentFactors = latentFactors[colnames(mutDF), ]
+
+
+
+# get same order
+MAE = MultiAssayExperiment(list(mutations = cllMultiOmics$Mutation, 
+                                latentFactors=t(latentFactorMat)))
+mutDF = as.data.frame(assay(MAE[, complete.cases(MAE), ], "mutations"))
+latentFactors = t(assay(MAE[, complete.cases(MAE), ], "latentFactors"))
 IGHV = mutDF["IGHV", ]
 IGHV[IGHV == 1] = "mutated"
 IGHV[IGHV == 0] = "unmutated"
@@ -210,4 +221,65 @@ plot(miraScores[sharedIDs, ]$score, cllRNA[thisGeneInd, sharedIDs])
 # figure: boxplot of NANOG expression in chr12+,-? correlation plot of NANOG
 # expression and LF2?
 
+###############################################################################
+# analysis/plots of latent factor 8, WNT signaling
 
+# Wnt3, Wnt5b, Wnt6, Wnt10a, Wnt14, and Wnt16, as well as the Wnt receptor Fzd3, 
+# were highly expressed in CLL, compared with normal B cells.
+# https://www.ncbi.nlm.nih.gov/pubmed/14973184
+myWNTGenes = c(c("WNT3", "WNT5B", "WNT6", "WNT10A", "WNT14", "WNT16"), "WNT5A")
+# WNT5A was shown as having a high loading for LF8 in MOFA paper
+
+# ensembl DB
+# hg 19
+DB = EnsDb.Hsapiens.v75
+library(BloodCancerMultiOmics2017)
+loadMOFAData(methylMat = TRUE, signalCoord=TRUE, latentFactorMat = TRUE,
+             cllMultiOmics=TRUE)
+
+data("dds", package = "BloodCancerMultiOmics2017")
+cllRNA = assay(dds)
+colnames(cllRNA) <- colData(dds)$PatID
+ensemblNames = row.names(cllRNA)
+geneDF = genes(filter(DB, filter = GeneNameFilter(value = "WNT", condition = "contains")), return.type="data.frame")
+geneDF = dplyr::filter(geneDF, symbol %in% myWNTGenes) 
+hist(cllRNA[dplyr::filter(geneDF, symbol == "WNT5A")$gene_id, ])
+wnt5aID = dplyr::filter(geneDF, symbol == "WNT5A")$gene_id
+MAE = MultiAssayExperiment(list(rna=cllRNA, latentFactors=t(latentFactorMat)))
+# shared samples and same ordering
+MAE = MAE[, complete.cases(MAE), ]
+cor.test(assay(MAE, "rna")[wnt5aID, ], assay(MAE, "latentFactors")["LF8", ])
+plot(assay(MAE, "rna")[wnt5aID, ], assay(MAE, "latentFactors")["LF8", ])
+# is WNT expression correlated with LF8
+mae2 = c(MAE, methyl=methylMat)
+mae2 = mae2[, complete.cases(mae2), ]
+all(colnames(assay(mae2, "methyl")) == colnames(assay(mae2, "latentFactors")))
+
+# test whether WNT expression is associated with methylation in downstream region sets
+thisRegionSet = "E008-H3K4me1.narrowPeak"
+thisRegionSet = "GSM1124068_SOX2.bed"
+thisRegionSet = "GSM1124071_NANOG.bed"
+thisRegionSet = "Pou5f1.bed"
+meanMethylThisRS=runCOCOA(signal = assays(mae2)$methyl, signalCoord = signalCoord, 
+                          GRList = GRList[thisRegionSet], 
+                          signalCol = colnames(assays(mae2)$methyl))
+meanMethylThisRS = meanMethylThisRS[, colnames(assays(mae2)$methyl)]
+
+cor.test(as.numeric(meanMethylThisRS), assays(mae2)$rna[wnt5aID, ])
+
+plot(as.numeric(meanMethylThisRS), assays(mae2)$rna[wnt5aID, ])
+
+cor.test(as.numeric(meanMethylThisRS), assays(mae2)$latentFactors["LF8", ])
+cov(as.numeric(meanMethylThisRS), assays(mae2)$latentFactors["LF8", ])
+
+# testing other WNT genes
+cllMultiOmics$mRNA[geneDF$gene_id, ]
+cor.test(cllMultiOmics$mRNA[wnt5aID, colnames(assays(mae2)$latentFactors)], 
+                        assays(mae2)$latentFactors["LF8", ])
+plot(cllMultiOmics$mRNA[wnt5aID, colnames(assays(mae2)$latentFactors)], 
+         sqrt(assays(mae2)$rna[wnt5aID, ]))
+cor.test(cllMultiOmics$mRNA[wnt5aID, colnames(assays(mae2)$latentFactors)], 
+     as.numeric(meanMethylThisRS))
+
+# "filter()" was masked by another package. Get dplyr filter() back
+library(dplyr)
