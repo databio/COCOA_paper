@@ -104,6 +104,20 @@ pc1ERATAC + theme(axis.text = element_text(colour = "black", size = 15), axis.ti
 pc1ERATAC
 ggsave(ffPlot(paste0(plotSubdir, "pc1ERATAC.svg")), plot = pc1ERATAC, device = "svg")
 
+################# PC2, immune-related
+# reviews of hematopoietic transcription factors (not exhaustive obviously):
+# myeloid: https://www.nature.com/articles/nri2024
+# (table 1) RUNX1, SCL/TAL, PU.1, CEBPa, IRF8, GFI1, CEBPe 
+# need to finish
+
+# lymphoid: https://doi.org/10.1182/blood-2014-12-575688
+# 
+
+# general: http://www.jbc.org/content/270/10/4955.short
+# (table)
+# TCF3 (E2A), KLF1 (EKLF), GATA1, GATA2, Ikaros, c-MYB, p45 NF-E2, PAX5, PU.1, RBTN2, SCL/TAL1
+
+
 
 ########## make PCA plot
 
