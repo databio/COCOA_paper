@@ -412,97 +412,119 @@ multiNiceHist = function(file, dataDF, colsToPlot, xLabels=colsToPlot,
     
 }
 
-# from dev version of COCOA
-signalAlongPC <- function(genomicSignal, signalCoord, regionSet, 
-                          sampleScores, orderByCol="PC1", topXVariables=NULL, 
-                          variableScores=NULL,
-                          cluster_columns = FALSE, 
-                          cluster_rows = FALSE, 
-                          row_title = "Sample",
-                          column_title = "Genomic Signal", 
-                          column_title_side = "bottom",
-                          name = "Genomic Signal Value",
-                          col = c("blue", "#EEEEEE", "red"), ...) {
-    
-    
-    if (!(is(genomicSignal, "matrix") || is(genomicSignal, "data.frame"))) {
-        stop("genomicSignal should be a matrix or data.frame. Check object class.")
-    }
-    
-    # test for appropriateness of inputs/right format
-    if (is(signalCoord, "GRanges")) {
-        coordGR <- signalCoord
-    } else if (is(signalCoord, "data.frame")) {
-        # UPDATE: does the work on data.frames that are not data.tables?
-        coordGR <- dtToGr(signalCoord)
-    } else {
-        stop("signalCoord should be a data.frame or GRanges object.")
-    }
-    
-    if (!(is(sampleScores, "matrix") || is(sampleScores, "data.frame"))) {
-        stop("sampleScores should be a matrix or data.frame.")
-    }
-    
-    
-    # PCA object must have subject_ID as row.names (corresponding 
-    # to column names of genomicSignal)
-    if (sum(row.names(sampleScores) %in% colnames(genomicSignal)) < 2) {
-        stop(cleanws("Sample names on pca data (row names) 
-                     must match sample names on methylation
-                     (column names)"))
-    }
-    
-    
-    if (!is(regionSet, "GRanges")) {
-        stop("regionSet should be a GRanges object. Check object class.")
-    }
-    
-    if (!is.null(topXVariables)) {
-        if (is.null(variableScores)) {
-            stop("To plot the topXVariables, variableScores must be given.")
-        }
-        if (!(length(variableScores) == nrow(genomicSignal))) {
-            stop("length(variableScores) should equal nrow(genomicSignal)")
-        }
-        
-    }
-    
-    
-    
-    # coordGR =
-    olList <- findOverlaps(regionSet, coordGR)
-    # regionHitInd <- sort(unique(queryHits(olList)))
-    cytosineHitInd <- sort(unique(subjectHits(olList)))
-    thisRSMData <- t(genomicSignal[cytosineHitInd, ])
-    nRegion = length(unique(queryHits(olList)))
-    # get top variables
-    if (!is.null(topXVariables)) {
-        if (nRegion > topXVariables) {
-            # select top variables
-            thisRSMData <- thisRSMData[, order(variableScores[cytosineHitInd], decreasing = TRUE)][, 1:topXVariables]
-        }
-    }
-    subject_ID <- row.names(thisRSMData)
-    # centeredPCAMeth <- t(apply(t(genomicSignal), 1, 
-    #                            function(x) x - pcaData$center)) #center first 
-    # reducedValsPCA <- centeredPCAMeth %*% pcaData$rotation
-    # reducedValsPCA <- pcaData$x
-    # pcaData must have subject_ID as row name
-    thisRSMData <- thisRSMData[names(sort(sampleScores[, orderByCol], 
-                                          decreasing = TRUE)), ]
-    
-    message(paste0("Number of cytosines: ", length(cytosineHitInd)))
-    message(paste0("Number of regions: ", nRegion))
-    
 
+# same as plotAnnoScoreDist but add an extra annotation bar on top of the plot
+# this requires using cowplot to put multiple plots together
+plotAnnoScoreDist2 <- function(rsScores, colsToPlot, pattern, patternName=pattern) {
+    library("cowplot")
     
-    ComplexHeatmap::Heatmap(thisRSMData, 
-                            col = col,
-                            row_title = row_title,
-                            column_title = column_title,
-                            column_title_side = column_title_side,
-                            cluster_rows = cluster_rows, 
-                            cluster_columns = cluster_columns, 
-                            name = name, ...)
+    rsCorP = plotAnnoScoreDist(rsScores=rsScores, colsToPlot=colsToPlot, 
+                               pattern=pattern, patternName=patternName)
+    ##################
+    
+    rsScores$rank = order(order(as.numeric(rsScores[, colsToPlot]), decreasing = TRUE))
+    
+    rsGroup = rep(0, nrow(rsScores))
+    for (i in seq_along(pattern)) {
+        thisPatternInd = grepl(pattern = pattern[i], 
+                               x = rsScores$rsName, 
+                               ignore.case = TRUE)
+        # earlier groups will be overwritten if they are not mutually exclusive
+        # (e.g. if the same region set matches two patterns, the later group
+        # will be assigned)
+        rsGroup[thisPatternInd] = i
+    }
+    rsGroup = as.factor(rsGroup)
+    # necessary so region set names will be in legend
+    levels(rsGroup) = c("Other", patternName)
+    rsScores$Group = rsGroup 
+    
+    ###############
+    # as.numeric(Group)-1)
+    # rsCorP + coord_flip()
+    polycombStatusP = ggplot(data = rsScores, mapping = aes(x=rank, y=1, col=Group)) + 
+        # geom_col(aes(col=Group), alpha=0) +
+        scale_color_discrete(drop = FALSE)
+    
+    for (i in 2:(length(pattern) + 1)) {
+        polycombStatusP = polycombStatusP + geom_col(data = rsScores[as.numeric(rsScores$Group) == i, ], 
+                                                     alpha=1)#, show.legend = FALSE)
+    }
+    
+    polycombStatusP 
+    
+    gg_dist_g1 = polycombStatusP
+    # gg_dist_g2 = rsCorP
+    gg_scatter = rsCorP
+    
+    # gg_dist_g2 = gg_dist_g2 + coord_flip()
+    
+    # Remove some duplicate axes
+    gg_dist_g1 = gg_dist_g1 + theme(axis.title.x=element_blank(),
+                                    axis.title.y = element_blank(),
+                                    axis.text=element_blank(),
+                                    axis.line=element_blank(),
+                                    axis.ticks=element_blank())
+    #legend.position = "bottom")
+    #legend.text = element_blank())
+    gg_dist_g1
+    
+    # Modify margin c(top, right, bottom, left) to reduce the distance between plots
+    #and align G1 density with the scatterplot
+    gg_dist_g1 = gg_dist_g1 + theme(plot.margin = unit(c(0.5, 0, 0, 0.5), "cm"))
+    gg_scatter = gg_scatter + theme(plot.margin = unit(c(0, 0, 0.5, 0), "cm"))
+    #gg_dist_g2 = gg_dist_g2 + theme(plot.margin = unit(c(0, 0.5, 0.5, 0), "cm"))
+    
+    # Combine all plots together and crush graph density with rel_heights
+    first_col = plot_grid(gg_dist_g1, gg_scatter, ncol = 1, rel_heights = c(1, 20), align = "v")#, axis="r")
+    #second_col = plot_grid(NULL, gg_dist_g2, ncol = 1, rel_heights = c(1, 3))
+    # perfect = plot_grid(first_col, second_col, ncol = 2, rel_widths = c(3, 1))
+    p = first_col
+    p
+    
+    return(p)
 }
 
+
+#' Plot region set scores and rank, annotating groups of interest
+#' 
+#' @param colsToPlot character. Name of the column to plot. ###update: only one can be used
+#' @param pattern character. Multiple patterns can be given as character objects in a vector.
+#' Regular expressions can be used (ignore.case=TRUE though)
+plotAnnoScoreDist <- function(rsScores, colsToPlot, pattern, patternName=pattern) {
+    
+    rsScores$rank = order(order(as.numeric(rsScores[, colsToPlot]), decreasing = TRUE))
+    
+    rsGroup = rep(0, nrow(rsScores))
+    for (i in seq_along(pattern)) {
+        thisPatternInd = grepl(pattern = pattern[i], 
+                               x = rsScores$rsName, 
+                               ignore.case = TRUE)
+        # earlier groups will be overwritten if they are not mutually exclusive
+        # (e.g. if the same region set matches two patterns, the later group
+        # will be assigned)
+        rsGroup[thisPatternInd] = i
+    }
+    rsGroup = as.factor(rsGroup)
+    # necessary so region set names will be in legend
+    levels(rsGroup) = c("Other", patternName)
+    rsScores$Group = rsGroup 
+    
+    
+    rsCorP = ggplot(data = rsScores, 
+                    mapping = aes(x=rank, y=get(colsToPlot), 
+                                  col=Group)) + # alpha=Group
+        # geom_point(alpha=0.0, shape=3) +
+        ylab("Region set score") + xlab("Region set rank") +
+        scale_color_discrete(drop = FALSE)
+    
+    
+    # add each group (Other and pattern) sequentially so they will be plotted on top
+    # of other points ('Other' plotted first)
+    
+    for (i in 1:(length(pattern) + 1)) {
+        rsCorP = rsCorP + geom_point(data = rsScores[as.numeric(rsScores$Group) == i, ], alpha=0.5, shape=3) 
+    }
+    
+    return(rsCorP)
+}

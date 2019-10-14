@@ -12,22 +12,17 @@ Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"
 patientMetadata = brcaMetadata # already screened out patients with incomplete ER or PGR mutation status
 # there should be 657 such patients
 set.seed(1234)
-plotSubdir = "06-brcaATAC/"
+plotSubdir = "23-brcaATAC/"
 
 if(!dir.exists(ffPlot(plotSubdir))) {
     dir.create(ffPlot(plotSubdir))
 }
 
 
-# DNA methylation data
+# cache data
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 
 ##########
-
-cocoa_dir <- ffCode("COCOA/R/") # feat-atac branch
-data_dir  <- ffProc("COCOA_paper/analysis/atac/")
-tcga_dir  <- "/scores/brca/tcga_brca_peaks-log2counts-dedup/"
-
 
 
 loadBRCAatac(signalMat = TRUE, signalCoord = TRUE, 
@@ -52,7 +47,7 @@ simpleCache(paste0("rsPermScores", .analysisID), assignToVariable = "rsPermScore
 
 loadGRList(genomeV = "hg38")
 ##############################################################################
-
+# visualize region set distribution
 rsScoreHeatmap(rsScores, signalCol=paste0("PC", 1:4), rsNameCol = "rsName", orderByCol = "PC1", column_title = "Region sets ordered by score for PC1")
 
 plotRSConcentration(rsScores, colsToSearch = c("rsName", "rsDescription"), 
@@ -80,9 +75,7 @@ erPC1Hist = plotRSConcentration(rsScores,
 
 ggsave(filename = ffPlot(paste0(plotSubdir, "rsConcentrationERPC1_brcaATAC_", nrow(merged), ".svg")), 
        plot = erPC1Hist, device = "svg") 
-
-#########################################################################################################
-# visualize region set distribution
+####
 
 aPCA = pca
 rsScores= regionSetScoresTotal
@@ -98,26 +91,44 @@ plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "rsName", pattern
 plotRSConcentration(rsScores = rsScores, scoreColName = "PC2", colsToSearch = "rsName", pattern = "ezh2|suz12|h3k27me")
 plotRSConcentration(rsScores = rsScores, scoreColName = "PC3", colsToSearch = "rsName", pattern = "ezh2|suz12")
 plotRSConcentration(rsScores = rsScores, scoreColName = paste0("PC", 1:4), colsToSearch = "rsName", pattern = "ezh2|suz12")
-plotRSConcentration(rsScores = rsScores, scoreColName = paste0("PC", 1:4), colsToSearch = "rsName", pattern = "runx|tal1|gata|lmo2|PU1|lyl1|FLI1|evi1")
+plotRSConcentration(rsScores = rsScores, scoreColName = paste0("PC", 1:10), colsToSearch = "rsName", pattern = "runx|tal1|gata|lmo2|PU1|lyl1|FLI1|evi1")
 pc1ERATAC = plotRSConcentration(rsScores = rsScores, "PC1", colsToSearch = "rsName", pattern = "esr|eralpha|foxa1|gata3|H3R17me2")
 pc1ERATAC + theme(axis.text = element_text(colour = "black", size = 15), axis.ticks = element_line(colour = "black"))
 pc1ERATAC
 ggsave(ffPlot(paste0(plotSubdir, "pc1ERATAC.svg")), plot = pc1ERATAC, device = "svg")
 
+plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC1", 
+                  pattern = c("esr|eralpha", "|foxa1|gata3|H3R17me2"), patternName = c("ER", "ER-related"))
+pc2AnnoScoreDist = plotAnnoScoreDist2(rsScores = rsScores, colsToPlot = "PC2", 
+                                      pattern = "esr|eralpha|foxa1|gata3|H3R17me2", patternName = "Hematopoietic TFs")
+
 ################# PC2, immune-related
 # reviews of hematopoietic transcription factors (not exhaustive obviously):
+# one general review, one myeloid review, and one lymphoid review
 # myeloid: https://www.nature.com/articles/nri2024
-# (table 1) RUNX1, SCL/TAL, PU.1, CEBPa, IRF8, GFI1, CEBPe 
-# need to finish
+# (table 1) RUNX1, SCL/TAL1, PU.1, CEBPa, IRF8, GFI1, CEBPe 
 
-# lymphoid: https://doi.org/10.1182/blood-2014-12-575688
-# 
+# abbrev cebpa
+hemaTFs = c("RUNX1", "SCL|TAL1", "PU.1|PU1|SPI1", 
+            "CEBPA", "IRF8", "GFI1", "CEBPE")
 
 # general: http://www.jbc.org/content/270/10/4955.short
 # (table)
 # TCF3 (E2A), KLF1 (EKLF), GATA1, GATA2, Ikaros, c-MYB, p45 NF-E2, PAX5, PU.1, RBTN2, SCL/TAL1
+hemaTFs = c(hemaTFs, c("TCF3", "KLF1", "GATA1", "GATA2", "Ikaros|IKZF1", "CMYB", "NFE2"))
 
+# lymphoid: https://doi.org/10.1182/blood-2014-12-575688
+# (figure 1. table 1) IKZF1, TCF3, EBF1, PAX5, FOXO1, ID2, GATA3
+hemaTFs = c(hemaTFs, c("TCF3", "EBF1", "PAX5", "FOXO1", "ID2", "GATA3"))
 
+hemaTFs = unique(hemaTFs)
+
+hemaPattern = paste0(hemaTFs, collapse = "|")
+plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC2", pattern = hemaPattern, patternName = "Hematopoietic TFs")
+pc2AnnoScoreDist = plotAnnoScoreDist2(rsScores = rsScores, colsToPlot = "PC2", 
+                   pattern = hemaPattern, patternName = "Hematopoietic TFs")
+ggsave(ffPlot(paste0(plotSubdir, "pc2HemaATAC.svg")), 
+       plot = pc2AnnoScoreDist, device = "svg")
 
 ########## make PCA plot
 
