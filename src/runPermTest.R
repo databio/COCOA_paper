@@ -135,12 +135,8 @@
 #' }
 ###############################################################################
 
-# default values
 if (!exists("variationMetric")) {
     variationMetric <- "cor"
-}
-if (!exists("recreate")) {
-    recreate = FALSE
 }
 
 
@@ -178,7 +174,7 @@ simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID
             message(i) # must be ahead of object that is saved as cache, not after
             tmp
             
-        }, recreate=recreate)
+        })
     }
     
     # combining all individual permutations/caches into one object
@@ -188,7 +184,7 @@ simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID
     }
     rsPermScores
     
-}, assignToVariable="rsPermScores", recreate=recreate)
+}, assignToVariable="rsPermScores")
 
 
 source(ffProjCode("processPermResults.R"))

@@ -486,11 +486,18 @@ plotAnnoScoreDist2 <- function(rsScores, colsToPlot, pattern, patternName=patter
 }
 
 
+
 #' Plot region set scores and rank, annotating groups of interest
 #' 
 #' @param colsToPlot character. Name of the column to plot. ###update: only one can be used
 #' @param pattern character. Multiple patterns can be given as character objects in a vector.
 #' Regular expressions can be used (ignore.case=TRUE though)
+#' @examples 
+#' data(rsScores)
+#' rsScores$rsName <- c("ER", "GATA3", "ER", "GATA3", "AP1") 
+#' plotAnnoScoreDist(rsScores, colsToPlot="PC1", pattern="ER")
+#' plotAnnoScoreDist(rsScores, colsToPlot="PC2", pattern=c("ER", "GATA3")) + geom_point(size=5)
+#' @export
 plotAnnoScoreDist <- function(rsScores, colsToPlot, pattern, patternName=pattern) {
     
     rsScores$rank = order(order(as.numeric(rsScores[, colsToPlot]), decreasing = TRUE))
