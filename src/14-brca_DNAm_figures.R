@@ -6,6 +6,9 @@ set.seed(1234)
 plotSubdir = "99_paper_figures/"
 scriptID = "99-paperFigures"
 createPlotSubdir(plotSubdir = plotSubdir)
+
+# dataID = "brcaDNAm657"
+
 .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
 
 ###########################################################
@@ -96,9 +99,13 @@ plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9),
 ####################
 # annoScoreDist
 a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC1", pattern = "esr1|eralpha")
+a + scale_color_brewer(palette = "Dark2")
+a + scale_color_brewer(palette = "RdYlBu")
+a + scale_color_brewer(palette = "Paired")
 a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC1", pattern = c("gata3|foxa1|H3R17me2", "esr1|eralpha"))
-a
-a
+a + scale_color_brewer(palette = "Dark2")
+a + scale_color_brewer(palette = "RdYlBu")
+a + scale_color_brewer(palette = "Paired")
 ###################
 # Fig. 2c, meta region loading profile plots, DNA methylation BRCA
 
