@@ -27,15 +27,16 @@ setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 
 loadBRCAatac(signalMat = TRUE, signalCoord = TRUE, 
              pcScores = TRUE, loadingMat = TRUE)
-# nPerm = 250
+# nPerm = 300
 # dataID =paste0("brcaATAC", ncol(signalMat))
 # dataID = "brcaATACPCAPerm"
 # variationMetric = "cor"
 # .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
 inputID = paste0("_", nPerm, "Perm_", variationMetric, 
                                      "_", "brcaATAC", ncol(signalMat))
-simpleCache(paste0("pRankedScores", .analysisID), assignToVariable = "rsScores", reload = TRUE)
-
+# simpleCache(paste0("pRankedScores", .analysisID), assignToVariable = "rsScores", reload = TRUE)
+simpleCache(paste0("rsScores", paste0("_", "brcaATAC", ncol(signalMat)), 
+                   "_", variationMetric), assignToVariable = "rsScores", reload = TRUE)
 rsEnSortedInd = rsRankingIndex(rsScores = rsScores, 
                                signalCol = list(paste0(paste0("PC", 1:10), "_PValGroup"), 
                                                 paste0("PC", 1:10)), 
@@ -97,10 +98,17 @@ pc1ERATAC + theme(axis.text = element_text(colour = "black", size = 15), axis.ti
 pc1ERATAC
 ggsave(ffPlot(paste0(plotSubdir, "pc1ERATAC.svg")), plot = pc1ERATAC, device = "svg")
 
-plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC1", 
-                  pattern = c("esr|eralpha", "|foxa1|gata3|H3R17me2"), patternName = c("ER", "ER-related"))
-pc2AnnoScoreDist = plotAnnoScoreDist2(rsScores = rsScores, colsToPlot = "PC2", 
-                                      pattern = "esr|eralpha|foxa1|gata3|H3R17me2", patternName = "Hematopoietic TFs")
+pcAnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC1", 
+                  pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2"), 
+                  patternName = c("ER", "ER-related")) + theme(text = element_text(size=10))
+pcAnnoScoreDist 
+ggsave(filename = ffPlot(paste0(plotSubdir, "pc1AnnoScoreDistERRelated.svg")), 
+       plot = pcAnnoScoreDist, device = "svg", height = 200, width = 100, units = "mm")
+# inkscape uses 90 dpi instead of 72
+# inkscape total plot size dimensions are 0.8 times ggplot dimensions
+plotAnnoScoreDist2(rsScores = rsScores, colsToPlot = "PC1", 
+                                      pattern = "esr|eralpha|foxa1|gata3|H3R17me2", patternName = "ER-related")
+pcAnnoScoreDist
 
 ################# PC2, immune-related
 # reviews of hematopoietic transcription factors (not exhaustive obviously):
@@ -131,7 +139,7 @@ ggsave(ffPlot(paste0(plotSubdir, "pc2HemaATAC.svg")),
        plot = pc2AnnoScoreDist, device = "svg")
 
 ########## make PCA plot
-
+pcaNames = row.names(aPCA$x)
 pcScore = data.frame(aPCA$x, pcaNames)
 pcScoreAnno= merge(pcScore, aMetadata, by.x = "pcaNames", by.y= "subject_ID", all.x=TRUE)
 colorClusterPlots(pcScoreAnno, plotCols = paste0("PC", c(1,2)), colorByCols = "ER_status")

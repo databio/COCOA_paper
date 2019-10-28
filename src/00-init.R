@@ -16,6 +16,7 @@ source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R" ))
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-dataProcessingFunctions.R" ))
 library(MultiAssayExperiment)
 library(folderfun)
+library(COCOA)
 
 # source(paste0(Sys.getenv("CODE"), "COCOA/R/COCOA.R"))
 # source(paste0(Sys.getenv("CODE"), "COCOA/R/visualization.R"))
@@ -73,7 +74,7 @@ setff("Sheets", paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/"))
 dirCode = function(.file="") {
     return(paste0(Sys.getenv("CODE"), "COCOA_paper/", .file))
 }
-devtools::load_all(ffCode("COCOA/"))
+# devtools::load_all(ffCode("COCOA/"))
 
 createPlotSubdir <- function(plotSubdir) {
     if (!dir.exists(ffPlot(plotSubdir))) {
