@@ -20,7 +20,7 @@ library(COCOA)
 
 # source(paste0(Sys.getenv("CODE"), "COCOA/R/COCOA.R"))
 # source(paste0(Sys.getenv("CODE"), "COCOA/R/visualization.R"))
-
+# devtools::load_all(ffCode("COCOA/"))
 
 
 brcaMetadata = fread(paste0(Sys.getenv("CODE"), 
@@ -74,7 +74,7 @@ setff("Sheets", paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/"))
 dirCode = function(.file="") {
     return(paste0(Sys.getenv("CODE"), "COCOA_paper/", .file))
 }
-# devtools::load_all(ffCode("COCOA/"))
+
 
 createPlotSubdir <- function(plotSubdir) {
     if (!dir.exists(ffPlot(plotSubdir))) {
@@ -445,7 +445,7 @@ plotAnnoScoreDist2 <- function(rsScores, colsToPlot, pattern, patternName=patter
     # rsCorP + coord_flip()
     polycombStatusP = ggplot(data = rsScores, mapping = aes(x=rank, y=1, col=Group)) + 
         # geom_col(aes(col=Group), alpha=0) +
-        scale_color_discrete(drop = FALSE)
+        scale_color_discrete(drop = FALSE) + theme(aspect.ratio = 0.03) + scale_x_continuous(limits = c(0, nrow(rsScores)))
     
     for (i in 2:(length(pattern) + 1)) {
         polycombStatusP = polycombStatusP + geom_col(data = rsScores[as.numeric(rsScores$Group) == i, ], 
@@ -477,7 +477,7 @@ plotAnnoScoreDist2 <- function(rsScores, colsToPlot, pattern, patternName=patter
     #gg_dist_g2 = gg_dist_g2 + theme(plot.margin = unit(c(0, 0.5, 0.5, 0), "cm"))
     
     # Combine all plots together and crush graph density with rel_heights
-    first_col = plot_grid(gg_dist_g1, gg_scatter, ncol = 1, rel_heights = c(1, 20), align = "v")#, axis="r")
+    first_col = plot_grid(gg_dist_g1, gg_scatter, ncol = 1, rel_heights = c(1, 8), align = "v", axis="lr")
     #second_col = plot_grid(NULL, gg_dist_g2, ncol = 1, rel_heights = c(1, 3))
     # perfect = plot_grid(first_col, second_col, ncol = 2, rel_widths = c(3, 1))
     p = first_col
@@ -524,7 +524,7 @@ plotAnnoScoreDist <- function(rsScores, colsToPlot, pattern, patternName=pattern
                                   col=Group)) + # alpha=Group
         # geom_point(alpha=0.0, shape=3) +
         ylab("Region set score") + xlab("Region set rank") +
-        scale_color_discrete(drop = FALSE)
+        scale_color_discrete(drop = FALSE) + theme(aspect.ratio = 1)
     
     
     # add each group (Other and pattern) sequentially so they will be plotted on top
