@@ -47,9 +47,7 @@ inputID = paste0("_", nPerm, "Perm_", variationMetric,
 
 simpleCache(paste0("rsScores", paste0("_", "brcaATAC", ncol(signalMat)), 
                    "_", variationMetric), assignToVariable = "rsScores", reload = TRUE)
-rsEnSortedInd = rsRankingIndex(rsScores = rsScores, 
-                               signalCol = paste0("PC", 1:10), 
-                               decreasing = TRUE)
+
 # simpleCache(paste0("pRankedScores", .analysisID), assignToVariable = "rsScores", reload = TRUE)
 # rsEnSortedInd = rsRankingIndex(rsScores = rsScores, 
 #                                signalCol = list(paste0(paste0("PC", 1:10), "_PValGroup"), 
@@ -67,6 +65,12 @@ if (length(GRList) != nrow(rsScores)) {
 lowCovRS <- rsScores$regionSetCoverage < 100
 rsScores <- rsScores[!lowCovRS, ]
 GRList <- GRList[!lowCovRS]
+rsName <- rsName[!lowCovRS]
+rsDescription <- rsDescription[!lowCovRS]
+
+rsEnSortedInd = rsRankingIndex(rsScores = rsScores, 
+                               signalCol = paste0("PC", 1:10), 
+                               decreasing = TRUE)
 
 ##############################################################################
 # panel A
@@ -91,11 +95,12 @@ plot(as.matrix(pcScoreAnno[,c("PC1", "PC2")]))
 
 pcAnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC1", 
                   pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2"), 
-                  patternName = c("ER", "ER-related")) + theme(text = element_text(size=10)) 
+                  patternName = c("ER", "ER-related")) + 
+                 theme(text = element_text(size=15), legend.position = c(0, 0.2)) 
                   # coord_fixed(ratio = 10)
 pcAnnoScoreDist 
 ggsave(filename = ffPlot(paste0(plotSubdir, "pc1AnnoScoreDistERRelated.svg")), 
-       plot = pcAnnoScoreDist, device = "svg", height = 200, width = 100, units = "mm")
+       plot = pcAnnoScoreDist, device = "svg", height = 100, width = 100, units = "mm")
 # inkscape uses 90 dpi instead of 72
 # inkscape total plot size dimensions are 0.8 times ggplot dimensions
 pcAnnoScoreDist2 = plotAnnoScoreDist2(rsScores = rsScores, colsToPlot = "PC1", pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2"), 
@@ -103,7 +108,7 @@ pcAnnoScoreDist2 = plotAnnoScoreDist2(rsScores = rsScores, colsToPlot = "PC1", p
 pcAnnoScoreDist2 
                                       #pattern = "esr|eralpha|foxa1|gata3|H3R17me2", patternName = "ER-related")
 ggsave(filename = ffPlot(paste0(plotSubdir, "pc1AnnoScoreDist2ERRelated.svg")), 
-       plot = pcAnnoScoreDist2, device = "svg",  height = 200, width = 100, units = "mm")
+       plot = pcAnnoScoreDist2, device = "svg",  height = 150, width = 150, units = "mm")
 
 
 ################# 
@@ -139,7 +144,8 @@ ggsave(ffPlot(paste0(plotSubdir, "pc2HemaATAC.svg")),
 
 ######### make "meta-region" loading profiles
 # panel D
-atacCor = cor(x = signalMat, y = pcScores[col])
+atacCor = cor(x = t(signalMat), y = pcScores[, signalCol])
+all(colnames(signalMat) == row.names(pcScores))
 
 # load region sets
 # source(ffProjCode("load_process_regions_brca.R"))
@@ -154,19 +160,19 @@ topRSNames = rsScores$rsName[uTopInd]
 
 
 multiProfileP = makeMetaRegionPlots(signal=atacCor, 
-                                    signalCoord=peaks, GRList=topRSList, 
+                                    signalCoord=signalCoord, GRList=topRSList, 
                                     rsNames=topRSNames, 
-                                    signalCol=PCsToAnnotate, binNum=21, aggrMethod ="simpleMean") 
+                                    signalCol=signalCol, binNum=21, aggrMethod ="simpleMean") 
 multiProfileP2 = makeMetaRegionPlots(signal=atacCor, 
-                                    signalCoord=peaks, GRList=topRSList, 
+                                    signalCoord=signalCoord, GRList=topRSList, 
                                     rsNames=topRSNames, 
-                                    signalCol=PCsToAnnotate, binNum=21, aggrMethod ="proportionWeightedMean") 
+                                    signalCol=signalCol, binNum=21, aggrMethod ="proportionWeightedMean") 
 
-inputID = paste0("brcaATAC", nrow(merged))
 ggsave(filename = ffPlot(paste0(plotSubdir,
                          "/metaRegionLoadingProfiles", 
                          inputID, ".pdf")), plot = multiProfileP[[1]], device = "pdf", limitsize = FALSE)
-ggsave(filename = ffPlot(paste0(plotSubdir, "/metaRegionLoadingProfilesWeightedMean", inputID, ".pdf")), plot = multiProfileP2[[1]], device = "pdf", limitsize = FALSE)
+ggsave(filename = ffPlot(paste0(plotSubdir, "/metaRegionLoadingProfilesWeightedMean", inputID, ".pdf")), 
+       plot = multiProfileP2[[1]], device = "pdf", limitsize = FALSE)
 
 ############################################################################
 rsEnrichment = rsScores
