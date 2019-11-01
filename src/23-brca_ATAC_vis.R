@@ -20,8 +20,10 @@ if(!dir.exists(ffPlot(plotSubdir))) {
 
 # cache data
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
-
 regionCovCutoff = 100
+plotWidth = 100 # mm
+plotHeight = 100 # mm
+
 
 ##########
 
@@ -76,18 +78,18 @@ rsEnSortedInd = rsRankingIndex(rsScores = rsScores,
 # panel A
 ########## make PCA plot
 aMetadata = read.csv(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/tcga_brca_metadata.csv"))
-pcaNames = row.names(aPCA$x)
-pcScore = data.frame(aPCA$x, pcaNames)
-pcScoreAnno= merge(pcScore, aMetadata, by.x = "pcaNames", by.y= "subject_ID", all.x=TRUE)
-colorClusterPlots(pcScoreAnno, plotCols = paste0("PC", c(1,2)), colorByCols = "ER_status")
-ggplot(data = pcScoreAnno, mapping = aes(x = PC1, y= PC2)) + geom_point(aes(col=ER_status), size = 4, alpha=0.5) + theme_classic()
+aMetadata$ER_status[aMetadata$ER_status == ""] = NA
+pcScores = data.frame(pcScores, pcaNames = row.names(pcScores))
+pcScoreAnno= merge(pcScores, aMetadata, by.x = "pcaNames", by.y= "subject_ID", all.x=TRUE)
+# colorClusterPlots(pcScoreAnno, plotCols = paste0("PC", c(1,2)), colorByCols = "ER_status")
 pcScoreAnno$ER_status[pcScoreAnno$ER_status == ""] = NA
-aPCAPlot = ggplot(data = pcScoreAnno, mapping = aes(x = PC1, y= PC2)) + geom_point(aes(col=ER_status), size = 4, alpha=0.5) +
-    theme(axis.title.x = element_text(size=20), axis.title.y = element_text(size=20)) + coord_fixed()
+aPCAPlot = ggplot(data = pcScoreAnno, mapping = aes(x = PC1, y= PC2)) + geom_point(aes(col=ER_status), size = 1, alpha=0.5) +
+    coord_fixed() + theme(legend.position = c(0.15, 0.15), axis.text = element_blank(), 
+                          axis.ticks = element_blank()) + scale_color_discrete(name="ER status")
 aPCAPlot
-ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_ATAC.svg")), plot = aPCAPlot, device = "svg")
-
-plot(as.matrix(pcScoreAnno[,c("PC1", "PC2")]))
+ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_ATAC.svg")), 
+       height=plotHeight-10, width=plotWidth-10, units = "mm",
+       plot = aPCAPlot, device = "svg")
 
 #############################################################################
 # panel B
@@ -96,11 +98,11 @@ plot(as.matrix(pcScoreAnno[,c("PC1", "PC2")]))
 pcAnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC1", 
                   pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2"), 
                   patternName = c("ER", "ER-related")) + 
-                 theme(text = element_text(size=15), legend.position = c(0, 0.2)) 
+                  theme(legend.position = c(0.15, 0.15)) 
                   # coord_fixed(ratio = 10)
 pcAnnoScoreDist 
 ggsave(filename = ffPlot(paste0(plotSubdir, "pc1AnnoScoreDistERRelated.svg")), 
-       plot = pcAnnoScoreDist, device = "svg", height = 100, width = 100, units = "mm")
+       plot = pcAnnoScoreDist, device = "svg", height = plotHeight, width = plotWidth, units = "mm")
 # inkscape uses 90 dpi instead of 72
 # inkscape total plot size dimensions are 0.8 times ggplot dimensions
 pcAnnoScoreDist2 = plotAnnoScoreDist2(rsScores = rsScores, colsToPlot = "PC1", pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2"), 
@@ -118,7 +120,6 @@ ggsave(filename = ffPlot(paste0(plotSubdir, "pc1AnnoScoreDist2ERRelated.svg")),
 # one general review, one myeloid review, and one lymphoid review
 # myeloid: https://www.nature.com/articles/nri2024
 # (table 1) RUNX1, SCL/TAL1, PU.1, CEBPa, IRF8, GFI1, CEBPe 
-
 # abbrev cebpa
 hemaTFs = c("RUNX1", "SCL|TAL1", "PU.1|PU1|SPI1", 
             "CEBPA", "IRF8", "GFI1", "CEBPE")
@@ -135,10 +136,18 @@ hemaTFs = c(hemaTFs, c("TCF3", "EBF1", "PAX5", "FOXO1", "ID2", "GATA3"))
 hemaTFs = unique(hemaTFs)
 
 hemaPattern = paste0(hemaTFs, collapse = "|")
-plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC2", pattern = hemaPattern, patternName = "Hematopoietic TFs")
+pc2AnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC2", 
+                  pattern = hemaPattern, patternName = "Hematopoietic TFs") + 
+    theme(legend.position = c(0.15, 0.15))
+pc2AnnoScoreDist
+ggsave(ffPlot(paste0(plotSubdir, "pc2HemaATAC.svg")), 
+       plot = pc2AnnoScoreDist, device = "svg", width = plotWidth, 
+       height=plotHeight, units = "mm")
+
 pc2AnnoScoreDist = plotAnnoScoreDist2(rsScores = rsScores, colsToPlot = "PC2", 
                    pattern = hemaPattern, patternName = "Hematopoietic TFs")
-ggsave(ffPlot(paste0(plotSubdir, "pc2HemaATAC.svg")), 
+pc2AnnoScoreDist
+ggsave(ffPlot(paste0(plotSubdir, "pc2HemaATAC2.svg")), 
        plot = pc2AnnoScoreDist, device = "svg")
 
 
@@ -173,6 +182,22 @@ ggsave(filename = ffPlot(paste0(plotSubdir,
                          inputID, ".pdf")), plot = multiProfileP[[1]], device = "pdf", limitsize = FALSE)
 ggsave(filename = ffPlot(paste0(plotSubdir, "/metaRegionLoadingProfilesWeightedMean", inputID, ".pdf")), 
        plot = multiProfileP2[[1]], device = "pdf", limitsize = FALSE)
+# individual mr profiles
+##########################################################################
+# does PC2 correspond to immune signature?
+mae = curatedTCGAData(diseaseCode = "BRCA", "mutation", dry.run = FALSE)
+immuneInfo = colData(mae)[, c("patient.samples.sample.portions.portion.slides.slide.percent_lymphocyte_infiltration",      
+"patient.samples.sample.portions.portion.slides.slide.percent_monocyte_infiltration",        
+"patient.samples.sample.portions.portion.slides.slide.percent_neutrophil_infiltration")] 
+names(immuneInfo) = c("lymphocyte", "monocyte", "neutrophil")
+immuneInfo = immuneInfo[row.names(pcScores), ]
+dim(immuneInfo)
+dim(pcScores)
+cor.test(immuneInfo$lymphocyte, pcScores$PC2)
+cor.test(immuneInfo$monocyte, pcScores$PC2)
+cor.test(immuneInfo$neutrophil, pcScores$PC2)
+plot(immuneInfo$monocyte, pcScores$PC2)
+plot(immuneInfo$lymphocyte, pcScores$PC2)
 
 ############################################################################
 rsEnrichment = rsScores

@@ -84,7 +84,11 @@ createPlotSubdir <- function(plotSubdir) {
 
 # for ggplot2
 theme_set(theme_classic() + 
-              theme(axis.text = element_text(colour = "black", size = 15), axis.ticks = element_line(colour = "black")))
+              theme(text = element_text(colour = "black", size = 12.5),
+                    axis.text=element_text(colour = "black", size = 12.5),
+                    axis.ticks = element_line(colour = "black")))
+#theme(axis.text = element_text(colour = "black", size = 15), axis.ticks = element_line(colour = "black")))
+
 
 # set environment
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
