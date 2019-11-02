@@ -2,11 +2,11 @@
 
 
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
-devtools::load_all(ffCode("COCOA"))
+library(COCOA)
 library(caret)
 
-scriptID = "22-tcgaCorCOCOA"
-plotSubdir = "22-tcgaCorCOCOA/"
+scriptID = "41-tcgaCorCOCOA"
+plotSubdir = "41-tcgaCorCOCOA/"
 sheetsDir = ffProc("COCOA_paper/analysis/sheets/")
 
 

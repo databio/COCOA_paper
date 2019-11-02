@@ -29,7 +29,7 @@ filteredMData = brcaMList[["methylProp"]][,
 ###########################################################
 # reading in the region sets
 # load LOLA database
-source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regions_brca.R"))
+loadGRList(genomeV = "hg38")
 
 #################################################################
 

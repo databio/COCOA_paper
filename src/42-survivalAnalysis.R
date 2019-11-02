@@ -7,21 +7,42 @@
 
 library(survival)
 library(survminer)
-
+library(tidyr)
+plotWidth = 100
+plotHeight = 100
+plotUnit = "mm"
 
 # .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
+################################################################################
 
+simpleCache(paste0("rsScores_", dataID, "_", variationMetric), assignToVariable = "realRSScores")
+keepInd = realRSScores$regionSetCoverage >= 100
+realRSScores = realRSScores[keepInd, ]
+GRList = GRList[keepInd]
+rsName = rsName[keepInd]
+rsDescription = rsDescription[keepInd]
+
+
+
+###############################################################################
 sampleLabels = as.numeric(sampleLabels$cancerStage)
 
 #############################################################################
-simpleCache(paste0("rsScores_", dataID, "_", variationMetric), assignToVariable = "realRSScores")
-simpleCache(paste0("pRankedScores", .analysisID), assignToVariable="pRankedScores")
 
-topRSInd = rsRankingIndex(rsScores = pRankedScores, 
-                          signalCol = list( "cancerStage_PValGroup", "cancerStage"), 
+# simpleCache(paste0("pRankedScores", .analysisID), assignToVariable="pRankedScores")
+
+# topRSInd = rsRankingIndex(rsScores = pRankedScores, 
+#                           signalCol = list( "cancerStage_PValGroup", "cancerStage"), 
+#                           newColName="cancerStage")$cancerStage
+# orderedRSNames = pRankedScores$rsName[topRSInd]
+# orderedRSDes = pRankedScores$rsDescription[topRSInd]
+topRSInd = rsRankingIndex(rsScores = realRSScores,
+                          signalCol = "cancerStage",
                           newColName="cancerStage")$cancerStage
-orderedRSNames = pRankedScores$rsName[topRSInd]
-orderedRSDes = pRankedScores$rsDescription[topRSInd]
+orderedRSNames = realRSScores$rsName[topRSInd]
+orderedRSDes = realRSScores$rsDescription[topRSInd]
+
+
 # names to search for 
 topRSSearchNames = c("ezh2", "jund", "tcf7l2")
 # topRSSearchNames = c("ezh2", "jund", "tcf7l2", "stemNotDiff", "P300", "Ctbp2", "H1hesc_E")
@@ -34,7 +55,7 @@ abbrevName = c("EZH2", "JUND", "TCF7L2")
 # abbrevName = c("EZH2", "JUND", "TCF7L2", "stemNotDiff", "P300", "Ctbp2", "H1hesc_E")
 # interesting: stemNotDiff, P300, Ctbp2, H1hesc_E
 
-actualCorMat = createCorFeatureMat(dataMat = genomicSignal,
+actualCorMat = COCOA:::createCorFeatureMat(dataMat = genomicSignal,
                                    featureMat = as.matrix(sampleLabels),
                                    centerDataMat=TRUE, centerFeatureMat=TRUE,
                                    testType = variationMetric)
@@ -44,17 +65,20 @@ colnames(actualCorMat) <- colsToAnnotate
 # look at average correlation per region to determine whether all CpGs 
 # are going in same (important for aggregating since a simple average
 # of the DNA methylation will run into problems if some CpGs go in opposite directions)
-mByRegion = averagePerRegion(signal = actualCorMat, signalCoord = signalCoord, 
-                             regionSet = GRList[[topRSInd[thisRSInd]]], 
+mByRegion = COCOA:::averagePerRegion(signal = actualCorMat, signalCoord = signalCoord, 
+                             regionSet = GRList[[topRSInd[1]]], 
                              signalCol = colsToAnnotate, absVal = FALSE)
 hist(mByRegion$cancerStage)
+sum(mByRegion$cancerStage < 0) / length(mByRegion$cancerStage)
 # first test whether DNA methylation is associated with cancer stage 
 
 #############################################################################
+# KIRC Panel C
+
 # "-" in name causes error
 colnames(genomicSignal) = gsub(pattern = "-", replacement = "_", x = colnames(genomicSignal))
 # average methylation per sample in these regions
-mBySampleDF = runCOCOA(signal=genomicSignal, 
+mBySampleDF = aggregateSignalGRList(signal=genomicSignal, 
                     signalCoord=signalCoord, GRList=GRList[topRSInd[thisRSInd]], 
                     signalCol = colnames(genomicSignal), 
                     scoringMetric = "regionMean", verbose = TRUE)
@@ -68,12 +92,30 @@ longMByS = gather(data = longMByS, "regionSetName", "methylScore", abbrevName)
 mByStagePlot = ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
     geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
 mByStagePlot
-ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStageTraining.svg")), plot = mByStagePlot, device = "svg")
+ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStageTraining.svg")), 
+       plot = mByStagePlot, device = "svg")
+
+# individual RS plots
+for (i in seq_along(abbrevName)) {
+    mByStagePlotSingle = ggplot(data=filter(longMByS, regionSetName == abbrevName[i]), 
+                              mapping = aes(x=cancerStage, y=methylScore)) + 
+        geom_violin() +
+        geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
+    mByStagePlotSingle
+    ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStageTraining", abbrevName[i], ".svg")), 
+           plot = mByStagePlotSingle, device = "svg", width=plotWidth, height = plotHeight / 2,
+           units = plotUnit)
+}
+
+
+
 
 # test how much methylation level in each region set is correlated with
 # methylation level in other region sets
 corMat = cor(t(mBySampleDF[, 1:ncol(genomicSignal)]))
 
+###############################################################################
+# Panel D and E
 
 # data.frame to store results 
 tmp = rep(-999, nrow(mBySampleDF))
@@ -121,6 +163,7 @@ for (i in 1:nrow(mBySampleDF)) {
 
 
 ################################################################################
+# part of Panel B
 # validation data
 vGenomicSignal = methylMat[, -trainDataInd]
 vSampleLabels = as.numeric(allSampleLabels[-trainDataInd])
@@ -128,10 +171,11 @@ colsToAnnotate = "cancerStage"
 
 valMeta = pMeta[-trainDataInd, ]
 
+
 # "-" in name causes error
 colnames(vGenomicSignal) = gsub(pattern = "-", replacement = "_", x = colnames(vGenomicSignal))
 
-mBySampleDF = runCOCOA(signal=vGenomicSignal, 
+mBySampleDF = aggregateSignalGRList(signal=vGenomicSignal, 
                      signalCoord=signalCoord, GRList=GRList[topRSInd[thisRSInd]], 
                      signalCol = colnames(vGenomicSignal), 
                      scoringMetric = "regionMean", verbose = TRUE)
@@ -144,7 +188,22 @@ longMByS = cbind(longMByS, cancerStage=as.factor(vSampleLabels))
 longMByS = gather(data = longMByS, "regionSetName", "methylScore", abbrevName)
 mByStagePlot = ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
     geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
+mByStagePlot
 ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStageValidation.svg")), plot = mByStagePlot, device = "svg")
+
+
+# individual RS plots
+for (i in seq_along(abbrevName)) {
+    mByStagePlotSingle = ggplot(data=filter(longMByS, regionSetName == abbrevName[i]), 
+                                mapping = aes(x=cancerStage, y=methylScore)) + 
+        geom_violin() +
+        geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
+    mByStagePlotSingle
+    ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStageValidation", abbrevName[i], ".svg")), 
+           plot = mByStagePlotSingle, device = "svg", width=plotWidth, height = plotHeight / 2,
+           units = plotUnit)
+}
+
 
 tmp = rep(-999, nrow(mBySampleDF))
 testResDF = data.frame(corPVal=tmp, 
