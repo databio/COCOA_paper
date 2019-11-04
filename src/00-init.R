@@ -18,6 +18,9 @@ library(MultiAssayExperiment)
 library(folderfun)
 library(COCOA)
 
+
+# options(stringsAsFactors = FALSE)
+
 # source(paste0(Sys.getenv("CODE"), "COCOA/R/COCOA.R"))
 # source(paste0(Sys.getenv("CODE"), "COCOA/R/visualization.R"))
 # devtools::load_all(ffCode("COCOA/"))

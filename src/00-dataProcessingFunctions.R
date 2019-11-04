@@ -361,6 +361,8 @@ loadGRList <- function(genomeV = "hg38", .env=currentEnv) {
     if (genomeV == "hg38") {
         source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regions_brca.R"))
         names(GRList) = rsName
+        mcols(GRList) <- data.frame(rsName, rsDescription, rsCollection,
+                                    stringsAsFactors = FALSE)
         assign(x = "GRList", GRList, envir = .env)
         assign(x = "rsName", rsName, envir = .env)
         assign(x = "rsDescription", rsDescription, envir = .env)
@@ -368,6 +370,8 @@ loadGRList <- function(genomeV = "hg38", .env=currentEnv) {
     } else if (genomeV == "hg19") {
         source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regionDB_hg19.R"))
         names(GRList) = rsName
+        mcols(GRList) <- data.frame(rsName, rsDescription, rsCollection,
+                                    stringsAsFactors = FALSE)
         assign(x = "GRList", GRList, envir = .env)
         assign(x = "rsName", rsName, envir = .env)
         assign(x = "rsDescription", rsDescription, envir = .env)

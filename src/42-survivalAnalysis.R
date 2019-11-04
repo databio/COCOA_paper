@@ -1,7 +1,13 @@
 # create survival plots
 # ideas for figures and what information is included in survival plots:
 # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6245494/
+# also has table of number of patients at risk, no tick marks on line but has confidence interval
+
 # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3008568/
+# didn't inlcude on plot how many patients were in each group but had censorship marks on lines
+# has table in figure for Cox PH model, columns: Variables in Model, p value, Adjusted Hazard Ratio
+# 95 % CI for HR (Lower and Upper cols)
+
 # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6676410/
 
 
@@ -11,6 +17,18 @@ library(tidyr)
 plotWidth = 100
 plotHeight = 100
 plotUnit = "mm"
+if (!exists("dataID")) {
+    dataID = "kircMethyl214"
+}
+
+if (!exists("variationMetric")) {
+    variationMetric = "spearmanCor"    
+}
+if (!exists("nPerm")) {
+    nPerm = 300
+}
+
+
 
 # .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
 ################################################################################
@@ -21,8 +39,7 @@ realRSScores = realRSScores[keepInd, ]
 GRList = GRList[keepInd]
 rsName = rsName[keepInd]
 rsDescription = rsDescription[keepInd]
-
-
+rsCollection = rsCollection[keepInd]
 
 ###############################################################################
 sampleLabels = as.numeric(sampleLabels$cancerStage)
@@ -55,25 +72,26 @@ abbrevName = c("EZH2", "JUND", "TCF7L2")
 # abbrevName = c("EZH2", "JUND", "TCF7L2", "stemNotDiff", "P300", "Ctbp2", "H1hesc_E")
 # interesting: stemNotDiff, P300, Ctbp2, H1hesc_E
 
-actualCorMat = COCOA:::createCorFeatureMat(dataMat = genomicSignal,
-                                   featureMat = as.matrix(sampleLabels),
-                                   centerDataMat=TRUE, centerFeatureMat=TRUE,
-                                   testType = variationMetric)
-                                    
-colnames(actualCorMat) <- colsToAnnotate
-
-# look at average correlation per region to determine whether all CpGs 
-# are going in same (important for aggregating since a simple average
-# of the DNA methylation will run into problems if some CpGs go in opposite directions)
-mByRegion = COCOA:::averagePerRegion(signal = actualCorMat, signalCoord = signalCoord, 
-                             regionSet = GRList[[topRSInd[1]]], 
-                             signalCol = colsToAnnotate, absVal = FALSE)
-hist(mByRegion$cancerStage)
-sum(mByRegion$cancerStage < 0) / length(mByRegion$cancerStage)
-# first test whether DNA methylation is associated with cancer stage 
+# actualCorMat = COCOA:::createCorFeatureMat(dataMat = genomicSignal,
+#                                    featureMat = as.matrix(sampleLabels),
+#                                    centerDataMat=TRUE, centerFeatureMat=TRUE,
+#                                    testType = variationMetric)
+#                                     
+# colnames(actualCorMat) <- colsToAnnotate
+# 
+# # look at average correlation per region to determine whether all CpGs 
+# # are going in same (important for aggregating since a simple average
+# # of the DNA methylation will run into problems if some CpGs go in opposite directions)
+# mByRegion = COCOA:::averagePerRegion(signal = actualCorMat, signalCoord = signalCoord, 
+#                              regionSet = GRList[[topRSInd[1]]], 
+#                              signalCol = colsToAnnotate, absVal = FALSE)
+# hist(mByRegion$cancerStage)
+# sum(mByRegion$cancerStage < 0) / length(mByRegion$cancerStage)
 
 #############################################################################
 # KIRC Panel C
+# first test whether DNA methylation is associated with cancer stage 
+
 
 # "-" in name causes error
 colnames(genomicSignal) = gsub(pattern = "-", replacement = "_", x = colnames(genomicSignal))
@@ -146,9 +164,13 @@ for (i in 1:nrow(mBySampleDF)) {
     
     # covariates
     covariateData = trainMeta
-    patSurv = Surv(covariateData$lastDate, event=covariateData$vital_status)
-    print(coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData))
+    patSurv = Surv(covariateData$lastDate / (365/12), event=covariateData$vital_status)
     
+    sink(file = ffPlot(paste0(plotSubdir, "coxphModel", abbrevName[i], ".txt")))
+        print(coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData))
+    sink()
+    
+        
     # kaplan meier
     # create groups
     covariateData$methylGroup = ecdf(covariateData$methylScore)(covariateData$methylScore)
@@ -157,7 +179,16 @@ for (i in 1:nrow(mBySampleDF)) {
     covariateData$methylGroup[(covariateData$methylGroup >= 0.25) & (covariateData$methylGroup <= 0.75)] = NA
     
     kmFit = survfit(patSurv ~ methylGroup, data=covariateData)
-    ggsurvplot(kmFit)
+    kmPlot = ggsurvplot(kmFit, risk.table = TRUE, conf.int = FALSE)
+    # cumcensor = TRUE, cumevents = TRUE,
+    # a$plot = a$plot + 
+        # scale_color_discrete(name="Strata", labels=c("Low methylation score", 
+        #                                                    "High methylation score"), breaks=c("red", "blue")) 
+        #theme(legend.text = element_text(c("Low methylation score", "High methylation score")))
+    svg(ffPlot(paste0(plotSubdir, "kmPlotTraining", abbrevName[i], ".svg")))
+    kmPlot
+    dev.off()
+
 }
 
 
@@ -231,9 +262,13 @@ for (i in 1:nrow(mBySampleDF)) {
     
     # covariates
     covariateData = valMeta
-    patSurv = Surv(covariateData$lastDate, covariateData$vital_status)
+    patSurv = Surv(covariateData$lastDate / (365/12), covariateData$vital_status)
     cModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
     print(cModel)
+    
+    sink(file = ffPlot(paste0(plotSubdir, "coxphModelValidation", abbrevName[i], ".txt")))
+    print(cModel)
+    sink()
     
     # create groups
     kmThresh = 0.25
@@ -243,10 +278,10 @@ for (i in 1:nrow(mBySampleDF)) {
     covariateData$methylGroup[(covariateData$methylGroup >= kmThresh) & (covariateData$methylGroup <= (1-kmThresh))] = NA
     
     kmFit = survfit(patSurv ~ methylGroup, data=covariateData)
-    kPlot = ggsurvplot(kmFit)
+    kPlot = ggsurvplot(kmFit, risk.table = TRUE)
     kPlot
-    pdf(ffPlot(paste0(plotSubdir, abbrevName[i], "_Kaplan", kmThresh, dataID, ".pdf")))
-    print(kPlot)
+    pdf(ffPlot(paste0(plotSubdir, abbrevName[i], "_Kaplan", kmThresh, "Validation", dataID, ".pdf")))
+        print(kPlot)
     dev.off()
     # ggsave(filename = ffPlot(paste0(plotSubdir, "EZH2", "Kaplan", kmThresh, dataID, ".svg")) , plot = kPlot, device = "svg")
     
