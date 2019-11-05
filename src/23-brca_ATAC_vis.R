@@ -98,7 +98,8 @@ ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_ATAC.svg")),
 pcAnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC1", 
                   pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2"), 
                   patternName = c("ER", "ER-related")) + 
-                  theme(legend.position = c(0.15, 0.15)) 
+                  theme(legend.position = c(0.15, 0.15)) +
+                  scale_color_manual(values = c("blue", "red", "orange"))
                   # coord_fixed(ratio = 10)
 pcAnnoScoreDist 
 ggsave(filename = ffPlot(paste0(plotSubdir, "pc1AnnoScoreDistERRelated.svg")), 
@@ -138,7 +139,8 @@ hemaTFs = unique(hemaTFs)
 hemaPattern = paste0(hemaTFs, collapse = "|")
 pc2AnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC2", 
                   pattern = hemaPattern, patternName = "Hematopoietic TFs") + 
-    theme(legend.position = c(0.15, 0.15))
+    theme(legend.position = c(0.15, 0.15)) + scale_color_manual(values = c("red", "orange"))
+
 pc2AnnoScoreDist
 ggsave(ffPlot(paste0(plotSubdir, "pc2HemaATAC.svg")), 
        plot = pc2AnnoScoreDist, device = "svg", width = plotWidth, 
@@ -183,6 +185,21 @@ ggsave(filename = ffPlot(paste0(plotSubdir,
 ggsave(filename = ffPlot(paste0(plotSubdir, "/metaRegionLoadingProfilesWeightedMean", inputID, ".pdf")), 
        plot = multiProfileP2[[1]], device = "pdf", limitsize = FALSE)
 # individual mr profiles
+
+names(multiProfileP2[[2]])
+thisRS = multiProfileP2[[2]][["wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak"]]
++ pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))
+pcP = lapply(X = pcP, as.data.table)
+pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
+
+ggplot(data = thisRS, mapping = aes(x =regionGroupID , y = PC1)) + 
+    geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets = "PC") + 
+    ggtitle(label = wrapper(rsNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
+    ylab("Normalized Loading Value") + 
+    theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+
+
 ##########################################################################
 # does PC2 correspond to immune signature?
 mae = curatedTCGAData(diseaseCode = "BRCA", "mutation", dry.run = FALSE)

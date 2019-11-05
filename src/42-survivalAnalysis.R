@@ -165,9 +165,11 @@ for (i in 1:nrow(mBySampleDF)) {
     # covariates
     covariateData = trainMeta
     patSurv = Surv(covariateData$lastDate / (365/12), event=covariateData$vital_status)
+    myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
     
     sink(file = ffPlot(paste0(plotSubdir, "coxphModel", abbrevName[i], ".txt")))
-        print(coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData))
+        print(myModel)
+        print(summary(myModel))
     sink()
     
         
@@ -268,6 +270,7 @@ for (i in 1:nrow(mBySampleDF)) {
     
     sink(file = ffPlot(paste0(plotSubdir, "coxphModelValidation", abbrevName[i], ".txt")))
     print(cModel)
+    print(summary(cModel))
     sink()
     
     # create groups
