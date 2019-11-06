@@ -196,7 +196,8 @@ prepareCLLMethyl = function(removeXY=TRUE) {
 
 
 loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactorMat=TRUE, 
-                         factorWeights=FALSE, cllMultiOmics=FALSE, .env=currentEnv) {
+                         factorWeights=FALSE, cllMultiOmics=FALSE,
+                         lfContributions=FALSE, .env=currentEnv) {
     
     # making sure parent.frame is evaluated inside function (not outside as 
     # when listed as default argument)
@@ -239,6 +240,7 @@ loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactorMat=TRUE,
                 MOFAobject,
                 as.data.frame = FALSE
             )
+            
         }
         if (methylMat && latentFactorMat) {
             sharedNames = row.names(LFs)[row.names(LFs) %in% colnames(methData)]
@@ -297,6 +299,17 @@ loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactorMat=TRUE,
         }
         
         assign("cllMultiOmics", CLL_data, envir = .env)
+    }
+    
+    if (lfContributions) {
+        # Loading an existing trained model
+        filepath <- system.file("extdata", "CLL_model.hdf5",
+                                package = "MOFAdata")
+        MOFAobject <- loadModel(filepath)
+        r2 <- calculateVarianceExplained(MOFAobject)
+        r2$R2PerFactor
+        r2$R2PerFactor[, "Methylation"]
+        assign("lfContributions", r2, envir=.env)
     }
     
     message(paste0(paste(c("methylMat", "signalCoord", 
