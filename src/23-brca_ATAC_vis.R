@@ -177,31 +177,50 @@ multiProfileP = makeMetaRegionPlots(signal=atacCor,
 multiProfileP2 = makeMetaRegionPlots(signal=atacCor, 
                                     signalCoord=signalCoord, GRList=topRSList, 
                                     rsNames=topRSNames, 
-                                    signalCol=signalCol, binNum=21, aggrMethod ="proportionWeightedMean") 
+                                    signalCol=signalCol, binNum=21, aggrMethod ="proportionWeightedMean", 
+                                    absVal = TRUE) 
 
 ggsave(filename = ffPlot(paste0(plotSubdir,
                          "/metaRegionLoadingProfiles", 
-                         inputID, ".pdf")), plot = multiProfileP[[1]], device = "pdf", limitsize = FALSE)
+                         inputID, ".pdf")), plot = multiProfileP[["grob"]], device = "pdf", limitsize = FALSE)
 ggsave(filename = ffPlot(paste0(plotSubdir, "/metaRegionLoadingProfilesWeightedMean", inputID, ".pdf")), 
-       plot = multiProfileP2[[1]], device = "pdf", limitsize = FALSE)
+       plot = multiProfileP2[["grob"]], device = "pdf", limitsize = FALSE)
 # individual mr profiles
 
-names(multiProfileP2[[2]])
+names(multiProfileP2[["metaRegionData"]])
 topRSNames = c("wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak", 
                "Human_MCF-7_ESR1_E2-6hr_Jin.bed", 
                "GSM1501162_CEBPA.bed", "GSM1097879_ERG.bed")
-minVal = -.1
-maxVal = 1
+abbrevNames = c("GATA3", "ESR1", "CEBPA", "ERG")
+# topRSNames = c("GSM835863_EP300.bed", 
+#                "GSM607949_GATA1.bed")
+minVal = .1
+maxVal = .6
 for (i in seq_along(topRSNames)) {
-    thisRS = multiProfileP2[[2]][topRSNames[i]]
+    thisRS = multiProfileP2[["metaRegionData"]][topRSNames[i]]
     pcP = lapply(X = thisRS, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))
     pcP = lapply(X = pcP, as.data.table)
     pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
-    ggplot(data = filter(pcP[[1]], PC %in% c("PC1", "PC2")), mapping = aes(x =binID , y = loading_value)) + 
-        geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets = "PC") + 
-        ggtitle(label = wrapper(topRSNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
-        ylab("Normalized Correlation") + 
-        theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+    
+    for (j in seq_along(signalCol[1:2])) {
+        myPlot = ggplot(data = filter(pcP[[1]], PC %in% signalCol[j]), mapping = aes(x =binID , y = loading_value)) + 
+            # ggplot(data = pcP[[1]], mapping = aes(x =binID , y = loading_value)) + 
+            geom_line() + ylim(c(minVal, maxVal)) + 
+            # facet_wrap(facets = "PC") + 
+            ggtitle(label = wrapper(topRSNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
+            ylab("Normalized Correlation") + 
+            theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
+                  axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
+                  axis.title = element_blank(), title = element_blank(), 
+                  axis.text.y=element_blank()
+                  )
+        myPlot
+        ggsave(filename = ffPlot(paste0(plotSubdir, 
+                                        "/mrProfilesWeightedMean_", abbrevNames[i],
+                                        "_", signalCol[j], ".svg")), 
+               plot = myPlot, device = "svg", height=20, width=30, units = "mm")
+    }
+
     
 }
 

@@ -374,12 +374,17 @@ getLowerBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage)
 #' The denominator of the mean
 #' is the sum of all the proportion overlaps. 
 
-makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, signalCol, binNum, aggrMethod="default") {
+makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, 
+                                signalCol, binNum, 
+                                # returnNormalizedVals=TRUE, 
+                                aggrMethod="default", absVal=TRUE) {
     
     pcProf = lapply(X = GRList, function(x) getMetaRegionProfile(signal = signal, 
                                                               signalCoord = signalCoord, 
                                                               regionSet = x, signalCol = signalCol,
-                                                              binNum = binNum, aggrMethod=aggrMethod))
+                                                              binNum = binNum, 
+                                                              aggrMethod=aggrMethod,
+                                                              absVal = absVal))
     
     pcP = copy(pcProf)
     # this check must be done before converting items of list to data.table
@@ -402,7 +407,12 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, signalCol,
     # }
     
     # average loading value from each PC to normalize so PCs can be compared with each other
-    avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(abs(x)))
+    if (absVal) {
+        avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(abs(x)))    
+    } else {
+        avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(x))
+    }
+    
     
     # normalize
     # pcP = lapply(pcP, FUN = function(x) t(apply(X = x, MARGIN = 1, FUN = function(y) y - c(0, avLoad))))
@@ -444,10 +454,12 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, signalCol,
         #xLabels = xAxisForRegionPlots2()
         
     }
-    multiProfileP = marrangeGrob(profilePList, ncol = 2, nrow = 2)
     
-    metaRegionProfileInfo = list(multiProfileP, pcProf)
-    setattr(metaRegionProfileInfo, "names", c("grob", "metaRegionData"))
+    multiProfileP = marrangeGrob(profilePList, ncol = 2, nrow = 2)
+    names(profilePList) <- rsNames    
+
+    metaRegionProfileInfo = list(multiProfileP, pcProf, profilePList)
+    setattr(metaRegionProfileInfo, "names", c("grob", "metaRegionData", "plotList"))
     
     return(metaRegionProfileInfo)
 }
