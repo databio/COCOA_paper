@@ -92,8 +92,8 @@ for (i in seq_along(cancerID)) {
                    plot = mByStagePlotSingle, device = "pdf", width=plotWidth, height = plotHeight / 2,
                    units = plotUnit)
             
-            corRes = cor.test(x = allSampleLabels, 
-                              as.vector(mBySample[j, 1:ncol(genomicSignal)]), method = "spearman")
+            corRes = cor.test(x = as.numeric(allSampleLabels), 
+                              as.numeric(mBySampleDF[j, 1:ncol(genomicSignal)]), method = "spearman")
             spearCorDF[2*(i-1)+j, "rsName"] = abbrevName[j]
             spearCorDF[2*(i-1)+j, "spearCor"] = corRes$estimate
             spearCorDF[2*(i-1)+j, "pVal"] = corRes$p.value
@@ -116,11 +116,10 @@ for (i in seq_along(cancerID)) {
         mBySample = as.numeric(mBySampleDF[j, 1:ncol(genomicSignal)])
         pMeta$methylScore = mBySample
         pMeta$meanMethyl = colMeans(genomicSignal)
-        hist(mBySample)
 
-        aliveMethyl = mBySample[pMeta$vital_status == 0]
-        deadMethyl = mBySample[pMeta$vital_status == 1]
-        print(wilcox.test(aliveMethyl, deadMethyl, conf.int = TRUE))
+        # aliveMethyl = mBySample[pMeta$vital_status == 0]
+        # deadMethyl = mBySample[pMeta$vital_status == 1]
+        # print(wilcox.test(aliveMethyl, deadMethyl, conf.int = TRUE))
         
         # test whether DNA methylation is associated with survival
         ###### cox proportional hazards model 
@@ -152,15 +151,12 @@ for (i in seq_along(cancerID)) {
         # scale_color_discrete(name="Strata", labels=c("Low methylation score", 
         #                                                    "High methylation score"), breaks=c("red", "blue")) 
         #theme(legend.text = element_text(c("Low methylation score", "High methylation score")))
-        pdf(ffPlot(paste0(plotSubdir, "kmPlot", abbrevName[j], "_", cancerID[i], ".pdf")))
+        pdf(file = ffPlot(paste0(plotSubdir, "kmPlot", abbrevName[j], "_", cancerID[i], ".pdf")))
         kmPlot
         dev.off()
         
     }
-    
-    # store in DF
 
-    
 }
 write.csv(spearCorDF, file = ffSheets("EZH2_TCGA_cancer_stage.csv"), quote = FALSE, 
           row.names = FALSE, col.names = TRUE)
