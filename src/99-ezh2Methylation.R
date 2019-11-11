@@ -3,6 +3,9 @@
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 library(curatedTCGAData)
 library(TCGAutils)
+library(tidyr)
+library(survival)
+library(survminer)
 
 library(ExperimentHub)
 ExperimentHub::getExperimentHubOption("CACHE")
@@ -12,13 +15,18 @@ plotWidth = 100
 plotHeight = 100
 plotUnit = "mm"
 
+plotSubdir = "99-ezh2Analysis/"
+if (!dir.exists(ffPlot(plotSubdir))) {
+    dir.create(ffPlot(plotSubdir))
+}
+
 #############################################################################
 loadGRList(genomeV = "hg19")
 
 myTopRSNames = c("wgEncodeAwgTfbsBroadHsmmtEzh239875UniPk.narrowPeak",
 "wgEncodeAwgTfbsSydhNt2d1Suz12UcdUniPk.narrowPeak")
 myTopRS = GRList[myTopRSNames]
-abbrevNames = c("EZH2", "SUZ12")
+abbrevName = c("EZH2", "SUZ12")
 ##############################################################################
 
 # do for each cancer type
@@ -45,7 +53,6 @@ for (i in seq_along(cancerID)) {
                "years_to_birth", "gender", "vital_status") %in% colnames(pMeta))) {
         next()
     }
-
     
     genomicSignal = methylMat
     
@@ -71,8 +78,8 @@ for (i in seq_along(cancerID)) {
         mByStagePlot = ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
             geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
         mByStagePlot
-        ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStage_", cancerID[i], ".svg")), 
-               plot = mByStagePlot, device = "svg")
+        ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStage_", cancerID[i], ".pdf")), 
+               plot = mByStagePlot, device = "pdf")
         
         # individual RS plots and spearman correlation
         for (j in seq_along(abbrevName)) {
@@ -81,8 +88,8 @@ for (i in seq_along(cancerID)) {
                 geom_violin() +
                 geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
             mByStagePlotSingle
-            ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStage", abbrevName[j],"_", cancerID[i], ".svg")), 
-                   plot = mByStagePlotSingle, device = "svg", width=plotWidth, height = plotHeight / 2,
+            ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStage", abbrevName[j],"_", cancerID[i], ".pdf")), 
+                   plot = mByStagePlotSingle, device = "pdf", width=plotWidth, height = plotHeight / 2,
                    units = plotUnit)
             
             corRes = cor.test(x = allSampleLabels, 
@@ -107,24 +114,21 @@ for (i in seq_along(cancerID)) {
     # once for each region set
     for (j in 1:nrow(mBySampleDF)) {
         mBySample = as.numeric(mBySampleDF[j, 1:ncol(genomicSignal)])
-        trainMeta$methylScore = mBySample
-        trainMeta$meanMethyl = colMeans(genomicSignal)
+        pMeta$methylScore = mBySample
+        pMeta$meanMethyl = colMeans(genomicSignal)
         hist(mBySample)
-        plot(sampleLabels, mBySample)
-        print(cor.test(x = sampleLabels, mBySample, method = "spearman"))
-        print(cor.test(x = trainMeta$years_to_birth, mBySample))
-        
-        aliveMethyl = mBySample[trainMeta$vital_status == 0]
-        deadMethyl = mBySample[trainMeta$vital_status == 1]
+
+        aliveMethyl = mBySample[pMeta$vital_status == 0]
+        deadMethyl = mBySample[pMeta$vital_status == 1]
         print(wilcox.test(aliveMethyl, deadMethyl, conf.int = TRUE))
         
         # test whether DNA methylation is associated with survival
         ###### cox proportional hazards model 
-        trainMeta$lastDate = trainMeta$days_to_last_followup
-        trainMeta$lastDate[is.na(trainMeta$lastDate)] = trainMeta$days_to_death[is.na(trainMeta$lastDate)]
+        pMeta$lastDate = pMeta$days_to_last_followup
+        pMeta$lastDate[is.na(pMeta$lastDate)] = pMeta$days_to_death[is.na(pMeta$lastDate)]
         
         # covariates
-        covariateData = trainMeta
+        covariateData = pMeta
         patSurv = Surv(covariateData$lastDate / (365/12), event=covariateData$vital_status)
         myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
         
@@ -148,7 +152,7 @@ for (i in seq_along(cancerID)) {
         # scale_color_discrete(name="Strata", labels=c("Low methylation score", 
         #                                                    "High methylation score"), breaks=c("red", "blue")) 
         #theme(legend.text = element_text(c("Low methylation score", "High methylation score")))
-        svg(ffPlot(paste0(plotSubdir, "kmPlot", abbrevName[j], "_", cancerID[i], ".svg")))
+        pdf(ffPlot(paste0(plotSubdir, "kmPlot", abbrevName[j], "_", cancerID[i], ".pdf")))
         kmPlot
         dev.off()
         
