@@ -345,18 +345,24 @@ loadProcessKIRCMethyl <- function(.env=currentEnv) {
     
     ## order samples consistently
     pMeta = pMeta[colnames(methylMat), ]
-    # screen out patients without stage
-    naInd = is.na(pMeta$pathologic_stage)
-    methylMat = methylMat[, !naInd]
-    pMeta = pMeta[!naInd, ]
     
-    allSampleLabels = factor(pMeta$pathologic_stage, levels = c("stage i", "stage ii", "stage iii", "stage iv"))
     
+    if ("pathologic_stage" %in% colnames(pMeta)) {
+        # screen out patients without stage
+        naInd = is.na(pMeta$pathologic_stage)
+        methylMat = methylMat[, !naInd]
+        pMeta = pMeta[!naInd, ]
+        allSampleLabels = factor(pMeta$pathologic_stage, levels = c("stage i", "stage ii", "stage iii", "stage iv"))
+        assign(x = "allSampleLabels", allSampleLabels, envir = .env)
+    } else {
+        warning("No cancer stage info. allSampleLabels not loaded.")
+    }
+
     
     assign(x = "methylMat", methylMat, envir = .env)
     assign(x = "signalCoord", signalCoord, envir = .env)
     assign(x = "pMeta", pMeta, envir = .env)
-    assign(x = "allSampleLabels", allSampleLabels, envir = .env)
+    
     
     
     message(paste0(paste(c("methylMat", "signalCoord", "pMeta", 

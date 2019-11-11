@@ -28,9 +28,13 @@ cancerID= c("ACC", "BLCA", "BRCA", "CESC", "CHOL",
             "LIHC", "LUAD", "LUSC", "MESO", "OV", "PAAD", "PCPG",
 "PRAD", "READ", "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM", "UCEC", "UCS", "UVM") 
 
+spearCor=rep(NA, length(cancerID)*length(myTopRS))
+spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)), 
+                        rsName=spearCor, spearCor, pVal=spearCor, 
+                        stringsAsFactors = FALSE)
 for (i in seq_along(cancerID)) {
     
-    
+    allSampleLabels = NULL
     # assigns methylMat, signalCoord, pMeta, allSampleLabels to environment
     fxCode = loadProcessTCGAMethyl(cancerID[i])
     
@@ -58,26 +62,36 @@ for (i in seq_along(cancerID)) {
     colnames(longMByS) = abbrevName
     longMByS$subjectID = colnames(mBySampleDF)
     longMByS = longMByS[1:ncol(genomicSignal), ]
-    longMByS = cbind(longMByS, cancerStage=as.factor(sampleLabels))
-    longMByS = gather(data = longMByS, "regionSetName", "methylScore", abbrevName)
-    mByStagePlot = ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
-        geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
-    mByStagePlot
-    ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStage_", cancerID[i], ".svg")), 
-           plot = mByStagePlot, device = "svg")
-    
-    # individual RS plots
-    for (j in seq_along(abbrevName)) {
-        mByStagePlotSingle = ggplot(data=filter(longMByS, regionSetName == abbrevName[j]), 
-                                    mapping = aes(x=cancerStage, y=methylScore)) + 
-            geom_violin() +
-            geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
-        mByStagePlotSingle
-        ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStage", abbrevName[j],"_", cancerID[i], ".svg")), 
-               plot = mByStagePlotSingle, device = "svg", width=plotWidth, height = plotHeight / 2,
-               units = plotUnit)
+    if (!is.null(allSampleLabels)) {
+        longMByS = cbind(longMByS, cancerStage=as.factor(allSampleLabels))
     }
     
+    longMByS = gather(data = longMByS, "regionSetName", "methylScore", abbrevName)
+    if (!is.null(allSampleLabels)) {
+        mByStagePlot = ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
+            geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
+        mByStagePlot
+        ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStage_", cancerID[i], ".svg")), 
+               plot = mByStagePlot, device = "svg")
+        
+        # individual RS plots and spearman correlation
+        for (j in seq_along(abbrevName)) {
+            mByStagePlotSingle = ggplot(data=filter(longMByS, regionSetName == abbrevName[j]), 
+                                        mapping = aes(x=cancerStage, y=methylScore)) + 
+                geom_violin() +
+                geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
+            mByStagePlotSingle
+            ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStage", abbrevName[j],"_", cancerID[i], ".svg")), 
+                   plot = mByStagePlotSingle, device = "svg", width=plotWidth, height = plotHeight / 2,
+                   units = plotUnit)
+            
+            corRes = cor.test(x = allSampleLabels, 
+                              as.vector(mBySample[j, 1:ncol(genomicSignal)]), method = "spearman")
+            spearCorDF[2*(i-1)+j, "rsName"] = abbrevName[j]
+            spearCorDF[2*(i-1)+j, "spearCor"] = corRes$estimate
+            spearCorDF[2*(i-1)+j, "pVal"] = corRes$p.value
+        }
+    }
     
     
     # test association between avg methyl. and cancer stage, and survival
@@ -134,15 +148,16 @@ for (i in seq_along(cancerID)) {
         # scale_color_discrete(name="Strata", labels=c("Low methylation score", 
         #                                                    "High methylation score"), breaks=c("red", "blue")) 
         #theme(legend.text = element_text(c("Low methylation score", "High methylation score")))
-        svg(ffPlot(paste0(plotSubdir, "kmPlotTraining", abbrevName[j], "_", cancerID[i], ".svg")))
+        svg(ffPlot(paste0(plotSubdir, "kmPlot", abbrevName[j], "_", cancerID[i], ".svg")))
         kmPlot
         dev.off()
         
     }
     
     # store in DF
-    cox
-    spearman cor
+
     
 }
+write.csv(spearCorDF, file = ffSheets("EZH2_TCGA_cancer_stage.csv"), quote = FALSE, 
+          row.names = FALSE, col.names = TRUE)
 
