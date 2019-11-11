@@ -1,5 +1,8 @@
 # load libraries and prepare environment for other scripts
 
+# for rivanna only
+.libPaths(c("/home/jtl2hk/containerFiles/3.6/", .libPaths()))
+
 library(dplyr)
 library(LOLA)
 library(simpleCache)
@@ -17,6 +20,7 @@ source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-dataProcessingFunctions.R"
 library(MultiAssayExperiment)
 library(folderfun)
 library(COCOA)
+
 
 
 # options(stringsAsFactors = FALSE)

@@ -365,6 +365,55 @@ loadProcessKIRCMethyl <- function(.env=currentEnv) {
                    " loaded into the environment."))
 }
 
+loadProcessTCGAMethyl <- function(cancerID, .env=currentEnv) {
+    # making sure parent.frame is evaluated inside function (not outside as 
+    # when listed as default argument)
+    currentEnv = parent.frame(n=1) # env where function was called
+    .env = currentEnv
+    
+    # loads methylList, pMeta (patient metadata)
+    fxCode = loadTCGAMethylation(cancerID = cancerID)
+    if (is.null(fxCode)) {
+        return(NULL)
+    }
+    
+    methylMat = methylList$methylProp
+    signalCoord = methylList$coordinates
+    
+    sampleType = substr(colnames(methylMat), start = 14, stop = 15)
+    # 01 is primary solid tumor, 11 is solid normal tissue, 05 is new primary tumor
+    # https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/sample-type-codes
+    # https://docs.gdc.cancer.gov/Encyclopedia/pages/TCGA_Barcode/
+    normalSampleInd = (sampleType == "11")
+    tumorSampleInd = (sampleType == "01") # exclude the extra sample 05
+    methylMat = methylMat[, tumorSampleInd]
+    # now I only need patient ID
+    colnames(methylMat) = substr(colnames(methylMat), start = 1, stop = 12)
+    
+    ## order samples consistently
+    pMeta = pMeta[colnames(methylMat), ]
+    # screen out patients without stage
+    naInd = is.na(pMeta$pathologic_stage)
+    methylMat = methylMat[, !naInd]
+    pMeta = pMeta[!naInd, ]
+    
+    allSampleLabels = factor(pMeta$pathologic_stage, levels = c("stage i", "stage ii", "stage iii", "stage iv"))
+    
+    
+    assign(x = "methylMat", methylMat, envir = .env)
+    assign(x = "signalCoord", signalCoord, envir = .env)
+    assign(x = "pMeta", pMeta, envir = .env)
+    assign(x = "allSampleLabels", allSampleLabels, envir = .env)
+    
+    
+    message(paste0(paste(c("methylMat", "signalCoord", "pMeta", 
+                           "allSampleLabels"), 
+                         collapse =" "), 
+                   " loaded into the environment."))
+    return(TRUE)
+}
+
+
 loadGRList <- function(genomeV = "hg38", .env=currentEnv) {
     # making sure parent.frame is evaluated inside function (not outside as 
     # when listed as default argument)
@@ -464,6 +513,11 @@ loadTCGAMethylation <- function(cancerID, methylList=TRUE, pMeta=TRUE,
     library(curatedTCGAData)
     library(TCGAutils)
 
+    mData = curatedTCGAData(diseaseCode = cancerID, assays = c("*methyl450*"), dry.run = TRUE)
+    if (nrow(mData) == 0) {
+        return(NULL)
+    }
+    
     mData = curatedTCGAData(diseaseCode = cancerID, assays = c("*methyl450*"), dry.run = FALSE)
 
     if (methylList) {
@@ -483,9 +537,27 @@ loadTCGAMethylation <- function(cancerID, methylList=TRUE, pMeta=TRUE,
         # get patient metadata, stored in colData(curatedTCGAData())
         metaDataCols = getClinicalNames(cancerID)
         allMeta = colData(mData) 
-        tcgaMetadata = allMeta[, metaDataCols]
+        # inconsistent column names
+        if (!("gender" %in% colnames(allMeta))) {
+            metaDataCols = c(metaDataCols, "patient.gender")
+        }
+        if (!("days_to_death" %in% colnames(allMeta))) {
+            metaDataCols = c(metaDataCols, "patient.days_to_death")
+        }
+        if (!("days_to_last_followup" %in% colnames(allMeta))) {
+            metaDataCols = c(metaDataCols, "patient.days_to_last_followup")
+        }
+        if (!("vital_status" %in% colnames(allMeta))) {
+            metaDataCols = c(metaDataCols, "patient.vital_status")
+        }
+        
+        tcgaMetadata = allMeta[, metaDataCols[metaDataCols %in% colnames(allMeta)]]
+        colnames(tcgaMetadata) <- sub(pattern = "patient.", replacement = "", 
+                                      x = colnames(patientMetadata), fixed = TRUE)
         assign("pMeta", tcgaMetadata, envir = .env)
     }
+    
+    return(TRUE)
     
 }
 
