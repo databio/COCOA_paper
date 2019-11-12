@@ -38,8 +38,16 @@ cancerID= c("ACC", "BLCA", "BRCA", "CESC", "CHOL",
 
 spearCor=rep(NA, length(cancerID)*length(myTopRS))
 spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)), 
-                        rsName=spearCor, spearCor, pVal=spearCor, 
+                        rsName=spearCor, spearCor, spearmanPVal=spearCor, 
+                        coxExp=spearCor, coxPVal=spearCor,
                         stringsAsFactors = FALSE)
+
+# [1] "stage i"    "stage iiib" "stage iia"  "stage iv"   "stage iiic"
+# [6] "stage iib"  "stage ii"   "stage iva"  "stage iic"  "stage iii"
+# [11] "stage iiia" "stage ivb"  "stage ia"
+
+
+
 for (i in seq_along(cancerID)) {
     
     allSampleLabels = NULL
@@ -55,6 +63,27 @@ for (i in seq_along(cancerID)) {
     }
     
     genomicSignal = methylMat
+    # higher number should be dead, lower number should be alive
+    if (is(pMeta$vital_status, "character")) {
+        pMeta$vital_status = factor(pMeta$vital_status, levels = c("alive", "dead"))
+    }
+
+    if (!is(pMeta$vital_status, "integer")) {
+        message(paste0(class(pMeta$vital_status), "_", unique(pMeta$vital_status)))
+    }
+    
+    if (is(pMeta$gender, "character")) {
+        pMeta$gender = as.numeric(factor(pMeta$gender, levels = c("female", "male")))
+    }
+    if (any(is.na(pMeta$vital_status))) {
+        naInd = which(is.na(pMeta$vital_status))
+        pMeta = pMeta[-naInd, ]
+        genomicSignal = genomicSignal[, -naInd]
+        if (!is.null(allSampleLabels)) {
+            allSampleLabels = allSampleLabels[-naInd]    
+        }
+        
+    }
     
     # get average methylation in EZH2 and SUZ12 regions
     # "-" in name causes error
@@ -96,7 +125,7 @@ for (i in seq_along(cancerID)) {
                               as.numeric(mBySampleDF[j, 1:ncol(genomicSignal)]), method = "spearman")
             spearCorDF[2*(i-1)+j, "rsName"] = abbrevName[j]
             spearCorDF[2*(i-1)+j, "spearCor"] = corRes$estimate
-            spearCorDF[2*(i-1)+j, "pVal"] = corRes$p.value
+            spearCorDF[2*(i-1)+j, "spearmanPVal"] = corRes$p.value
         }
     }
     
@@ -129,14 +158,15 @@ for (i in seq_along(cancerID)) {
         # covariates
         covariateData = pMeta
         patSurv = Surv(covariateData$lastDate / (365/12), event=covariateData$vital_status)
-        myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
+        try({myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
         
         sink(file = ffPlot(paste0(plotSubdir, "coxphModel", abbrevName[j], "_", cancerID[i], ".txt")))
         print(myModel)
         print(summary(myModel))
         sink()
-        
-        
+        spearCorDF[2*(i-1)+j, "coxPVal"] = summary(myModel)$coefficients["methylScore", "Pr(>|z|)"]
+        spearCorDF[2*(i-1)+j, "coxExp"] = summary(myModel)$coefficients["methylScore", "exp(coef)"]
+            })
         # kaplan meier
         # create groups
         covariateData$methylGroup = ecdf(covariateData$methylScore)(covariateData$methylScore)
