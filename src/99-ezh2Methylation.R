@@ -33,8 +33,9 @@ abbrevName = c("EZH2", "SUZ12")
 cancerID= c("ACC", "BLCA", "BRCA", "CESC", "CHOL", 
             "COAD", "DLBC", "ESCA", "GBM", "HNSC", 
             "KICH", "KIRC", "KIRP", "LAML", "LGG", 
-            "LIHC", "LUAD", "LUSC", "MESO", "OV", "PAAD", "PCPG",
-"PRAD", "READ", "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM", "UCEC", "UCS", "UVM") 
+            "LIHC", "LUAD", "LUSC", "MESO", "OV", 
+            "PAAD", "PCPG", "PRAD", "READ", "SARC", 
+            "SKCM", "STAD", "TGCT", "THCA", "THYM", "UCEC", "UCS", "UVM") 
 
 spearCor=rep(NA, length(cancerID)*length(myTopRS))
 spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)), 
@@ -56,7 +57,7 @@ for (i in seq_along(cancerID)) {
         next()
     }
     if (!all(c("days_to_last_followup", "days_to_death", 
-               "years_to_birth", "gender", "vital_status") %in% colnames(pMeta))) {
+              "vital_status") %in% colnames(pMeta))) {
         next()
     }
     
@@ -172,7 +173,23 @@ for (i in seq_along(cancerID)) {
         # covariates
         covariateData = pMeta
         patSurv = Surv(covariateData$lastDate / (365/12), event=covariateData$vital_status)
-        try({myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
+        try({
+            if ("years_to_birth" %in% colnames(covariateData)) {
+                if ("gender" %in% colnames(covariateData)) {
+                    myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
+                } else {
+                    myModel = coxph(patSurv ~ years_to_birth + meanMethyl + methylScore, data = covariateData)
+                }
+                
+            } else {
+                if ("gender" %in% colnames(covariateData)) {
+                    myModel = coxph(patSurv ~ gender + meanMethyl + methylScore, data = covariateData)
+                } else {
+                    myModel = coxph(patSurv ~ meanMethyl + methylScore, data = covariateData)
+                }
+                
+            }
+            
         
         sink(file = ffPlot(paste0(plotSubdir, "coxphModel", abbrevName[j], "_", cancerID[i], ".txt")))
         print(myModel)
