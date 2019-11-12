@@ -388,10 +388,11 @@ loadProcessTCGAMethyl <- function(cancerID, .env=currentEnv) {
     
     sampleType = substr(colnames(methylMat), start = 14, stop = 15)
     # 01 is primary solid tumor, 11 is solid normal tissue, 05 is new primary tumor
+    # 03 is primary blood cancer (peripheral) 09 is primary cancer from bone marrow
     # https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/sample-type-codes
     # https://docs.gdc.cancer.gov/Encyclopedia/pages/TCGA_Barcode/
     normalSampleInd = (sampleType == "11")
-    tumorSampleInd = (sampleType == "01") | (sampleType == "03") # exclude the extra sample 05
+    tumorSampleInd = (sampleType == "01") | (sampleType == "03") | (sampleType == "09") # exclude the extra sample 05
     methylMat = methylMat[, tumorSampleInd]
     # now I only need patient ID
     colnames(methylMat) = substr(colnames(methylMat), start = 1, stop = 12)
