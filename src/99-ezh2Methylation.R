@@ -42,9 +42,7 @@ spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)),
                         coxExp=spearCor, coxPVal=spearCor,
                         stringsAsFactors = FALSE)
 
-# [1] "stage i"    "stage iiib" "stage iia"  "stage iv"   "stage iiic"
-# [6] "stage iib"  "stage ii"   "stage iva"  "stage iic"  "stage iii"
-# [11] "stage iiia" "stage ivb"  "stage ia"
+
 
 
 
@@ -140,6 +138,22 @@ for (i in seq_along(cancerID)) {
                             coxEffect=tmp, 
                             coxModel=tmp)
     
+    # these patients have no survival data and so are not helpful for survival
+    # analysis despite still being helpful for cancer stage analysis earlier
+    removeInd = pMeta$days_to_last_followup == 0
+    removeInd[is.na(removeInd)] = FALSE # keep NA rows
+    pMeta = pMeta[!removeInd, ]
+    if (sum(removeInd) > 0) {
+        mBySampleDF = mBySampleDF[, -which(removeInd)]
+    }
+    genomicSignal = genomicSignal[, !removeInd]
+    
+    if ("dead" %in% pMeta$vital_status) {
+        # dead is 1
+        pMeta$vital_status = pMeta$vital_status == "dead"
+    }
+
+    
     # once for each region set
     for (j in 1:nrow(mBySampleDF)) {
         mBySample = as.numeric(mBySampleDF[j, 1:ncol(genomicSignal)])
@@ -176,6 +190,11 @@ for (i in seq_along(cancerID)) {
         
         kmFit = survfit(patSurv ~ methylGroup, data=covariateData)
         kmPlot = ggsurvplot(kmFit, risk.table = TRUE, conf.int = TRUE)
+        
+        # Error in data.frame(..., check.names = FALSE) : 
+        #     arguments imply differing number of rows: 165, 0, 330
+        
+        
         # cumcensor = TRUE, cumevents = TRUE,
         # a$plot = a$plot + 
         # scale_color_discrete(name="Strata", labels=c("Low methylation score", 

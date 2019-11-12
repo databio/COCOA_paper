@@ -404,6 +404,11 @@ loadProcessTCGAMethyl <- function(cancerID, .env=currentEnv) {
         naInd = is.na(pMeta$pathologic_stage)
         methylMat = methylMat[, !naInd]
         pMeta = pMeta[!naInd, ]
+        pMeta$pathologic_stage[pMeta$pathologic_stage %in% paste0("stage i", c("a", "b", "c", "d")) ] = "stage i"
+        pMeta$pathologic_stage[pMeta$pathologic_stage %in% paste0("stage ii", c("a", "b", "c", "d")) ] = "stage ii"
+        pMeta$pathologic_stage[pMeta$pathologic_stage %in% paste0("stage iii", c("a", "b", "c", "d")) ] = "stage iii"
+        pMeta$pathologic_stage[pMeta$pathologic_stage %in% paste0("stage iv", c("a", "b", "c", "d")) ] = "stage iv"
+
         allSampleLabels = factor(pMeta$pathologic_stage, levels = c("stage i", "stage ii", "stage iii", "stage iv"))
         assign(x = "allSampleLabels", allSampleLabels, envir = .env)
     } else {
