@@ -5,6 +5,13 @@ library(MultiAssayExperiment)
 library(ensembldb)
 library(EnsDb.Hsapiens.v75)
 
+if (!exists("dataID")) {
+    dataID = "CLL196MOFA"    
+}
+if (!exists("variationMetric")) {
+    variationMetric = "cov"   
+}
+plotSubdir = "19-permMOFACLLDNAm/"
 ##############################################################################
 # Fig. 4, MOFA CLL
 # http://msb.embopress.org/content/14/6/e8124
@@ -12,15 +19,11 @@ library(EnsDb.Hsapiens.v75)
 # factor 1: cell type/differentiation, factor 7: chemo-immunotherapy treatment prior to sample collection
 # factor 7: del17p, TP53 mutations, methylation of oncogenes
 
-# dataID = "CLL196MOFA"
-# variationMetric = "cov"
 
 loadMOFAData(methylMat = TRUE, signalCoord=TRUE, latentFactorMat = TRUE,
              cllMultiOmics=TRUE)
 simpleCache("mofaPermZScoresCor", assignToVariable = "rsZScores")
 simpleCache(paste0("rsScore_", dataID, "_", variationMetric), assignToVariable = "rsScores")
-
-
 
 
 # get same order
@@ -51,44 +54,7 @@ ggsave(filename = ffPlot(paste0(plotSubdir, "mofaFactorLF1LF2.svg")),
        plot = fPlot, device = "svg")
 cor.test(x = latentFactors$CD3, y = latentFactors$LF9)
 
-
-
-# View(rsScores[order(rsScores$LF1, decreasing=TRUE), ])
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "K562")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "GM12878|GM18526|GM12891|GM10847|K562|leukemia|leukaemia|lymphoma")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "esr|eralpha|gata3|foxa1|h3r17")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "h3k9")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "h3k4me1")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "h3k4me3")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "h3k36")
-plotRSConcentration(rsScores, scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "h3k27me")
-# transcription factors
-# associated with immune latent factors
-plotRSConcentration(rsScores[rsScores$region_coverage >= 100, ], scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "nfkb")
-# 
-plotRSConcentration(rsScores[rsScores$region_coverage >= 100, ], scoreColName=c(paste0("LF", c(1:3, 5:7, 9))), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "esr1")
-
-#################### plot raw data in top regions for LF1
+t#################### plot raw data in top regions for LF1
 simpleCache("inferredMethylWeightsMOFA", assignToVariable = "featureLFCor")
 # make sure they are in the same order/have same CpGs
 featureLFCor = featureLFCor[row.names(methylMat), ]
@@ -143,6 +109,23 @@ signalAlongPC(genomicSignal=methylMat,
               topXVariables=50,
               variableScores = abs(as.numeric(featureLFCor[, lfCols[i]])),
               cluster_columns = TRUE, column_title = "Individual cytosines")
+
+###############################################################################
+# Panel B
+# sidebar with IGHV status for methylation heatmap
+latentFactors = latentFactors[order(latentFactors$LF1, decreasing = TRUE), ]
+latentFactors$LF1Index = 1:nrow(latentFactors)
+latentFactors$IGHV = factor(latentFactors$IGHV, levels = c("unmutated", "mutated"))
+
+IGHVBar = ggplot(data = latentFactors, mapping = aes(x = LF1Index, y = 1)) + 
+    geom_col(aes(color=IGHV)) + coord_flip() + scale_fill_discrete(na.value = "gray") + 
+    theme(axis.title = element_blank(), axis.text = element_blank(), 
+          axis.line = element_blank(), axis.ticks = element_blank())
+
+IGHVBar
+ggsave(filename = ffPlot(paste0(plotSubdir, "IGHVBarLF1.svg")), 
+       plot = IGHVBar, 
+       device = "svg", width = 50, height = 35, units = "mm")
 
 ##############################################################################
 # figure connecting LF2 and chr12 trisomy to NANOG

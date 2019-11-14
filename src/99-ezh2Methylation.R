@@ -62,14 +62,14 @@ for (i in seq_along(cancerID)) {
     }
     
     genomicSignal = methylMat
-    # higher number should be dead, lower number should be alive
+    # higher number should be dead, lower number should be alive (either 0/1 or 1/2)
     if (is(pMeta$vital_status, "character")) {
         pMeta$vital_status = factor(pMeta$vital_status, levels = c("alive", "dead"))
     }
 
-    if (!is(pMeta$vital_status, "integer")) {
-        message(paste0(class(pMeta$vital_status), "_", unique(pMeta$vital_status)))
-    }
+    # if (!is(pMeta$vital_status, "integer")) {
+    #     message(paste0(class(pMeta$vital_status), "_", unique(pMeta$vital_status)))
+    # }
     
     if (is(pMeta$gender, "character")) {
         pMeta$gender = as.numeric(factor(pMeta$gender, levels = c("female", "male")))
@@ -150,7 +150,7 @@ for (i in seq_along(cancerID)) {
     genomicSignal = genomicSignal[, !removeInd]
     
     if ("dead" %in% pMeta$vital_status) {
-        # dead is 1
+        # dead is 1, alive is 0
         pMeta$vital_status = pMeta$vital_status == "dead"
     }
 
