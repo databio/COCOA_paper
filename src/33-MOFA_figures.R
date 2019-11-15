@@ -11,7 +11,10 @@ if (!exists("dataID")) {
 if (!exists("variationMetric")) {
     variationMetric = "cov"   
 }
-plotSubdir = "19-permMOFACLLDNAm/"
+plotSubdir = "33-MOFA_figs/"
+if (!dir.exists(ffPlot(plotSubdir))) {
+    dir.create(ffPlot(plotSubdir))
+}
 ##############################################################################
 # Fig. 4, MOFA CLL
 # http://msb.embopress.org/content/14/6/e8124
@@ -36,10 +39,12 @@ IGHV[IGHV == 1] = "mutated"
 IGHV[IGHV == 0] = "unmutated"
 IGHV = as.factor(IGHV)
 latentFactors = data.frame(latentFactors, IGHV, KLHL6=mutDF["KLHL6", ], BRAF=factor(mutDF["BRAF", ])) 
+# checking whether LF9 is associated with certain immunce cell markers
 # CD56=cllMultiOmics$mRNA["ENSG00000149294", ],
 # CD3=cllMultiOmics$mRNA["ENSG00000167286", ])
 # CD19=cllMultiOmics$mRNA["ENSG00000177455", ]
 # latentFactors$IGHV = factor(latentFactors$IGHV, levels = c("mutated", "unmutated"))
+# cor.test(x = latentFactors$CD3, y = latentFactors$LF9)
 
 # make plot of latent factors (show that LF1 separates based on differentiation)
 # it seems that the sign of latent factor 1 is switched either in the paper or the data package
@@ -52,7 +57,7 @@ fPlot = ggplot(data = latentFactors, mapping = aes(x = -1*LF1, y = LF2)) + geom_
 fPlot
 ggsave(filename = ffPlot(paste0(plotSubdir, "mofaFactorLF1LF2.svg")), 
        plot = fPlot, device = "svg")
-cor.test(x = latentFactors$CD3, y = latentFactors$LF9)
+
 
 t#################### plot raw data in top regions for LF1
 simpleCache("inferredMethylWeightsMOFA", assignToVariable = "featureLFCor")
@@ -243,17 +248,26 @@ thisRegionSet = "E008-H3K4me1.narrowPeak"
 thisRegionSet = "GSM1124068_SOX2.bed"
 thisRegionSet = "GSM1124071_NANOG.bed"
 thisRegionSet = "Pou5f1.bed"
-meanMethylThisRS=runCOCOA(signal = assays(mae2)$methyl, signalCoord = signalCoord, 
+meanMethylThisRS=aggregateSignalGRList(signal = assays(mae2)$methyl, signalCoord = signalCoord, 
                           GRList = GRList[thisRegionSet], 
                           signalCol = colnames(assays(mae2)$methyl))
 meanMethylThisRS = meanMethylThisRS[, colnames(assays(mae2)$methyl)]
 
 cor.test(as.numeric(meanMethylThisRS), assays(mae2)$rna[wnt5aID, ])
-
+# for Pou5f1: cor=-0.1484203 , p-value = 0.0858
 plot(as.numeric(meanMethylThisRS), assays(mae2)$rna[wnt5aID, ])
 
+
+
 cor.test(as.numeric(meanMethylThisRS), assays(mae2)$latentFactors["LF8", ])
+plot(as.numeric(meanMethylThisRS), assays(mae2)$latentFactors["LF8", ])
+# methylation level is positively correlated with LF8, implying that
+# activity is negatively correlated with LF8
+
 cov(as.numeric(meanMethylThisRS), assays(mae2)$latentFactors["LF8", ])
+plot(assays(mae2)$latentFactors["LF8", ], assays(mae2)$rna[wnt5aID, ])
+cor.test(assays(mae2)$latentFactors["LF8", ], assays(mae2)$rna[wnt5aID, ])
+# WNT5a is (significantly) negatively correlated with LF8
 
 # testing other WNT genes
 cllMultiOmics$mRNA[geneDF$gene_id, ]
