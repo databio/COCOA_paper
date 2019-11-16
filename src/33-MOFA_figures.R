@@ -15,6 +15,9 @@ plotSubdir = "33-MOFA_figs/"
 if (!dir.exists(ffPlot(plotSubdir))) {
     dir.create(ffPlot(plotSubdir))
 }
+
+inputID = dataID
+
 ##############################################################################
 # Fig. 4, MOFA CLL
 # http://msb.embopress.org/content/14/6/e8124
@@ -24,7 +27,7 @@ if (!dir.exists(ffPlot(plotSubdir))) {
 
 
 loadMOFAData(methylMat = TRUE, signalCoord=TRUE, latentFactorMat = TRUE,
-             cllMultiOmics=TRUE)
+             cllMultiOmics=TRUE, featureLFCor = TRUE)
 simpleCache("mofaPermZScoresCor", assignToVariable = "rsZScores")
 simpleCache(paste0("rsScore_", dataID, "_", variationMetric), assignToVariable = "rsScores")
 
@@ -59,14 +62,15 @@ ggsave(filename = ffPlot(paste0(plotSubdir, "mofaFactorLF1LF2.svg")),
        plot = fPlot, device = "svg")
 
 
-t#################### plot raw data in top regions for LF1
-simpleCache("inferredMethylWeightsMOFA", assignToVariable = "featureLFCor")
+#################### plot raw data in top regions for LF1
+# simpleCache("inferredMethylWeightsMOFA", assignToVariable = "featureLFCor")
 # make sure they are in the same order/have same CpGs
 featureLFCor = featureLFCor[row.names(methylMat), ]
 loadGRList(genomeV = "hg19")
 dataID = "cll196"
-lfCols= paste0("LF", c(1:3, 5:7, 9))
-cpgCov = rsScores$cytosine_coverage
+lfCols= paste0("LF", 1:10)
+# lfCols= paste0("LF", c(1:3, 5:7, 9))
+cpgCov = rsScores$signalCoverage
 topRSInd = rsRankingIndex(rsScores = rsScores[cpgCov >= 200, ], signalCol = lfCols)
 View(rsScores[order(rsScores$LF1, decreasing = TRUE), ])
 topLF1Ind = topRSInd$LF1[1:20]
@@ -92,7 +96,7 @@ for (i in seq_along(lfCols)) {
     
     # heatmap
     for (j in seq_along(theseTopRS)) {
-        print(signalAlongPC(genomicSignal=methylMat,
+        print(signalAlongAxis(genomicSignal=methylMat,
                             signalCoord=signalCoord,
                             sampleScores=latentFactorMat,
                             regionSet=theseTopRS[[j]], orderByCol=lfCols[i],
@@ -107,7 +111,7 @@ for (i in seq_along(lfCols)) {
     dev.off()
 }
 
-signalAlongPC(genomicSignal=methylMat,
+signalAlongAxis(genomicSignal=methylMat,
               signalCoord=signalCoord,
               sampleScores=latentFactorMat,
               regionSet=topLF1RS[["Gm12878_WE.bed"]], orderByCol=lfCols[i],
@@ -137,7 +141,7 @@ ggsave(filename = ffPlot(paste0(plotSubdir, "IGHVBarLF1.svg")),
 # NANOG is ENSG00000111704
 library(BloodCancerMultiOmics2017)
 loadMOFAData(methylMat = TRUE, signalCoord=TRUE, latentFactorMat = TRUE,
-             cllMultiOmics=TRUE)
+             cllMultiOmics=TRUE, featureLFCor = TRUE)
 data("dds", package = "BloodCancerMultiOmics2017")
 cllRNA = assay(dds)
 colnames(cllRNA) <- colData(dds)$PatID
@@ -277,6 +281,74 @@ plot(cllMultiOmics$mRNA[wnt5aID, colnames(assays(mae2)$latentFactors)],
          sqrt(assays(mae2)$rna[wnt5aID, ]))
 cor.test(cllMultiOmics$mRNA[wnt5aID, colnames(assays(mae2)$latentFactors)], 
      as.numeric(meanMethylThisRS))
+
+#############################################################################
+# Panel C Meta region profiles
+signalCol = lfCols
+topRSInd = rsRankingIndex(rsScores = rsScores, signalCol)
+
+topInd = topRSInd[, "LF8"][1:50]
+# uTopInd = unique(c(topPC1Ind, topPC2Ind))
+uTopInd = topInd
+
+# topRSList = GRList[uTopInd]
+topRSList = lapply(X = GRList[uTopInd], FUN = function(x) resize(x = x, width = 14000, fix = "center"))
+topRSNames = names(topRSList)
+
+
+
+multiProfileP = makeMetaRegionPlots(signal=featureLFCor, 
+                                    signalCoord=signalCoord, GRList=topRSList, 
+                                    rsNames=topRSNames, 
+                                    signalCol=signalCol, binNum=21, aggrMethod ="default") 
+multiProfileP2 = multiProfileP
+
+ggsave(filename = ffPlot(paste0(plotSubdir,
+                                "/metaRegionLoadingProfiles", 
+                                inputID, ".pdf")), plot = multiProfileP[["grob"]], device = "pdf", limitsize = FALSE)
+# individual mr profiles
+
+names(multiProfileP2[["metaRegionData"]])
+
+
+topRSNames = c("Pou5f1.bed", 
+               "GSM1124068_SOX2.bed", 
+               "E008-H3K4me1.narrowPeak", "GSM1124071_NANOG.bed")
+abbrevNames = c("POU5F1", "SOX2", "H3K4me1_in_H9_cell_line", "NANOG")
+# topRSList = topRSList[topRSNames]
+# topRSNames = c("GSM835863_EP300.bed", 
+#                "GSM607949_GATA1.bed")
+minVal = 0.01
+maxVal = .02
+for (i in seq_along(topRSNames)) {
+    thisRS = multiProfileP2[["metaRegionData"]][topRSNames[i]]
+    pcP = lapply(X = thisRS, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))
+    pcP = lapply(X = pcP, as.data.table)
+    pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
+    
+    for (j in 8) {
+        myPlot = ggplot(data = dplyr::filter(pcP[[1]], PC %in% signalCol[j]), mapping = aes(x =binID , y = loading_value)) + 
+            # ggplot(data = pcP[[1]], mapping = aes(x =binID , y = loading_value)) + 
+            geom_line() + ylim(c(minVal, maxVal)) + 
+            # facet_wrap(facets = "PC") + 
+            ggtitle(label = wrapper(topRSNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
+            ylab("Normalized Correlation") + 
+            theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
+                  axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
+                  axis.title = element_blank(), title = element_blank(), 
+                  #axis.text.y=element_blank()
+            )
+        myPlot
+        ggsave(filename = ffPlot(paste0(plotSubdir, 
+                                        "/mrProfiles", abbrevNames[i],
+                                        "_", signalCol[j], ".svg")), 
+               plot = myPlot, device = "svg", height=30, width=15, units = "mm")
+    }
+    
+    
+}
+
+
 
 # "filter()" was masked by another package. Get dplyr filter() back
 library(dplyr)

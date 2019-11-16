@@ -197,7 +197,7 @@ prepareCLLMethyl = function(removeXY=TRUE) {
 
 loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactorMat=TRUE, 
                          factorWeights=FALSE, cllMultiOmics=FALSE,
-                         lfContributions=FALSE, .env=currentEnv) {
+                         lfContributions=FALSE, featureLFCor=FALSE, .env=currentEnv) {
     
     # making sure parent.frame is evaluated inside function (not outside as 
     # when listed as default argument)
@@ -257,6 +257,14 @@ loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactorMat=TRUE,
         }
     }
     
+    if (featureLFCor) {
+        corMat = COCOA:::createCorFeatureMat(dataMat = methData, 
+                                             featureMat = LFs, 
+                                             testType = "cov")
+        
+        assign("featureLFCor", corMat, envir=.env)
+    }
+    
     if (factorWeights) {
         # Loading an existing trained model
         filepath <- system.file("extdata", "CLL_model.hdf5",
@@ -311,6 +319,8 @@ loadMOFAData <- function(methylMat=TRUE, signalCoord=TRUE, latentFactorMat=TRUE,
         r2$R2PerFactor[, "Methylation"]
         assign("lfContributions", r2, envir=.env)
     }
+    
+
     
     message(paste0(paste(c("methylMat", "signalCoord", 
                            "latentFactorMat", "factorWeights", "cllMultiOmics")[c(methylMat, signalCoord,

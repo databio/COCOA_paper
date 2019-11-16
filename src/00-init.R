@@ -348,7 +348,10 @@ getLowerBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage)
 ################## not sure whether to add this one to COCOA
 # convenience function to quickly make meta-region loading profiles
 # first calculates profiles, then normalizes and plots
-# output is marrangeGrob and should be saved with ggsave
+# output is list with 3 items:  c("grob", "metaRegionData", "plotList")
+# grob: an marrangeGrob of all plots and should be saved with ggsave
+# metaRegionData: unnormalized output of getMetaRegionProfile
+# plotList: the plot for each region set individually (all signalCol in one plot)
 #' @param aggrMethod character. A character object with the aggregation method.
 #' Similar to `scoringMetric`.
 #' There are different aggregation methods available for 
