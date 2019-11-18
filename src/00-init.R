@@ -129,6 +129,16 @@ screenOutRoadmap = function(rsScores, rsCollection, patternSearchCol="rsName", k
     return(keepInd)
 }
 
+conAssign <- function(vName, value, .env=currentEnv) {
+    currentEnv = parent.frame(n=1) 
+    
+    # pull in outside env to check for existence
+    if (!exists(vName, envir = .env)) {
+        # assign to parent env
+        assign(x = vName, value = value, envir = .env)
+    }
+}
+
 ############ functions to add to COCOA ##############################
 # ggplot version of rs concentration
 # 1 row per region set, column for rank in a given PC, 0/1 column for ER or not
@@ -393,15 +403,6 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames,
                                                               aggrMethod=aggrMethod,
                                                               absVal = absVal))
     
-    pcP = copy(pcProf)
-    # this check must be done before converting items of list to data.table
-    # otherwise NULL will be converted to a data.table
-    notNull = !vapply(X = pcP, FUN = is.null, FUN.VALUE = TRUE)
-    pcP = pcP[notNull]
-    rsNames = rsNames[notNull]
-    pcP = lapply(pcP,FUN = as.data.table)
-    
-    
     # emptyInd = sapply()
     # # for single columns?
     # # average loading value from each PC to normalize so PCs can be compared with each other
@@ -413,32 +414,16 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames,
     #                     FUN=function(x) mean(abs(x)))
     # }
     
-    # average loading value from each PC to normalize so PCs can be compared with each other
-    if (absVal) {
-        avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(abs(x)))    
-    } else {
-        avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(x))
-    }
-    
-    
     # normalize
     # pcP = lapply(pcP, FUN = function(x) t(apply(X = x, MARGIN = 1, FUN = function(y) y - c(0, avLoad))))
     # for (i in seq_along(signalCol)) {
     #     # by reference
     #     lapply(pcP, FUN = function(x) x[, 1])
     # }
-    pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=signalCol, z = avLoad)])
-    pcP = lapply(pcP, FUN = function(x) data.table(regionGroupID=1:nrow(x), x))
     
-    # for the plot scale
-    maxVal = max(sapply(pcP, FUN = function(x) max(x[, .SD, .SDcols=signalCol])))
-    minVal = min(sapply(pcP, FUN = function(x) min(x[, .SD, .SDcols=signalCol])))
-    
-    # convert to long format for plots
-    pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))
-    pcP = lapply(X = pcP, as.data.table)
-    pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
-    
+    pcP = normalizeMRProfile(signal=signal, signalCol=signalCol, 
+                             pcProf, rsNames = rsNames, absVal=TRUE)
+
     # stack overflow for wrapping plot title
     wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n") 
     
@@ -456,10 +441,7 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames,
             theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
         profilePList[[i]]
         # plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
-        # 
-        
         #xLabels = xAxisForRegionPlots2()
-        
     }
     
     multiProfileP = marrangeGrob(profilePList, ncol = 2, nrow = 2)
@@ -473,6 +455,42 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames,
 
 # stack overflow for wrapping plot title
 wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n") 
+
+
+normalizeMRProfile <- function(signal, signalCol, pList, rsNames, absVal=TRUE) {
+    
+    pcP = copy(pList)
+    
+    # this check must be done before converting items of list to data.table
+    # otherwise NULL will be converted to a data.table
+    notNull = !vapply(X = pcP, FUN = is.null, FUN.VALUE = TRUE)
+    pcP = pcP[notNull]
+    rsNames = rsNames[notNull]
+    pcP = lapply(pcP,FUN = as.data.table)
+    
+    
+    # average loading value from each PC to normalize so PCs can be compared with each other
+    if (absVal) {
+        avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(abs(x)))    
+    } else {
+        avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(x))
+    }
+    
+    pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=signalCol, z = avLoad)])
+    pcP = lapply(pcP, FUN = function(x) data.table(regionGroupID=1:nrow(x), x))
+    
+    # for the plot scale
+    maxVal = max(sapply(pcP, FUN = function(x) max(x[, .SD, .SDcols=signalCol])))
+    minVal = min(sapply(pcP, FUN = function(x) min(x[, .SD, .SDcols=signalCol])))
+    
+    # convert to long format for plots
+    pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))
+    pcP = lapply(X = pcP, as.data.table)
+    pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
+    normPList = pcP
+    
+    return(normPList)
+}
 
 ###################### visualization ##########################
 
