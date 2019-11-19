@@ -423,7 +423,12 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames,
     
     pcP = normalizeMRProfile(signal=signal, signalCol=signalCol, 
                              pcProf, rsNames = rsNames, absVal=TRUE)
-
+    
+    # for the plot scale
+    maxVal = max(sapply(pcP, FUN = function(x) max(x[, loading_value])))
+    minVal = min(sapply(pcP, FUN = function(x) min(x[, loading_value])))
+    
+    
     # stack overflow for wrapping plot title
     wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n") 
     
@@ -434,7 +439,7 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames,
         thisRS = pcP[[i]]
         
         
-        profilePList[[i]] = ggplot(data = thisRS, mapping = aes(x =regionGroupID , y = loading_value)) + 
+        profilePList[[i]] = ggplot(data = thisRS, mapping = aes(x =binID , y = loading_value)) + 
             geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets = "PC") + 
             ggtitle(label = wrapper(rsNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
             ylab("Normalized Loading Value") + 
@@ -457,6 +462,7 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames,
 wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n") 
 
 
+#a data.table. ouput includes columns "PC", "loading_value"
 normalizeMRProfile <- function(signal, signalCol, pList, rsNames, absVal=TRUE) {
     
     pcP = copy(pList)
@@ -477,11 +483,7 @@ normalizeMRProfile <- function(signal, signalCol, pList, rsNames, absVal=TRUE) {
     }
     
     pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=signalCol, z = avLoad)])
-    pcP = lapply(pcP, FUN = function(x) data.table(regionGroupID=1:nrow(x), x))
-    
-    # for the plot scale
-    maxVal = max(sapply(pcP, FUN = function(x) max(x[, .SD, .SDcols=signalCol])))
-    minVal = min(sapply(pcP, FUN = function(x) min(x[, .SD, .SDcols=signalCol])))
+    pcP = lapply(pcP, FUN = function(x) data.table(binID=1:nrow(x), x))
     
     # convert to long format for plots
     pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))

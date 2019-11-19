@@ -154,18 +154,32 @@ topRSNames = c("wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak",
                "Human_MCF-7_H3R17me2_No-treatment_Brown.bed", 
                "wgEncodeAwgTfbsHaibT47dEraaV0416102Bpa1hUniPk.narrowPeak",
                "Human_MCF-7_FoxA1_No-treatment_Brown.bed",
-               "GSM1501162_CEBPA.bed", "GSM1097879_ERG.bed")
-abbrevNames = c("GATA3", "H3R17me2", "ER", "FOXA1", "CEBPA", "ERG")
+               "GSM1501162_CEBPA.bed",
+               "wgEncodeAwgTfbsSydhH1hescSuz12UcdUniPk.narrowPeak",
+               "E104-H3K27me3.narrowPeak",
+               "E032-H3K9me3.narrowPeak", 
+               "wgEncodeAwgTfbsBroadH1hescEzh239875UniPk.narrowPeak") #, "GSM1097879_ERG.bed")
+abbrevNames = c("GATA3", "H3R17me2", "ER", "FOXA1", "CEBPA",
+                "SUZ12", "H3K27me3", "H3K9me3",
+                "EZH2")#, "ERG")
 # topRSNames = c("GSM835863_EP300.bed", 
 #                "GSM607949_GATA1.bed")
-minVal = 0
-maxVal = 3
+
+
 for (i in seq_along(topRSNames)) {
-    thisRS = multiProfileP2[["metaRegionData"]][topRSNames[i]]
-    pcP = lapply(X = pcP, as.data.table)
-    pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
-    
-    for (j in seq_along(signalCol[1:2])) {
+    minVal = -1
+    maxVal = 2
+        
+    pcP = multiProfileP2[["metaRegionData"]][topRSNames[i]]
+
+    for (j in seq_along(signalCol[1:4])) {
+        
+        if (j == 4) {
+            minVal = 0
+            maxVal = 0.5
+        } 
+        
+        
         myPlot = ggplot(data = filter(pcP[[1]], PC %in% signalCol[j]), mapping = aes(x =binID , y = loading_value)) + 
             # ggplot(data = pcP[[1]], mapping = aes(x =binID , y = loading_value)) + 
             geom_line() + ylim(c(minVal, maxVal)) + 
@@ -174,8 +188,8 @@ for (i in seq_along(topRSNames)) {
             ylab("Normalized Correlation") + 
             theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
                   axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
-                  axis.title = element_blank(), title = element_blank(), 
-                  axis.text.y=element_blank()
+                  axis.title = element_blank(), title = element_blank(), axis.text.y=element_blank()
+                  
             )
         myPlot
         ggsave(filename = ffPlot(paste0(plotSubdir, 
