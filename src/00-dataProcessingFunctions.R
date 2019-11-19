@@ -538,13 +538,22 @@ loadTCGAMethylation <- function(cancerID, methylList=TRUE, pMeta=TRUE,
     library(curatedTCGAData)
     library(TCGAutils)
 
-    mData = curatedTCGAData(diseaseCode = cancerID, assays = c("*methyl450*"), dry.run = TRUE)
+    mData = curatedTCGAData(diseaseCode = cancerID, assays = c("*Methylation*"), dry.run = TRUE)
     if (nrow(mData) == 0) {
         return(NULL)
     }
     
-    mData = curatedTCGAData(diseaseCode = cancerID, assays = c("*methyl450*"), dry.run = FALSE)
+    mData = curatedTCGAData(diseaseCode = cancerID, assays = c("*Methylation*"), dry.run = FALSE)
 
+    # if 27k microarrays given then screen them out
+    ind27 = grepl(pattern = "methyl27", x = names(assays(mData)))
+    mData = mData[, , !ind27]
+    
+    if (length(names(assays(mData))) == 0) {
+        return(NULL)
+    }
+    
+    
     if (methylList) {
         testM = assays(mData)[[1]]
         testM = as.matrix(testM)
