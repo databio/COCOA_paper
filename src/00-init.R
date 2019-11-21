@@ -701,7 +701,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
                           makePCFSCH=TRUE, 
                           topRSInd_pcFSCH = unique(unlist(sortedRSIndDF[1:10, ])), 
                           PCsToAnnotate_pcFSCH=PCSTOANNOTATE,
-                          makerRSOLCP=TRUE, 
+                          makeRSOLCP=TRUE, 
                           topRSInd_rsOLCP = unique(unlist(sortedRSIndDF[1:10, ])), 
                           makeMRLP=TRUE, 
                           topRSInd_mrLP=unique(unlist(sortedRSIndDF[1:10, ])), 
@@ -855,7 +855,8 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     ################################################################################
     # seeing how much overlap there is between region sets
     # based on overlap of covered cytosines, not the regions themselves
-    
+    makeRSOLCP
+    topRSInd_rsOLCP
     if (makeRSOLCP) {
         # total regions in column region sets are the denominator for the proportion
         .regionSetList = GRList[topRSInd_rsOLCP] 
@@ -907,9 +908,10 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     # make PC score plot where samples are colored by metadata
     
     if (!is.null(pMeta) && !is.null(colorByCols)) {
-
+        sharedSamples = intersect(row.names(pcScores), pMeta$sample_name)
+        row.names(pMeta) = pMeta$sample_name
         pcScores = mPCA$x
-        colorPlot = colorClusterPlots(clusteredDF = cbind(pcScores, pMeta),
+        colorPlot = colorClusterPlots(clusteredDF = cbind(pcScores[sharedSamples, ], pMeta[sharedSamples, ]),
                                       plotCols = c("PC1", "PC2"), colorByCols = colorByCols)
         ggplot2::ggsave(filename=paste0(plotDir, "annoPCPlot", "_", inputID, ".pdf"),
                         plot = colorPlot, device = "pdf",
