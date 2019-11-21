@@ -677,7 +677,7 @@ plotAnnoScoreDist <- function(rsScores, colsToPlot, pattern, patternName=pattern
 #### plots that will be created
 ## "comparePCHeatmap"
 ## "methylAlongPC"
-## "regionQuantileByPC"
+## "regionQuantileByTargetVar"
 ## "pcFromSubset Correlation Heatmap"
 ## "region set Overlapping Cytosine Proportion" (rsOLCP)
 ## proportion of cytosines from region set that are shared with other region set
@@ -778,7 +778,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
         }
     }
     ###################################################################################
-    # regionQuantileByPC
+    # regionQuantileByTargetVar
     # comparing loading scores/percentiles for individual regions among PCs
     # need region sets and PCA loadings
     
@@ -792,7 +792,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
         # if there are too many regions, will try to cluster and cause memory error:
         # cannot allocate vector of size X Gb,
         # fix this by decreasing maxRegionsToPlot or use cluster_rows=FALSE
-        multiRegionQuantileByPC(signal=loadingMat, signalCoord=coordinateDT, 
+        multiRegionQuantileByTargetVar(signal=loadingMat, signalCoord=coordinateDT, 
                                 GRList=GRList[topRSInd_rQBPC], 
                                 rsNames=paste0(rsScores$rsName[topRSInd_rQBPC], " : ", rsScores$rsDescription[topRSInd_rQBPC]), 
                                 signalCol=PCsToAnnotate_rQBPC, maxRegionsToPlot = 5000,
@@ -897,7 +897,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
         }, recreate = TRUE)
         
         ggsave(filename = paste0(plotDir,
-                                 "/metaRegionLoadingProfiles", 
+                                 "metaRegionLoadingProfiles", 
                                  inputID, ".pdf"), plot = mrPlotOutput$grob, device = "pdf", limitsize = FALSE)
         
         # check PPARG.bed, Jaspar motifs (had 18 rows instead of 21)

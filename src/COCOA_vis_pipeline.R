@@ -156,7 +156,7 @@ if (makeRQBPC) {
     # if there are too many regions, will try to cluster and cause memory error:
     # cannot allocate vector of size X Gb,
     # fix this by decreasing maxRegionsToPlot or use cluster_rows=FALSE
-        multiRegionQuantileByPC(signal=loadingMat, signalCoord=coordinateDT, 
+        multiRegionQuantileByTargetVar(signal=loadingMat, signalCoord=coordinateDT, 
                            GRList=GRList[topRSInd_rQBPC], 
                            rsNames=paste0(rsEnrichment$rsName[topRSInd_rQBPC], " : ", rsEnrichment$rsDescription[topRSInd_rQBPC]), 
                             signalCol=PCsToAnnotate_rQBPC, maxRegionsToPlot = 5000,
