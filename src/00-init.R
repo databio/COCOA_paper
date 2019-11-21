@@ -882,10 +882,13 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     # seeing if loading values have a spike in the center of these region sets
     # compared to surrounding genome 
     
+    # Error in names(profilePList) <- rsNames : 
+    #     'names' attribute [62] must be the same length as the vector [57]
+    
     if (makeMRLP) {
         .regionSetList = GRList[topRSInd_mrLP]
         .regionSetList = lapply(.regionSetList, resize, width = 14000, fix="center")
-        .rsNames = paste0(rsScores$rsName[topRSInd_mrLP], " : ", rsScores$rsDescription[topRSInd_mrLP])
+        .rsNames = paste0(rsScores$rsName[topRSInd_mrLP], "_:_", rsScores$rsDescription[topRSInd_mrLP])
         
         # returns a list: one item is grob, one item is list of binned data tables
         mrPlotOutput = makeMetaRegionPlots(signal = loadingMat, signalCoord = coordinateDT, GRList = .regionSetList, 
@@ -908,9 +911,9 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     # make PC score plot where samples are colored by metadata
     
     if (!is.null(pMeta) && !is.null(colorByCols)) {
+        pcScores = mPCA$x
         sharedSamples = intersect(row.names(pcScores), pMeta$sample_name)
         row.names(pMeta) = pMeta$sample_name
-        pcScores = mPCA$x
         colorPlot = colorClusterPlots(clusteredDF = cbind(pcScores[sharedSamples, ], pMeta[sharedSamples, ]),
                                       plotCols = c("PC1", "PC2"), colorByCols = colorByCols)
         ggplot2::ggsave(filename=paste0(plotDir, "annoPCPlot", "_", inputID, ".pdf"),
