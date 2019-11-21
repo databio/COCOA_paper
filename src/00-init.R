@@ -903,11 +903,11 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     # make PC score plot where samples are colored by metadata
     
     if (!is.null(pMeta) && !is.null(colorByCols)) {
-        
+
         pcScores = mPCA$x
-        colorPlot = colorClusterPlots(clusteredDF = cbind(pcScores, pMeta), 
+        colorPlot = colorClusterPlots(clusteredDF = cbind(pcScores, pMeta),
                                       plotCols = c("PC1", "PC2"), colorByCols = colorByCols)
-        ggplot2::ggsave(filename=paste0(plotDir, "annoPCPlot", "_", inputID)), ".pdf"), 
+        ggplot2::ggsave(filename=paste0(plotDir, "annoPCPlot", "_", inputID, ".pdf"),
                         plot = colorPlot, device = "pdf",
                         limitsize=FALSE)
     }
