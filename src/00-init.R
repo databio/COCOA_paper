@@ -739,6 +739,8 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     # TODO: filter out low coverage region sets
     # for rsScores
     if (makeCPCH) {
+        # necessary
+        PCsToAnnotate_cPCH
         comparePCHeatmap(rsScores=rsScores, 
                          PCsToRankBy=PCsToAnnotate_cPCH, 
                          PCsToInclude=PCsToAnnotate_cPCH,
