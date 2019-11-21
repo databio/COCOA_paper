@@ -697,7 +697,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
                           PCsToAnnotate_mAPC = PCSTOANNOTATE[1:5], topRSToPlotNum=20,
                           makeRQBPC=TRUE, 
                           topRSInd_rQBPC = unique(unlist(sortedRSIndDF[1:10, ])),
-                          PCsToAnnotate_rQBPC = c(PCSTOANNOTATE),
+                          PCsToAnnotate_rQBPC = PCSTOANNOTATE,
                           makePCFSCH=TRUE, 
                           topRSInd_pcFSCH = unique(unlist(sortedRSIndDF[1:10, ])), 
                           PCsToAnnotate_pcFSCH=PCSTOANNOTATE,
@@ -726,7 +726,9 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     
     # make new directory in specified directory since this is specific to inputID
     plotDir = paste0(plotDir, "COCOA_plots", inputID, "/")
-    createPlotSubdir(plotDir)
+    if (!dir.exists(plotDir)) {
+        dir.create(plotDir, recursive = TRUE)
+    }
     ##################################################################################
     # comparePCHeatmap
     # visualization of enrichment score results across PCs
