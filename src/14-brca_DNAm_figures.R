@@ -158,10 +158,10 @@ topRSNames = c("wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak",
                "wgEncodeAwgTfbsSydhH1hescSuz12UcdUniPk.narrowPeak",
                "E104-H3K27me3.narrowPeak",
                "E032-H3K9me3.narrowPeak", 
-               "wgEncodeAwgTfbsBroadH1hescEzh239875UniPk.narrowPeak") #, "GSM1097879_ERG.bed")
+               "wgEncodeAwgTfbsBroadH1hescEzh239875UniPk.narrowPeak")
 abbrevNames = c("GATA3", "H3R17me2", "ER", "FOXA1", "CEBPA",
                 "SUZ12", "H3K27me3", "H3K9me3",
-                "EZH2")#, "ERG")
+                "EZH2")
 # topRSNames = c("GSM835863_EP300.bed", 
 #                "GSM607949_GATA1.bed")
 
@@ -201,6 +201,29 @@ for (i in seq_along(topRSNames)) {
     
 }
 
+################################################################################
+# supplementary Fig
+# DNA methylation in top region sets, ordered by PC score
+# regions for which I plotted meta-region profiles
+
+# get top region sets
+
+for (i in seq_along(topRSNames)) {
+    pdf(file = ffPlot(paste0(plotSubdir, "methylAlongPC1_", abbrevNames[i])))
+    draw(signalAlongAxis(genomicSignal = brcaSharedC$methylProp, signalCoord = brcaCoord, 
+                    regionSet = GRList[[topRSNames[i]]], 
+                    sampleScores= mPCA$x[, c("PC1", "PC4")], orderByCol="PC1", 
+                    topXVariables=100, variableScores = brcaCov[, "PC1"], 
+                    cluster_columns=TRUE, show_row_names=FALSE)) 
+    dev.off()
+    pdf(file = ffPlot(paste0(plotSubdir, "methylAlongPC4_", abbrevNames[i])))
+    draw(signalAlongAxis(genomicSignal = brcaSharedC$methylProp, signalCoord = brcaCoord, 
+                         regionSet = GRList[[topRSNames[i]]], 
+                         sampleScores= mPCA$x[, c("PC1", "PC4")], orderByCol="PC4", 
+                         topXVariables=100, variableScores = brcaCov[, "PC4"], 
+                         cluster_columns=TRUE, show_row_names=FALSE)) 
+    dev.off()
+}
 
 ########
 ### figures for PC4, Supplementary?
@@ -213,6 +236,7 @@ plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9),
                     colsToSearch = c("rsName", "rsDescription"), 
                     pattern= "h3k9|h3k27me|suz12|ezh2")
 # meta-region loading profile
+
 
 ########################################################################################
 # ROC curve
