@@ -152,6 +152,24 @@ pc2AnnoScoreDist
 ggsave(ffPlot(paste0(plotSubdir, "pc2HemaATAC2.svg")), 
        plot = pc2AnnoScoreDist, device = "svg")
 
+#################
+# supplementary fig. immune region sets for other PCs
+if (!dir.exists(ffPlot(plotSubdir, "hemaRSDist/"))) {
+    dir.create(ffPlot(plotSubdir, "hemaRSDist/"))
+}
+pcsToAnnotate = paste0("PC", 1:10)
+for (i in seq_along(pcsToAnnotate)) {
+    thisPCPlot = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = pcsToAnnotate[i], 
+                      pattern = hemaPattern, patternName = "Hematopoietic TFs") + 
+        theme(axis.title = element_text(size = 12.5), axis.text = element_text(size=10)) + 
+        scale_color_manual(values = c("red", "orange"), guide=FALSE) + 
+        ggtitle(label = pcsToAnnotate[i])
+    # Title with PC?
+    ggsave(ffPlot(paste0(plotSubdir, "hemaRSDist/", pcsToAnnotate[i], "HemaATAC.svg")), 
+           plot = thisPCPlot, device = "svg", width = 70, 
+           height=70, units = "mm")
+}
+
 
 ######### make "meta-region" loading profiles
 # panel D
