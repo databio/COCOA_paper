@@ -164,33 +164,34 @@ for (i in seq_along(cancerID)) {
         # aliveMethyl = mBySample[pMeta$vital_status == 0]
         # deadMethyl = mBySample[pMeta$vital_status == 1]
         # print(wilcox.test(aliveMethyl, deadMethyl, conf.int = TRUE))
-        
+
         # test whether DNA methylation is associated with survival
-        ###### cox proportional hazards model 
+        ###### cox proportional hazards model
         pMeta$lastDate = pMeta$days_to_last_followup
         pMeta$lastDate[is.na(pMeta$lastDate)] = pMeta$days_to_death[is.na(pMeta$lastDate)]
-        
+
         # covariates
         covariateData = pMeta
         patSurv = Surv(covariateData$lastDate / (365/12), event=covariateData$vital_status)
         try({
             if ("years_to_birth" %in% colnames(covariateData)) {
                 if ("gender" %in% colnames(covariateData)) {
+                    
                     myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
                 } else {
                     myModel = coxph(patSurv ~ years_to_birth + meanMethyl + methylScore, data = covariateData)
                 }
-                
+
             } else {
                 if ("gender" %in% colnames(covariateData)) {
                     myModel = coxph(patSurv ~ gender + meanMethyl + methylScore, data = covariateData)
                 } else {
                     myModel = coxph(patSurv ~ meanMethyl + methylScore, data = covariateData)
                 }
-                
+
             }
-            
-        
+
+
         sink(file = ffPlot(paste0(plotSubdir, "coxphModel", abbrevName[j], "_", cancerID[i], ".txt")))
         print(myModel)
         print(summary(myModel))
@@ -204,26 +205,93 @@ for (i in seq_along(cancerID)) {
         covariateData$methylGroup[covariateData$methylGroup < 0.3333] = 0
         covariateData$methylGroup[covariateData$methylGroup > 0.6666] = 2
         covariateData$methylGroup[(covariateData$methylGroup >= 0.3333) & (covariateData$methylGroup <= 0.6666)] = NA
-        
+
         kmFit = survfit(patSurv ~ methylGroup, data=covariateData)
         kmPlot = ggsurvplot(kmFit, risk.table = TRUE, conf.int = TRUE)
-        
-        # Error in data.frame(..., check.names = FALSE) : 
+
+        # Error in data.frame(..., check.names = FALSE) :
         #     arguments imply differing number of rows: 165, 0, 330
-        
-        
+
+
         # cumcensor = TRUE, cumevents = TRUE,
-        # a$plot = a$plot + 
-        # scale_color_discrete(name="Strata", labels=c("Low methylation score", 
-        #                                                    "High methylation score"), breaks=c("red", "blue")) 
+        # a$plot = a$plot +
+        # scale_color_discrete(name="Strata", labels=c("Low methylation score",
+        #                                                    "High methylation score"), breaks=c("red", "blue"))
         #theme(legend.text = element_text(c("Low methylation score", "High methylation score")))
         pdf(file = ffPlot(paste0(plotSubdir, "kmPlot", abbrevName[j], "_", cancerID[i], ".pdf")))
         kmPlot
         dev.off()
-        
+
     }
 
 }
 write.csv(spearCorDF, file = ffSheets("EZH2_TCGA_cancer_stage.csv"), quote = FALSE, 
           row.names = FALSE, col.names = TRUE)
+
+#################################################################################
+# are the same regions variable/associated with survival in each cancer?
+# are the same regions associated with cancer stage that are associated with survival?
+
+
+# get set of regions that is covered in each cancer
+
+# get set of CpGs that are covered in all cancers
+
+
+# get association association with survival for each CpG, correcting for 
+# age, average genome-wide methylation, and sex
+cgNames = row.names(genomicSignal)
+covariateData = cbind(covariateData, t(genomicSignal))
+
+try({
+    if ("years_to_birth" %in% colnames(covariateData)) {
+        if ("gender" %in% colnames(covariateData)) {
+            f1 <- as.formula(paste("patSurv ~ ",
+                                   paste(c("years_to_birth", "gender", "meanMethyl", cgNames), collapse= "+")))
+            
+            myModel = coxph(f1, covariateData)
+            myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl, 
+                            data = covariateData)
+        } else {
+            myModel = coxph(patSurv ~ years_to_birth + meanMethyl + methylScore, data = covariateData)
+        }
+        
+    } else {
+        if ("gender" %in% colnames(covariateData)) {
+            myModel = coxph(patSurv ~ gender + meanMethyl + methylScore, data = covariateData)
+        } else {
+            myModel = coxph(patSurv ~ meanMethyl + methylScore, data = covariateData)
+        }
+        
+    }
+})
+
+coef(myModel)
+
+
+
+
+
+
+
+
+
+
+
+makeQuantileGroups <- function(dataVec, nGroups=3) {
+    groups = rep(1, length(dataVec))
+    
+    for (i in 1:(nGroups-1)) {
+        groups[dataVec > quantile(x = dataVec, i/nGroups)] = i + 1
+    }
+    
+    # returns a vector of group membership
+    return(groups)
+}
+
+
+
+
+
+
 

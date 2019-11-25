@@ -114,6 +114,7 @@ a
 
 ###################
 # Fig. 2c, meta region loading profile plots, DNA methylation BRCA
+# Supplementary fig.
 
 PCsToAnnotate = paste0("PC", 1:10)
 signalCol = PCsToAnnotate
