@@ -14,8 +14,7 @@ library(GenomicRanges) # GRangesList, resize
 library(MIRA)
 library(ComplexHeatmap)
 library(gridExtra) #marrangeGrob for colorClusterPlots()
-# some of the environmental variables from aml/.../00-init.R will need to be reset
-source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R" )) 
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-genericFunctions.R" )) 
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-dataProcessingFunctions.R" ))
 library(MultiAssayExperiment)
 library(folderfun)
