@@ -67,13 +67,25 @@ brcaCov = cov(t(brcaSharedC$methylProp), mPCA$x[, paste0("PC", 1:10)])
 
 colorByCols = "ER_status"
 pcaWithAnno = cbind(mPCA$x, patientMetadata[row.names(mPCA$x) ,])
-multiColorPCAPlots = colorClusterPlots(pcaWithAnno, 
-                                       plotCols = c("PC1", "PC4"), 
-                                       colorByCols=colorByCols)
-ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/allMPCA_PCA_Plots/multiColorPCAPlots_allMPCA_", 
-                                PCsToPlot[i], "x", PCsToPlot[j], 
-                                ".pdf")), plot = multiColorPCAPlots, device = "pdf",
-                limitsize=FALSE)
+
+myPCList = list()
+myPCList[[1]] = c("PC1", "PC2")
+myPCList[[2]] = c("PC1", "PC3")
+myPCList[[3]] = c("PC1", "PC4")
+myPCList[[4]] = c("PC2", "PC3")
+myPCList[[5]] = c("PC2", "PC4")
+myPCList[[6]] = c("PC3", "PC4")
+
+for (i in seq_along(myPCList)) {
+    PCsToPlot = myPCList[[i]]
+    multiColorPCAPlots = colorClusterPlots(pcaWithAnno, 
+                                               plotCols = PCsToPlot, 
+                                               colorByCols=colorByCols)
+    ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/multiColorPCAPlots_allMPCA_", 
+                                           PCsToPlot[1], "x", PCsToPlot[2], 
+                                           ".pdf")), plot = multiColorPCAPlots, device = "pdf",
+                    limitsize=FALSE)
+}
 
 ##################
 # Fig 2. BRCA DNA methylation 
