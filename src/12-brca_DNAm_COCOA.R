@@ -246,54 +246,6 @@ for (i in c(2, 4:6)) {
 }
 
 
-###################################################################################
-# # visualizing ICA
-# # treating cytosines as observations and patients as dimensions 
-# allMICA = fastICA(X = brcaMList$methylProp, n.comp = 5)#, alg.typ = "deflation")
-# 
-# i=2
-# cpgToPlotNum=20000
-# pdf(paste0(Sys.getenv("PLOTS"), "ICA_cpg_plots.pdf"))
-# for (i in 1:ncol(allMICA$S)) {
-#     for (j in 1:ncol(allMICA$S)) {
-#         cpgToPlot = sample(1:nrow(allMICA$S), cpgToPlotNum)
-#         plot(allMICA$S[cpgToPlot, i], allMICA$S[cpgToPlot, j])
-#     }
-# }
-# dev.off()
-# plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 2])
-# plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 3])
-# plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 4])
-# plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 5])
-# 
-# # # add annotation information
-# # icaWithAnno = cbind(as.data.table(allMICA$x), patientMetadata[dataSplit, ])
-# # 
-# # colorByCols = colnames(patientMetadata)[!(colnames(patientMetadata) %in% "subject_ID")]
-# # for (i in 2:6) {
-# #     multiColorICAPlots = colorClusterPlots(icaWithAnno, 
-# #                                            plotCols = c("PC1", paste0("PC", i)), 
-# #                                            colorByCols=colorByCols)
-# #     ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorICAPlots1", i), 
-# #                                     ".pdf"), plot = multiColorICAPlots, device = "pdf",
-# #                     limitsize=FALSE)
-# # }
-# # for (i in c(2, 4:6)) {
-# #     multiColorICAPlots = colorClusterPlots(icaWithAnno, 
-# #                                            plotCols = c("PC3", paste0("PC", i)), 
-# #                                            colorByCols=colorByCols)
-# #     ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorICAPlots3", i), 
-# #                                     ".pdf"), plot = multiColorICAPlots, device = "pdf",
-# #                     limitsize=FALSE)
-# # }
-# 
-
-
-
-
-# visualizing 
-
-
 ######################################################################################
 # analysis of whether certain subsets of region sets are the variable ones
 

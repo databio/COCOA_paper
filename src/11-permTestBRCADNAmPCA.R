@@ -18,7 +18,6 @@ nPerm = 300
 ######################################################################
 # required inputs to permutation test
 dataID = "brcaDNAm657"
-devtools::load_all(ffCode("COCOA/"))
 colsToAnnotate = paste0("PC", 1:10)
 variationMetric = "cov"
 
@@ -50,6 +49,14 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
                           rsDescription=rsDescription, rsCollection=rsCollection)
     actualResults
 }, assignToVariable = "realRSScores")
+
+tmp = formattedCOCOAScores(scores = realRSScores, 
+                           colsToAnnotate = colsToAnnotate, 
+                           numTopRS = 100)
+
+write.csv(tmp, file = ffSheets(paste0("topRSScores","_", 
+                                      dataID, "_", variationMetric, ".csv")), 
+          row.names = FALSE)
 
 ############################################################################
 

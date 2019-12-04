@@ -87,6 +87,15 @@ for (i in seq_along(myPCList)) {
                     limitsize=FALSE)
 }
 
+pcaWithAnno = as.data.frame(pcaWithAnno)
+for (i in c(paste0("PC", 1:4))) {
+    print(
+    wilcox.test(pcaWithAnno[pcaWithAnno$ER_status == "Positive", i], 
+                pcaWithAnno[pcaWithAnno$ER_status == "Negative", i], conf.int = TRUE)
+    )
+}
+pcaWithAnno = as.data.table(pcaWithAnno)
+
 ##################
 # Fig 2. BRCA DNA methylation 
 # simpleCache(paste0("rsScores_", dataID, "_", variationMetric), assignToVariable = "rsScores")
