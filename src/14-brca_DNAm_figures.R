@@ -1,4 +1,5 @@
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
+library(curatedTCGAData)
 
 setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
 
@@ -93,8 +94,13 @@ for (i in c(paste0("PC", 1:4))) {
     wilcox.test(pcaWithAnno[pcaWithAnno$ER_status == "Positive", i], 
                 pcaWithAnno[pcaWithAnno$ER_status == "Negative", i], conf.int = TRUE)
     )
+    print(
+    cor.test(pcaWithAnno[, i], as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3)
+    )
 }
 pcaWithAnno = as.data.table(pcaWithAnno)
+
+
 
 ##################
 # Fig 2. BRCA DNA methylation 
@@ -132,6 +138,48 @@ a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC4",
     theme(legend.position = c(0.15, 0.15)) +
     scale_color_manual(values = c("blue", "red", "orange")) + xlab("Region set rank (PC1)")
 a
+
+####################
+# interpretation of PC2
+# EMT?
+
+emtSig = as.character(read.csv(ffCode("COCOA_paper/metadata/EMT_core_sig_Groger2012.csv"), 
+                  header = FALSE)[, 1])
+
+rnaMAE = curatedTCGAData(diseaseCode = "BRCA", assays = c("RNASeq2GeneNorm"), 
+                      dry.run = FALSE)
+rna = assay(rnaMAE, "BRCA_RNASeq2GeneNorm-20160128")
+colnames(rna) <- substr(colnames(rna), 1, 12)
+sharedSamples = row.names(mPCA$x)[row.names(mPCA$x) %in% colnames(rna)]
+
+rna <- rna[, sharedSamples]
+mPCScores = mPCA$x[sharedSamples, ]
+
+sGenes = intersect(emtSig, row.names(rna))
+rna = rna[sGenes, ]
+
+rnaPCA = prcomp(t(rna), center = TRUE, scale.=TRUE)
+plot(rnaPCA$x[, c("PC1", "PC2")])
+pcMean = colMeans(rnaPCA$x)
+pcSD = apply(X = rnaPCA$x, 2, sd)
+# zScorePC1 = abs((rnaPCA$x[, "PC1"] - pcMean[1]) / pcSD[1])
+# zScorePC2 = abs((rnaPCA$x[, "PC2"] - pcMean[2]) / pcSD[2])
+# sum(zScorePC1 > 3)
+# sum(zScorePC2 > 3)
+# outliers = row.names(rnaPCA$x[(zScorePC1 > 3) | (zScorePC2 > 3), ])
+
+plot((rnaPCA$sdev^2 / sum(rnaPCA$sdev^2) )[1:10])
+
+cor.test(rnaPCA$x[, "PC2"], mPCScores[, "PC2"])
+all(row.names(mPCScores) == row.names(rnaPCA))
+
+
+rnaD = dist(t(rna))
+rnaClust = kmeans(x = t(rna), centers = 2)
+table(rnaClust$cluster)
+all(row.names(mPCScores) == names(rnaClust$cluster))
+cor.test(x = mPCScores[, "PC2"], (rnaClust$cluster * 2 - 3), method = "spearman")
+# not significant
 
 ###################
 # Fig. 2c, meta region loading profile plots, DNA methylation BRCA
