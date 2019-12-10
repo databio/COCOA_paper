@@ -95,10 +95,9 @@ for (i in c(paste0("PC", 1:4))) {
                 pcaWithAnno[pcaWithAnno$ER_status == "Negative", i], conf.int = TRUE)
     )
     print(
-    cor.test(pcaWithAnno[, i], as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3)
+    cor.test(pcaWithAnno[, i], as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3, method = "spearman")
     )
 }
-pcaWithAnno = as.data.table(pcaWithAnno)
 
 
 
@@ -123,14 +122,19 @@ ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "ER_related_PC1.svg"),
 
 ####################
 # annoScoreDist
-a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC1", 
-                      pattern = c("esr1|eralpha", "gata3|foxa1|h3r17"), 
-                      patternName = c("ER", "ER-related")) +
-    theme(legend.position = c(0.15, 0.15)) +
-    scale_color_manual(values = c("blue", "red", "orange")) + xlab("Region set rank (PC1)")
-a 
-ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_PC1_", .analysisID, ".svg"), 
-       plot = a, device = "svg", width = plotWidth, height = plotHeight, units = plotUnits)
+
+
+for (i in paste0("PC", 1:4)) {
+    
+    a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
+                          pattern = c("esr1|eralpha", "gata3|foxa1|h3r17"), 
+                          patternName = c("ER", "ER-related")) +
+        theme(legend.position = c(0.15, 0.15)) +
+        scale_color_manual(values = c("blue", "red", "orange")) + xlab(paste0("Region set rank (", i, ")"))
+    a 
+    ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, ".svg"), 
+           plot = a, device = "svg", width = plotWidth, height = plotHeight, units = plotUnits)
+}
 
 a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC4", 
                       pattern = c("EZH2|SUZ12", "gata3|foxa1|h3r17"), 
@@ -138,6 +142,38 @@ a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC4",
     theme(legend.position = c(0.15, 0.15)) +
     scale_color_manual(values = c("blue", "red", "orange")) + xlab("Region set rank (PC1)")
 a
+
+######################
+# ER association by PC
+
+corList = list()
+thesePCs = paste0("PC", 1:4)
+corVec = rep(-99, length(thesePCs))
+names(corVec) = thesePCs
+for (i in thesePCs) {
+    # print(
+    #     wilcox.test(pcaWithAnno[pcaWithAnno$ER_status == "Positive", i], 
+    #                 pcaWithAnno[pcaWithAnno$ER_status == "Negative", i], conf.int = TRUE)
+    # )
+        corList[[i]]= cor.test(pcaWithAnno[, i], as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3, method = "spearman")
+        corVec[i] = cor.test(pcaWithAnno[, i], 
+                             as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3, 
+                             method = "spearman")$estimate
+}
+
+corVec
+medRank = rep(-99, length(thesePCs))
+minRank = rep(-99, length(thesePCs))
+for (i in seq_along(thesePCs)) {
+    erInd = unique(c(grep(pattern = "esr1|eralpha", x = as.character(rsScores[order(rsScores[, thesePCs[i]], 
+                                                        decreasing = TRUE), ]$rsName), ignore.case = TRUE),
+      grep(pattern = "esr1|eralpha", x = as.character(rsScores[order(rsScores[, thesePCs[i]], 
+                                                        decreasing = TRUE), ]$rsDescription), ignore.case = TRUE)))
+    medRank[i]= median(erInd)
+}
+
+plot(abs(corVec), medRank)
+
 
 ####################
 # interpretation of PC2
