@@ -4,6 +4,7 @@
 .libPaths(c("/home/jtl2hk/containerFiles/3.6/", .libPaths()))
 
 library(dplyr)
+library(tidyr)
 library(LOLA)
 library(simpleCache)
 library(data.table)

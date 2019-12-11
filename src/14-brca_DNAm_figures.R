@@ -133,7 +133,7 @@ for (i in paste0("PC", 1:4)) {
         scale_color_manual(values = c("blue", "red", "orange")) + xlab(paste0("Region set rank (", i, ")"))
     a 
     ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, ".svg"), 
-           plot = a, device = "svg", width = plotWidth, height = plotHeight, units = plotUnits)
+           plot = a, device = "svg", width = plotWidth/2, height = plotHeight/2, units = plotUnits)
 }
 
 a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC4", 
@@ -162,7 +162,7 @@ for (i in thesePCs) {
 }
 
 corVec
-medRank = rep(-99, length(thesePCs))
+tmedRank = rep(-99, length(thesePCs))
 minRank = rep(-99, length(thesePCs))
 for (i in seq_along(thesePCs)) {
     erInd = unique(c(grep(pattern = "esr1|eralpha", x = as.character(rsScores[order(rsScores[, thesePCs[i]], 
@@ -173,6 +173,26 @@ for (i in seq_along(thesePCs)) {
 }
 
 plot(abs(corVec), medRank)
+
+###
+# order samples by PC score, color by ER status
+erStatusDF = cbind(apply(X = mPCA$x[, paste0("PC", 1:4)], 
+                         MARGIN = 2, FUN = function(x) order(order(x, decreasing = FALSE))), 
+                   as.data.frame(patientMetadata[row.names(mPCA$x) , ])[, c("subject_ID", "ER_status")])
+erStatusDF = pivot_longer(erStatusDF, cols = c("PC1", "PC2", "PC3", "PC4"), names_to = "PC", values_to = "rank")    
+
+erStatusDF$barHeight = rep(1, nrow(erStatusDF))
+erStatusDF = arrange(erStatusDF, PC, rank) 
+
+erStatusPlot = ggplot(data = erStatusDF, mapping = aes(x=rank, y=barHeight, group=PC)) + 
+    geom_col(aes(col=ER_status)) + scale_color_discrete(breaks=c("Positive", "Negative")) +
+    xlab("Samples ordered by PC score") + theme(axis.text = element_blank(), axis.ticks = element_blank(),
+                             axis.title.y = element_blank(), axis.line = element_blank())
+erStatusPlot
+
+ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/orderedERStatus.svg")), 
+                plot = erStatusPlot, device = "svg", height = plotHeight / 2, 
+                width = plotWidth, units = plotUnits)
 
 
 ####################
