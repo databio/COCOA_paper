@@ -312,7 +312,6 @@ abbrevNames = c("GATA3", "H3R17me2", "ER", "FOXA1", "CEBPA",
 # topRSNames = c("GSM835863_EP300.bed", 
 #                "GSM607949_GATA1.bed")
 
-
 for (i in seq_along(topRSNames)) {
     minVal = -1
     maxVal = 2
@@ -326,7 +325,6 @@ for (i in seq_along(topRSNames)) {
             maxVal = 0.5
         } 
         
-        
         myPlot = ggplot(data = filter(pcP[[1]], PC %in% signalCol[j]), mapping = aes(x =binID , y = loading_value)) + 
             # ggplot(data = pcP[[1]], mapping = aes(x =binID , y = loading_value)) + 
             geom_line() + ylim(c(minVal, maxVal)) + 
@@ -335,17 +333,13 @@ for (i in seq_along(topRSNames)) {
             ylab("Normalized Correlation") + 
             theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
                   axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
-                  axis.title = element_blank(), title = element_blank(), axis.text.y=element_blank()
-                  
-            )
+                  axis.title = element_blank(), title = element_blank(), axis.text.y=element_blank())
         myPlot
         ggsave(filename = ffPlot(paste0(plotSubdir, 
                                         "/mrProfilesWeightedMean_", abbrevNames[i],
                                         "_", signalCol[j], ".svg")), 
                plot = myPlot, device = "svg", height=20, width=30, units = "mm")
     }
-    
-    
 }
 
 ################################################################################
@@ -354,22 +348,43 @@ for (i in seq_along(topRSNames)) {
 # regions for which I plotted meta-region profiles
 
 # get top region sets
-
+colnames(brcaSharedC$methylProp) = gsub(pattern = "-",
+                                        replacement = "_", 
+                                        x = colnames(brcaSharedC$methylProp))
+row.names(mPCA$x) = gsub(pattern = "-",
+                        replacement = "_", 
+                        x = row.names(mPCA$x))
+myPCs = paste0("PC", 1:4)
 for (i in seq_along(topRSNames)) {
-    pdf(file = ffPlot(paste0(plotSubdir, "methylAlongPC1_", abbrevNames[i])))
-    draw(signalAlongAxis(genomicSignal = brcaSharedC$methylProp, signalCoord = brcaCoord, 
-                    regionSet = GRList[[topRSNames[i]]], 
-                    sampleScores= mPCA$x[, c("PC1", "PC4")], orderByCol="PC1", 
-                    topXVariables=100, variableScores = brcaCov[, "PC1"], 
-                    cluster_columns=TRUE, show_row_names=FALSE)) 
-    dev.off()
-    pdf(file = ffPlot(paste0(plotSubdir, "methylAlongPC4_", abbrevNames[i])))
-    draw(signalAlongAxis(genomicSignal = brcaSharedC$methylProp, signalCoord = brcaCoord, 
-                         regionSet = GRList[[topRSNames[i]]], 
-                         sampleScores= mPCA$x[, c("PC1", "PC4")], orderByCol="PC4", 
-                         topXVariables=100, variableScores = brcaCov[, "PC4"], 
-                         cluster_columns=TRUE, show_row_names=FALSE)) 
-    dev.off()
+    thisRSM = COCOA:::averagePerRegion(signal=brcaSharedC$methylProp, 
+                                       signalCoord = brcaCoord, 
+                                       regionSet = GRList[[topRSNames[i]]], 
+                                       signalCol = colnames(brcaSharedC$methylProp))
+    thisRSCovScores = COCOA:::averagePerRegion(signal=brcaCov[, myPCs], 
+                                               signalCoord = brcaCoord, 
+                                               regionSet = GRList[[topRSNames[i]]], 
+                                               signalCol = myPCs)
+    thisRSM = as.data.frame(thisRSM)
+    thisRSCovScores = as.data.frame(thisRSCovScores)
+    for (j in seq_along(myPCs)) {
+        pdf(file = ffPlot(paste0(plotSubdir, 
+                                 "methylAlong", myPCs[j], "_", abbrevNames[i], ".pdf")))
+        # svg(filename = ffPlot(paste0(plotSubdir, "methylAlong", myPCs[j], "_", abbrevNames[i], ".svg")))
+        draw(signalAlongAxis(genomicSignal = thisRSM[, !(colnames(thisRSM) %in% c("chr", "start", "end"))], 
+                             signalCoord = thisRSM[, c("chr", "start", "end")], 
+                             regionSet = GRList[[topRSNames[i]]], 
+                             sampleScores= mPCA$x[, myPCs], orderByCol=myPCs[j], 
+                             topXVariables=100, variableScores = thisRSCovScores[, myPCs[j]], 
+                             cluster_columns=TRUE, show_row_names=FALSE, show_column_names=FALSE, 
+                             column_title = "Regions (top 100)", name = "DNA methylation level", 
+                             row_title = "Samples ordered by PC score")) 
+        # draw(signalAlongAxis(genomicSignal = brcaSharedC$methylProp, signalCoord = brcaCoord, 
+        #                      regionSet = GRList[[topRSNames[i]]], 
+        #                      sampleScores= mPCA$x[, myPCs], orderByCol=myPCs[j], 
+        #                      topXVariables=100, variableScores = brcaCov[, myPCs[j]], 
+        #                      cluster_columns=TRUE, show_row_names=FALSE)) 
+        dev.off()
+    }
 }
 
 ########
