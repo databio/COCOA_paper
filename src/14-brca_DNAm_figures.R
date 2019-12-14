@@ -294,7 +294,17 @@ ggsave(plot = mrProfileList$grob,
 # normalize so plots from different PCs will be comparable
 multiProfileP2 = normalizeMRProfile(signal=brcaCov, signalCol=signalCol, 
                        mrProfileList$metaRegionData, 
-                       names(mrProfileList$metaRegionData))
+                       names(mrProfileList$metaRegionData), 
+                       normMethod = "mean")
+multiProfileP2 = normalizeMRProfile(signal=brcaCov, signalCol=signalCol, 
+                                    mrProfileList$metaRegionData, 
+                                    names(mrProfileList$metaRegionData),
+                                    normMethod = "zscore")
+# multiProfileP2 = normalizeMRProfile(signal=brcaCov, signalCol=signalCol, 
+#                                     mrProfileList$metaRegionData, 
+#                                     names(mrProfileList$metaRegionData),
+#                                     normMethod = "normPVal")
+
 multiProfileP2[["metaRegionData"]] = multiProfileP2
 names(multiProfileP2[["metaRegionData"]])
 topRSNames = c("wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak",
@@ -313,27 +323,27 @@ abbrevNames = c("GATA3", "H3R17me2", "ER", "FOXA1", "CEBPA",
 #                "GSM607949_GATA1.bed")
 
 for (i in seq_along(topRSNames)) {
-    minVal = -1
-    maxVal = 2
+    minVal = -0.5
+    maxVal = 2.5
         
     pcP = multiProfileP2[["metaRegionData"]][topRSNames[i]]
 
     for (j in seq_along(signalCol[1:4])) {
         
-        if (j == 4) {
-            minVal = 0
-            maxVal = 0.5
-        } 
+        # if (j == 4) {
+        #     minVal = 0
+        #     maxVal = 0.5
+        # } 
         
         myPlot = ggplot(data = filter(pcP[[1]], PC %in% signalCol[j]), mapping = aes(x =binID , y = loading_value)) + 
             # ggplot(data = pcP[[1]], mapping = aes(x =binID , y = loading_value)) + 
-            geom_line() + ylim(c(minVal, maxVal)) + 
+            geom_line() + ylim(c(minVal, maxVal)) + geom_hline(yintercept = 0, col="red", alpha = 0.25) +
             # facet_wrap(facets = "PC") + 
             ggtitle(label = wrapper(topRSNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
             ylab("Normalized Correlation") + 
             theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
                   axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
-                  axis.title = element_blank(), title = element_blank(), axis.text.y=element_blank())
+                  axis.title = element_blank(), title = element_blank(), axis.text.y=element_blank()) 
         myPlot
         ggsave(filename = ffPlot(paste0(plotSubdir, 
                                         "/mrProfilesWeightedMean_", abbrevNames[i],
@@ -367,9 +377,15 @@ for (i in seq_along(topRSNames)) {
     thisRSM = as.data.frame(thisRSM)
     thisRSCovScores = as.data.frame(thisRSCovScores)
     for (j in seq_along(myPCs)) {
+        
         pdf(file = ffPlot(paste0(plotSubdir, 
                                  "methylAlong", myPCs[j], "_", abbrevNames[i], ".pdf")))
-        # svg(filename = ffPlot(paste0(plotSubdir, "methylAlong", myPCs[j], "_", abbrevNames[i], ".svg")))
+        # png(filename = ffPlot(paste0(plotSubdir, 
+        #                              "methylAlong", myPCs[j], "_", abbrevNames[i], ".png")),
+        #     width = 480, height = 480, units = "px", pointsize = 12,
+        #     bg = "white",  res = NA,
+        #     type = c("cairo", "cairo-png", "Xlib", "quartz"))
+        # # svg(filename = ffPlot(paste0(plotSubdir, "methylAlong", myPCs[j], "_", abbrevNames[i], ".svg")))
         draw(signalAlongAxis(genomicSignal = thisRSM[, !(colnames(thisRSM) %in% c("chr", "start", "end"))], 
                              signalCoord = thisRSM[, c("chr", "start", "end")], 
                              regionSet = GRList[[topRSNames[i]]], 

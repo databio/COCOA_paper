@@ -463,7 +463,10 @@ wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n")
 
 
 #a data.table. ouput includes columns "PC", "loading_value"
-normalizeMRProfile <- function(signal, signalCol, pList, rsNames, absVal=TRUE) {
+# @param negLog logical. only applies if normMethod is making a pval, -log(x,10)
+normalizeMRProfile <- function(signal, signalCol, pList, rsNames, 
+                               absVal=TRUE, 
+                               normMethod=c("mean", "zscore", "normPVal", "empPVal"),  negLog=TRUE) {
     
     pcP = copy(pList)
     
@@ -477,12 +480,28 @@ normalizeMRProfile <- function(signal, signalCol, pList, rsNames, absVal=TRUE) {
     
     # average loading value from each PC to normalize so PCs can be compared with each other
     if (absVal) {
-        avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(abs(x)))    
+        avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(abs(x)))
+        sdLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) sd(abs(x), na.rm = TRUE))
     } else {
         avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(x))
+        sdLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) sd(x, na.rm = TRUE))
     }
     
-    pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=signalCol, z = avLoad)])
+    if (normMethod == "mean") {
+        pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=signalCol, z = avLoad)])
+    } else if (normMethod == "zscore") {
+        pcP = lapply(pcP, FUN = function(x) as.data.table(x[, mapply(FUN = function(y, z) get(y) - z, y=signalCol, z = avLoad)]))
+        pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) / z, y=signalCol, z = sdLoad)])
+    } else if (normMethod == "normPVal") {
+        pcP = lapply(pcP, FUN = function(x) as.data.table(x[, mapply(FUN = function(y, z) get(y) - z, y=signalCol, z = avLoad)]))
+        pcP = lapply(pcP, FUN = function(x) as.data.table(x[, mapply(FUN = function(y, z) get(y) / z, y=signalCol, z = sdLoad)]))
+        # two sided p-value (for one sided, don't multiply by two)
+        pcP = lapply(X = pcP, FUN = function(x) apply(X = x, FUN = function(y) (1-pnorm(abs(y))) * 2, MARGIN = 2))
+        if(negLog) {
+            pcP = lapply(X = pcP, FUN = function(x) apply(X = x, FUN = function(y) -log10(y), MARGIN = 2))
+        }
+    }
+    
     pcP = lapply(pcP, FUN = function(x) data.table(binID=1:nrow(x), x))
     
     # convert to long format for plots
