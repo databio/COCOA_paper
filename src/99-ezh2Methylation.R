@@ -23,11 +23,29 @@ if (!dir.exists(ffPlot(plotSubdir))) {
 #############################################################################
 loadGRList(genomeV = "hg19")
 
-myTopRSNames = c("wgEncodeAwgTfbsBroadHsmmtEzh239875UniPk.narrowPeak",
-"wgEncodeAwgTfbsSydhNt2d1Suz12UcdUniPk.narrowPeak")
-myTopRS = GRList[myTopRSNames]
-abbrevName = c("EZH2", "SUZ12")
 ##############################################################################
+# create consensus polycomb region set 
+
+# combine top region sets from KIRC analysis
+dataID = "kircMethyl214"
+variationMetric = "spearmanCor" 
+simpleCache(paste0("rsScores_", dataID, "_", variationMetric), assignToVariable = "rsScores")
+
+# ezh2 and suz12
+topEzh2 = arrange(rsScores, desc(cancerStage))$rsName[1:11]
+topEzh2 = topEzh2[grepl(pattern = "ezh2|suz12", x = topEzh2, ignore.case = TRUE)]
+topEzh2GRList = GRList[topEzh2]
+mergedTopEzh2 = unlist(topEzh2GRList, recursive = TRUE, use.names = TRUE)
+mergedTopEzh2 = reduce(mergedTopEzh2)
+
+# myTopRSNames = c("wgEncodeAwgTfbsBroadHsmmtEzh239875UniPk.narrowPeak",
+#                  "wgEncodeAwgTfbsSydhNt2d1Suz12UcdUniPk.narrowPeak")
+myTopRS = mergedTopEzh2
+abbrevName = c("polycomb")
+
+###############################################################################
+
+
 
 # do for each cancer type
 cancerID= c("ACC", "BLCA", "BRCA", "CESC", "CHOL", 
@@ -45,8 +63,8 @@ spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)),
 
 
 
-
-
+# get overlap between myTopRS (based on CpGs covered in epigenetic data)
+getOverlap=TRUE
 for (i in seq_along(cancerID)) {
     
     allSampleLabels = NULL
@@ -190,7 +208,7 @@ for (i in seq_along(cancerID)) {
                 }
 
             }
-
+        
 
         sink(file = ffPlot(paste0(plotSubdir, "coxphModel", abbrevName[j], "_", cancerID[i], ".txt")))
         print(myModel)
@@ -221,76 +239,90 @@ for (i in seq_along(cancerID)) {
         pdf(file = ffPlot(paste0(plotSubdir, "kmPlot", abbrevName[j], "_", cancerID[i], ".pdf")))
         kmPlot
         dev.off()
+        
+        # also want to know how many covered CpGs are shared by EZH2 and SUZ12
+        # only need to do once
+        if (getOverlap) {
 
+            pOL = percentCOverlap(mCoord = signalCoord, 
+                                  GRList = myTopRS) 
+            getOverlap = FALSE
+        }
     }
 
 }
+
+# spearCorDF = read.csv(ffSheets("EZH2_TCGA_cancer_stage.csv"))
+spearCorDF$holmCoxPVal = p.adjust(p = spearCorDF$coxPVal, method = "holm")
+spearCorDF$holmSpearmanPVal = p.adjust(p = spearCorDF$spearmanPVal, method = "holm")
+
 write.csv(spearCorDF, file = ffSheets("EZH2_TCGA_cancer_stage.csv"), quote = FALSE, 
           row.names = FALSE, col.names = TRUE)
 
-#################################################################################
-# are the same regions variable/associated with survival in each cancer?
-# are the same regions associated with cancer stage that are associated with survival?
 
-
-# get set of regions that is covered in each cancer
-
-# get set of CpGs that are covered in all cancers
-
-
-# get association association with survival for each CpG, correcting for 
-# age, average genome-wide methylation, and sex
-cgNames = row.names(genomicSignal)
-covariateData = cbind(covariateData, t(genomicSignal))
-
-try({
-    if ("years_to_birth" %in% colnames(covariateData)) {
-        if ("gender" %in% colnames(covariateData)) {
-            f1 <- as.formula(paste("patSurv ~ ",
-                                   paste(c("years_to_birth", "gender", "meanMethyl", cgNames), collapse= "+")))
-            
-            myModel = coxph(f1, covariateData)
-            myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl, 
-                            data = covariateData)
-        } else {
-            myModel = coxph(patSurv ~ years_to_birth + meanMethyl + methylScore, data = covariateData)
-        }
-        
-    } else {
-        if ("gender" %in% colnames(covariateData)) {
-            myModel = coxph(patSurv ~ gender + meanMethyl + methylScore, data = covariateData)
-        } else {
-            myModel = coxph(patSurv ~ meanMethyl + methylScore, data = covariateData)
-        }
-        
-    }
-})
-
-coef(myModel)
-
-
-
-
-
-
-
-
-
-
-
-makeQuantileGroups <- function(dataVec, nGroups=3) {
-    groups = rep(1, length(dataVec))
-    
-    for (i in 1:(nGroups-1)) {
-        groups[dataVec > quantile(x = dataVec, i/nGroups)] = i + 1
-    }
-    
-    # returns a vector of group membership
-    return(groups)
-}
-
-
-
+# #################################################################################
+# # are the same regions variable/associated with survival in each cancer?
+# # are the same regions associated with cancer stage that are associated with survival?
+# 
+# 
+# # get set of regions that is covered in each cancer
+# 
+# # get set of CpGs that are covered in all cancers
+# 
+# 
+# # get association association with survival for each CpG, correcting for 
+# # age, average genome-wide methylation, and sex
+# cgNames = row.names(genomicSignal)
+# covariateData = cbind(covariateData, t(genomicSignal))
+# 
+# try({
+#     if ("years_to_birth" %in% colnames(covariateData)) {
+#         if ("gender" %in% colnames(covariateData)) {
+#             f1 <- as.formula(paste("patSurv ~ ",
+#                                    paste(c("years_to_birth", "gender", "meanMethyl", cgNames), collapse= "+")))
+#             
+#             myModel = coxph(f1, covariateData)
+#             myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl, 
+#                             data = covariateData)
+#         } else {
+#             myModel = coxph(patSurv ~ years_to_birth + meanMethyl + methylScore, data = covariateData)
+#         }
+#         
+#     } else {
+#         if ("gender" %in% colnames(covariateData)) {
+#             myModel = coxph(patSurv ~ gender + meanMethyl + methylScore, data = covariateData)
+#         } else {
+#             myModel = coxph(patSurv ~ meanMethyl + methylScore, data = covariateData)
+#         }
+#         
+#     }
+# })
+# 
+# coef(myModel)
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# makeQuantileGroups <- function(dataVec, nGroups=3) {
+#     groups = rep(1, length(dataVec))
+#     
+#     for (i in 1:(nGroups-1)) {
+#         groups[dataVec > quantile(x = dataVec, i/nGroups)] = i + 1
+#     }
+#     
+#     # returns a vector of group membership
+#     return(groups)
+# }
+# 
+# 
+# 
 
 
 
