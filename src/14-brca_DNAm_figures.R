@@ -64,7 +64,7 @@ dim(brcaSharedC$methylProp)
 brcaCov = cov(t(brcaSharedC$methylProp), mPCA$x[, paste0("PC", 1:10)])
 
 #############################################################################
-# Fig. 2a, PCA plot, DNA methylation
+# PCA plot, DNA methylation
 
 colorByCols = "ER_status"
 pcaWithAnno = cbind(mPCA$x, patientMetadata[row.names(mPCA$x) ,])
@@ -104,23 +104,24 @@ for (i in c(paste0("PC", 1:4))) {
 ##################
 # Fig 2. BRCA DNA methylation 
 # simpleCache(paste0("rsScores_", dataID, "_", variationMetric), assignToVariable = "rsScores")
-
-# summary figure of COCOA BRCA results: ER set relative ranking among region sets
-esrConcentrationPlot = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
-                                           colsToSearch = c("rsName", "rsDescription"), 
-                                           pattern= "esr|eralpha|eraa") + ggtitle("Estrogen receptor region sets") + 
-    theme(axis.title.x = element_text(size = 20), 
-          axis.title.y = element_text(size=20), 
-          axis.text.x = element_text(size=20), 
-          axis.text.y = element_text(size=20), title = element_text(size = 20)) + scale_y_continuous(breaks = seq(from=0, to=10, by=2))
-ggsave(filename = ffPlot(paste0(plotSubdir, "erRegionSetsDNAm.svg")), plot = esrConcentrationPlot, device = "svg")
-
-erRelated = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
-                                colsToSearch = c("rsName", "rsDescription"), 
-                                pattern= "esr|eralpha|gata3|foxa1|h3r17") + ggtitle("Estrogen receptor-related region sets")
-ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "ER_related_PC1.svg"), plot = erRelated, device = "svg")
+# 
+# # summary figure of COCOA BRCA results: ER set relative ranking among region sets
+# esrConcentrationPlot = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
+#                                            colsToSearch = c("rsName", "rsDescription"), 
+#                                            pattern= "esr|eralpha|eraa") + ggtitle("Estrogen receptor region sets") + 
+#     theme(axis.title.x = element_text(size = 20), 
+#           axis.title.y = element_text(size=20), 
+#           axis.text.x = element_text(size=20), 
+#           axis.text.y = element_text(size=20), title = element_text(size = 20)) + scale_y_continuous(breaks = seq(from=0, to=10, by=2))
+# ggsave(filename = ffPlot(paste0(plotSubdir, "erRegionSetsDNAm.svg")), plot = esrConcentrationPlot, device = "svg")
+# 
+# erRelated = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
+#                                 colsToSearch = c("rsName", "rsDescription"), 
+#                                 pattern= "esr|eralpha|gata3|foxa1|h3r17") + ggtitle("Estrogen receptor-related region sets")
+# ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "ER_related_PC1.svg"), plot = erRelated, device = "svg")
 
 ####################
+# figure 2A
 # annoScoreDist
 
 
@@ -144,6 +145,7 @@ for (i in paste0("PC", 1:4)) {
            plot = a, device = "svg", width = plotWidth/2, height = plotHeight/2, units = plotUnits)
 }
 
+# making a plot with legend
 i="PC1"
 a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
                       pattern = c("esr1|eralpha", "gata3|foxa1|h3r17"), 
@@ -165,6 +167,7 @@ a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC4",
 a
 
 ######################
+# figure 2B
 # ER association by PC
 
 corList = list()

@@ -23,6 +23,7 @@ setCacheDir(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/RCache/"))
 regionCovCutoff = 100
 plotWidth = 100 # mm
 plotHeight = 100 # mm
+plotUnits = "mm"
 
 
 ##########
@@ -75,12 +76,12 @@ rsEnSortedInd = rsRankingIndex(rsScores = rsScores,
                                decreasing = TRUE)
 
 ##############################################################################
-# panel A
 ########## make PCA plot
 aMetadata = read.csv(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/tcga_brca_metadata.csv"))
 aMetadata$ER_status[aMetadata$ER_status == ""] = NA
 pcScores = data.frame(pcScores, pcaNames = row.names(pcScores))
 pcScoreAnno= merge(pcScores, aMetadata, by.x = "pcaNames", by.y= "subject_ID", all.x=TRUE)
+pcScoreAnno = pcScoreAnno[order(pcScoreAnno$pcaNames)[!duplicated(sort(pcScoreAnno$pcaNames))], ]
 # colorClusterPlots(pcScoreAnno, plotCols = paste0("PC", c(1,2)), colorByCols = "ER_status")
 pcScoreAnno$ER_status[pcScoreAnno$ER_status == ""] = NA
 aPCAPlot = ggplot(data = pcScoreAnno, mapping = aes(x = PC1, y= PC2)) + geom_point(aes(col=ER_status), size = 1, alpha=0.5) +
@@ -91,19 +92,42 @@ ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_ATAC.svg")),
        height=plotHeight-10, width=plotWidth-10, units = "mm",
        plot = aPCAPlot, device = "svg")
 
+
+# pcaWithAnno = cbind(mPCA$x, patientMetadata[row.names(mPCA$x) ,])
+
+# get unique samples
+pcaWithAnno = as.data.frame(pcScoreAnno)
+for (i in c(paste0("PC", 1:4))) {
+    print(
+        wilcox.test(pcaWithAnno[pcaWithAnno$ER_status == "Positive", i], 
+                    pcaWithAnno[pcaWithAnno$ER_status == "Negative", i], conf.int = TRUE)
+    )
+    print(
+        cor.test(pcaWithAnno[, i], as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3, method = "spearman")
+    )
+}
+
+
 #############################################################################
-# panel B
+# panel A
 # load(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/brca_peak_pca_sample_names.RData")) # pcaNames
 
-pcAnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC1", 
-                  pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2"), 
-                  patternName = c("ER", "ER-related")) + 
-                  theme(legend.position = c(0.15, 0.15)) +
-                  scale_color_manual(values = c("blue", "red", "orange"))
-                  # coord_fixed(ratio = 10)
-pcAnnoScoreDist 
-ggsave(filename = ffPlot(paste0(plotSubdir, "pc1AnnoScoreDistERRelated.svg")), 
-       plot = pcAnnoScoreDist, device = "svg", height = plotHeight, width = plotWidth, units = "mm")
+myPCs = paste0("PC", 1:4)
+for (i in seq_along(myPCs)) {
+    pcAnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = myPCs[i], 
+                                        pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2"), 
+                                        patternName = c("ER", "ER-related")) + 
+        theme(legend.position = c(0.15, 0.15)) +
+        scale_color_manual(values = c("blue", "red", "orange"))
+    # coord_fixed(ratio = 10)
+    pcAnnoScoreDist 
+    ggsave(filename = ffPlot(paste0(plotSubdir, myPCs[i], "AnnoScoreDistERRelated.svg")), 
+           plot = pcAnnoScoreDist, device = "svg", height = plotHeight, width = plotWidth, units = "mm")
+}
+
+
+
+
 # inkscape uses 90 dpi instead of 72
 # inkscape total plot size dimensions are 0.8 times ggplot dimensions
 pcAnnoScoreDist2 = plotAnnoScoreDist2(rsScores = rsScores, colsToPlot = "PC1", pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2"), 
@@ -115,7 +139,7 @@ ggsave(filename = ffPlot(paste0(plotSubdir, "pc1AnnoScoreDist2ERRelated.svg")),
 
 
 ################# 
-# panel C 
+# panel A part 2 
 # PC2, immune-related
 # reviews of hematopoietic transcription factors (not exhaustive obviously):
 # one general review, one myeloid review, and one lymphoid review
@@ -169,6 +193,30 @@ for (i in seq_along(pcsToAnnotate)) {
            plot = thisPCPlot, device = "svg", width = 70, 
            height=70, units = "mm")
 }
+
+####################
+# panel B
+# ER status association with PC
+
+# order samples by PC score, color by ER status
+erStatusDF = cbind(apply(X = pcScoreAnno[, paste0("PC", 1:4)], 
+                         MARGIN = 2, FUN = function(x) order(order(x, decreasing = FALSE))), 
+                   as.data.frame(pcScoreAnno)[, "ER_status", drop=FALSE])
+erStatusDF = pivot_longer(erStatusDF, cols = c("PC1", "PC2", "PC3", "PC4"), names_to = "PC", values_to = "rank")    
+
+erStatusDF$barHeight = rep(1, nrow(erStatusDF))
+erStatusDF = arrange(erStatusDF, PC, rank) 
+
+erStatusPlot = ggplot(data = filter(erStatusDF, PC %in% c("PC1", "PC2")), mapping = aes(x=rank, y=barHeight, group=PC)) + 
+    geom_col(aes(col=ER_status)) + scale_color_discrete(breaks=c("Positive", "Negative")) +
+    xlab("Samples ordered by PC score") + theme(axis.text = element_blank(), axis.ticks = element_blank(),
+                                                axis.title.y = element_blank(), axis.line = element_blank())
+erStatusPlot
+
+ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/orderedERStatus.svg")), 
+                plot = erStatusPlot, device = "svg", height = plotHeight / 2, 
+                width = plotWidth, units = plotUnits)
+
 
 
 ######### make "meta-region" loading profiles
