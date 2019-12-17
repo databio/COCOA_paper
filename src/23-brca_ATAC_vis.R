@@ -253,6 +253,12 @@ ggsave(filename = ffPlot(paste0(plotSubdir, "/metaRegionLoadingProfilesWeightedM
        plot = multiProfileP2[["grob"]], device = "pdf", limitsize = FALSE)
 # individual mr profiles
 
+# normalize
+multiProfileP2 = normalizeMRProfile(signal=atacCor, signalCol=signalCol, 
+                                    multiProfileP2$metaRegionData, 
+                                    names(multiProfileP2$metaRegionData),
+                                    normMethod = "zscore")
+
 names(multiProfileP2[["metaRegionData"]])
 topRSNames = c("wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak", 
                "Human_MCF-7_ESR1_E2-6hr_Jin.bed", 
@@ -271,7 +277,7 @@ for (i in seq_along(topRSNames)) {
     for (j in seq_along(signalCol[1:2])) {
         myPlot = ggplot(data = filter(pcP[[1]], PC %in% signalCol[j]), mapping = aes(x =binID , y = loading_value)) + 
             # ggplot(data = pcP[[1]], mapping = aes(x =binID , y = loading_value)) + 
-            geom_line() + ylim(c(minVal, maxVal)) + 
+            geom_line() + ylim(c(minVal, maxVal)) + geom_hline(yintercept = 0, col="red", alpha = 0.25) +
             # facet_wrap(facets = "PC") + 
             ggtitle(label = wrapper(topRSNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
             ylab("Normalized Correlation") + 

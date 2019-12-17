@@ -394,7 +394,8 @@ getLowerBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage)
 makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, 
                                 signalCol, binNum, 
                                 # returnNormalizedVals=TRUE, 
-                                aggrMethod="default", absVal=TRUE) {
+                                aggrMethod="default", absVal=TRUE, 
+                                normMethod = c("mean", "zscore")) {
     
     pcProf = lapply(X = GRList, function(x) getMetaRegionProfile(signal = signal, 
                                                               signalCoord = signalCoord, 
@@ -422,7 +423,7 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames,
     # }
     
     pcP = normalizeMRProfile(signal=signal, signalCol=signalCol, 
-                             pcProf, rsNames = rsNames, absVal=TRUE)
+                             pcProf, rsNames = rsNames, absVal=TRUE, normMethod = normMethod)
     
     # for the plot scale
     maxVal = max(sapply(pcP, FUN = function(x) max(x[, loading_value])))
