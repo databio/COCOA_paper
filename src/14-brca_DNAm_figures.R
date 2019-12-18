@@ -381,13 +381,13 @@ for (i in seq_along(topRSNames)) {
     thisRSCovScores = as.data.frame(thisRSCovScores)
     for (j in seq_along(myPCs)) {
         
-        pdf(file = ffPlot(paste0(plotSubdir, 
-                                 "methylAlong", myPCs[j], "_", abbrevNames[i], ".pdf")))
-        # png(filename = ffPlot(paste0(plotSubdir, 
-        #                              "methylAlong", myPCs[j], "_", abbrevNames[i], ".png")),
-        #     width = 480, height = 480, units = "px", pointsize = 12,
-        #     bg = "white",  res = NA,
-        #     type = c("cairo", "cairo-png", "Xlib", "quartz"))
+        # pdf(file = ffPlot(paste0(plotSubdir, 
+        #                          "methylAlong", myPCs[j], "_", abbrevNames[i], ".pdf")))
+        png(filename = ffPlot(paste0(plotSubdir,
+                                     "methylAlong", myPCs[j], "_", abbrevNames[i], ".png")),
+            width = 100, height = 75, units = "mm", pointsize = 12,
+            bg = "white",  res = 300,
+            type = c("cairo", "cairo-png", "Xlib", "quartz"))
         # # svg(filename = ffPlot(paste0(plotSubdir, "methylAlong", myPCs[j], "_", abbrevNames[i], ".svg")))
         draw(signalAlongAxis(genomicSignal = thisRSM[, !(colnames(thisRSM) %in% c("chr", "start", "end"))], 
                              signalCoord = thisRSM[, c("chr", "start", "end")], 
@@ -396,15 +396,35 @@ for (i in seq_along(topRSNames)) {
                              topXVariables=100, variableScores = thisRSCovScores[, myPCs[j]], 
                              cluster_columns=TRUE, show_row_names=FALSE, show_column_names=FALSE, 
                              column_title = "Regions (top 100)", name = "DNA methylation level", 
-                             row_title = "Samples ordered by PC score")) 
-        # draw(signalAlongAxis(genomicSignal = brcaSharedC$methylProp, signalCoord = brcaCoord, 
-        #                      regionSet = GRList[[topRSNames[i]]], 
-        #                      sampleScores= mPCA$x[, myPCs], orderByCol=myPCs[j], 
-        #                      topXVariables=100, variableScores = brcaCov[, myPCs[j]], 
-        #                      cluster_columns=TRUE, show_row_names=FALSE)) 
+                             row_title = "Samples ordered by PC score", 
+                             row_title_gp = gpar(fontsize = 14), # 54
+                             column_title_gp = gpar(fontsize = 14),
+                             show_heatmap_legend = FALSE
+                             )
+             ) 
         dev.off()
+        
+        if ((j == 1) && (i == 1)) {
+            svg(filename = ffPlot(paste0(plotSubdir, "methylAlong", myPCs[j], "_", abbrevNames[i], ".svg")))
+            draw(signalAlongAxis(genomicSignal = thisRSM[, !(colnames(thisRSM) %in% c("chr", "start", "end"))], 
+                                 signalCoord = thisRSM[, c("chr", "start", "end")], 
+                                 regionSet = GRList[[topRSNames[i]]], 
+                                 sampleScores= mPCA$x[, myPCs], orderByCol=myPCs[j], 
+                                 topXVariables=10, variableScores = thisRSCovScores[, myPCs[j]], 
+                                 cluster_columns=TRUE, show_row_names=FALSE, show_column_names=FALSE, 
+                                 column_title = "Regions (top 100)", name = "DNA methylation level", 
+                                 row_title = "Samples ordered by PC score" 
+                                 # row_title_gp = gpar(fontsize = 14), # 54
+                                 # column_title_gp = gpar(fontsize = 14))
+            )) 
+            dev.off()
+        }
+
     }
 }
+
+# make one plot as svg, with the legend 
+
 
 ########
 ### figures for PC4, Supplementary?
