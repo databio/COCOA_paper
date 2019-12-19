@@ -405,7 +405,8 @@ for (i in seq_along(topRSNames)) {
         dev.off()
         
         if ((j == 1) && (i == 1)) {
-            svg(filename = ffPlot(paste0(plotSubdir, "methylAlong", myPCs[j], "_", abbrevNames[i], ".svg")))
+            svg(filename = ffPlot(paste0(plotSubdir, "methylAlong", myPCs[j], "_", abbrevNames[i], "_hasLegend.svg")), 
+                width = 10, height=10) # inches
             draw(signalAlongAxis(genomicSignal = thisRSM[, !(colnames(thisRSM) %in% c("chr", "start", "end"))], 
                                  signalCoord = thisRSM[, c("chr", "start", "end")], 
                                  regionSet = GRList[[topRSNames[i]]], 
@@ -413,11 +414,10 @@ for (i in seq_along(topRSNames)) {
                                  topXVariables=10, variableScores = thisRSCovScores[, myPCs[j]], 
                                  cluster_columns=TRUE, show_row_names=FALSE, show_column_names=FALSE, 
                                  column_title = "Regions (top 100)", name = "DNA methylation level", 
-                                 row_title = "Samples ordered by PC score" 
-                                 # row_title_gp = gpar(fontsize = 14), # 54
-                                 # column_title_gp = gpar(fontsize = 14))
-            )) 
+                                 row_title = "Samples ordered by PC score")) 
             dev.off()
+            # row_title_gp = gpar(fontsize = 14), # 54
+            # column_title_gp = gpar(fontsize = 14))
         }
 
     }

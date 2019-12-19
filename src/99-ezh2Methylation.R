@@ -41,7 +41,10 @@ mergedTopEzh2 = reduce(mergedTopEzh2)
 # myTopRSNames = c("wgEncodeAwgTfbsBroadHsmmtEzh239875UniPk.narrowPeak",
 #                  "wgEncodeAwgTfbsSydhNt2d1Suz12UcdUniPk.narrowPeak")
 myTopRS = mergedTopEzh2
+# myTopRS must be a GRList for following code
+myTopRS = GRangesList(myTopRS)
 abbrevName = c("polycomb")
+length(mergedTopEzh2) # 10994
 
 ###############################################################################
 
@@ -64,7 +67,7 @@ spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)),
 
 
 # get overlap between myTopRS (based on CpGs covered in epigenetic data)
-getOverlap=TRUE
+getOverlap=FALSE
 for (i in seq_along(cancerID)) {
     
     allSampleLabels = NULL
@@ -140,9 +143,9 @@ for (i in seq_along(cancerID)) {
             
             corRes = cor.test(x = as.numeric(allSampleLabels), 
                               as.numeric(mBySampleDF[j, 1:ncol(genomicSignal)]), method = "spearman")
-            spearCorDF[2*(i-1)+j, "rsName"] = abbrevName[j]
-            spearCorDF[2*(i-1)+j, "spearCor"] = corRes$estimate
-            spearCorDF[2*(i-1)+j, "spearmanPVal"] = corRes$p.value
+            spearCorDF[length(myTopRS)*(i-1)+j, "rsName"] = abbrevName[j]
+            spearCorDF[length(myTopRS)*(i-1)+j, "spearCor"] = corRes$estimate
+            spearCorDF[length(myTopRS)*(i-1)+j, "spearmanPVal"] = corRes$p.value
         }
     }
     
@@ -256,7 +259,7 @@ for (i in seq_along(cancerID)) {
 spearCorDF$holmCoxPVal = p.adjust(p = spearCorDF$coxPVal, method = "holm")
 spearCorDF$holmSpearmanPVal = p.adjust(p = spearCorDF$spearmanPVal, method = "holm")
 
-write.csv(spearCorDF, file = ffSheets("EZH2_TCGA_cancer_stage.csv"), quote = FALSE, 
+write.csv(spearCorDF, file = ffSheets("polycomb_TCGA_cancer_stage.csv"), quote = FALSE, 
           row.names = FALSE, col.names = TRUE)
 
 
