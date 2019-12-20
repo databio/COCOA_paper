@@ -301,12 +301,18 @@ multiProfileP = makeMetaRegionPlots(signal=featureLFCor,
                                     signalCoord=signalCoord, GRList=topRSList, 
                                     rsNames=topRSNames, 
                                     signalCol=signalCol, binNum=21, aggrMethod ="default") 
-multiProfileP2 = multiProfileP
 
 ggsave(filename = ffPlot(paste0(plotSubdir,
                                 "/metaRegionLoadingProfiles", 
                                 inputID, ".pdf")), plot = multiProfileP[["grob"]], device = "pdf", limitsize = FALSE)
 # individual mr profiles
+
+# normalize so plots from different PCs will be comparable
+multiProfileP2 = list()
+multiProfileP2[["metaRegionData"]] = normalizeMRProfile(signal=featureLFCor, signalCol=signalCol, 
+                                    multiProfileP$metaRegionData, 
+                                    rsNames=names(multiProfileP$metaRegionData), 
+                                    normMethod = "zscore")
 
 names(multiProfileP2[["metaRegionData"]])
 
@@ -318,36 +324,78 @@ abbrevNames = c("POU5F1", "SOX2", "H3K4me1_in_H9_cell_line", "NANOG")
 # topRSList = topRSList[topRSNames]
 # topRSNames = c("GSM835863_EP300.bed", 
 #                "GSM607949_GATA1.bed")
-minVal = 0.01
-maxVal = .02
+minVal = -0.2
+maxVal = 0.8
 for (i in seq_along(topRSNames)) {
     thisRS = multiProfileP2[["metaRegionData"]][topRSNames[i]]
-    pcP = lapply(X = thisRS, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))
-    pcP = lapply(X = pcP, as.data.table)
-    pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
+    # pcP = lapply(X = thisRS, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))
+    # pcP = lapply(X = pcP, as.data.table)
+    # pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
     
     for (j in 8) {
-        myPlot = ggplot(data = dplyr::filter(pcP[[1]], PC %in% signalCol[j]), mapping = aes(x =binID , y = loading_value)) + 
+        myPlot = ggplot(data = dplyr::filter(thisRS[[1]], PC %in% signalCol[j]), mapping = aes(x =binID , y = loading_value)) + 
             # ggplot(data = pcP[[1]], mapping = aes(x =binID , y = loading_value)) + 
-            geom_line() + ylim(c(minVal, maxVal)) + 
+            geom_line() + ylim(c(minVal, maxVal)) + geom_hline(yintercept = 0, col="red", alpha = 0.25) +
             # facet_wrap(facets = "PC") + 
             ggtitle(label = wrapper(topRSNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
             ylab("Normalized Correlation") + 
             theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
                   axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
-                  axis.title = element_blank(), title = element_blank(), 
+                  axis.title = element_blank(), title = element_blank()
                   #axis.text.y=element_blank()
             )
         myPlot
         ggsave(filename = ffPlot(paste0(plotSubdir, 
                                         "/mrProfiles", abbrevNames[i],
                                         "_", signalCol[j], ".svg")), 
-               plot = myPlot, device = "svg", height=30, width=15, units = "mm")
+               plot = myPlot, device = "svg", height=30, width=50, units = "mm")
     }
-    
-    
 }
 
+##############################################
+# annoScorePlot for LF8
+# filter out low-coverage region sets first
+
+
+.analysisID = dataID
+plotUnits = "mm"
+plotWidth = 80
+plotHeight = 80
+stemPattern = paste0(c("POU5F1", "SOX2", "H3K4me1_in_H9_cell_line", "NANOG"), 
+                     collapse ="|")
+
+for (i in paste0("LF8")) {
+    
+    a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
+                          pattern = c(stemPattern), 
+                          patternName = c("stem-related")) +
+        theme(legend.position = c(0.15, 0.15)) +
+        scale_color_manual(values = c("orange", "red")) + 
+        xlab(paste0("Region set rank (", i, ")")) + 
+        theme(axis.title.y = element_blank(), 
+              legend.text = element_blank(), 
+              legend.title = element_blank(), 
+              legend.position = "none") +
+        scale_x_continuous(breaks = c(0, 1000, 2000), 
+                           labels= c("0", "1000", "2000"), limits=c(-25, nrow(rsScores) + 25))
+    
+    a 
+    ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, ".svg"), 
+           plot = a, device = "svg", width = plotWidth, height = plotHeight, units = plotUnits)
+}
+
+# making a plot with legend
+i="PC1"
+a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
+                      pattern = c("esr1|eralpha", "gata3|foxa1|h3r17"), 
+                      patternName = c("ER", "ER-related")) +
+    theme(legend.position = c(0.15, 0.15)) +
+    scale_color_manual(values = c("blue", "red", "orange")) + 
+    xlab(paste0("Region set rank (", i, ")"))
+
+a 
+ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, "_withLegend.svg"), 
+       plot = a, device = "svg", width = plotWidth, height = plotHeight, units = plotUnits)
 
 
 # "filter()" was masked by another package. Get dplyr filter() back

@@ -404,6 +404,11 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames,
                                                               aggrMethod=aggrMethod,
                                                               absVal = absVal))
     
+    # get rid of region sets that had insufficient overlap
+    notNull = !vapply(X = pcProf, FUN = is.null, FUN.VALUE = TRUE)
+    pcProf = pcProf[notNull]
+    rsNames = rsNames[notNull]
+    
     # emptyInd = sapply()
     # # for single columns?
     # # average loading value from each PC to normalize so PCs can be compared with each other
