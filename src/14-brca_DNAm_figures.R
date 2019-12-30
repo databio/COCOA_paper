@@ -263,7 +263,7 @@ cor.test(x = mPCScores[, "PC2"], (rnaClust$cluster * 2 - 3), method = "spearman"
 
 ###################
 # Fig. 2c, meta region loading profile plots, DNA methylation BRCA
-# Supplementary fig.
+# Supplementary fig. 
 
 PCsToAnnotate = paste0("PC", 1:10)
 signalCol = PCsToAnnotate
@@ -295,10 +295,10 @@ ggsave(plot = mrProfileList$grob,
 # individual mr profiles
 
 # normalize so plots from different PCs will be comparable
-multiProfileP2 = normalizeMRProfile(signal=brcaCov, signalCol=signalCol, 
-                       mrProfileList$metaRegionData, 
-                       names(mrProfileList$metaRegionData), 
-                       normMethod = "mean")
+# multiProfileP2 = normalizeMRProfile(signal=brcaCov, signalCol=signalCol, 
+#                        mrProfileList$metaRegionData, 
+#                        names(mrProfileList$metaRegionData), 
+#                        normMethod = "mean")
 multiProfileP2 = normalizeMRProfile(signal=brcaCov, signalCol=signalCol, 
                                     mrProfileList$metaRegionData, 
                                     names(mrProfileList$metaRegionData),
@@ -354,6 +354,65 @@ for (i in seq_along(topRSNames)) {
                plot = myPlot, device = "svg", height=20, width=30, units = "mm")
     }
 }
+
+####################
+# histone modification region sets: e.g. H3K9me3, H3K27me3
+
+# top 2 H3K9me3 and H3K27me3 from PC2
+topRSNames = c("E122-H3K9me3.narrowPeak",
+               "E021-H3K9me3.narrowPeak",
+               "E117-H3K27me3.narrowPeak",
+               "E104-H3K27me3.narrowPeak")
+               
+abbrevNames = c("HUVEC H3K9me3", "iPS_DF_6.9_Cell_Line H3K9me3", "t",
+                "Right Atrium H3K27me3")
+
+topGRList = GRList[topRSNames]
+
+regionSetNames = names(topGRList)
+wideGRList <- lapply(topGRList, resize, width=14000, fix="center")
+
+mrProfileList  = makeMetaRegionPlots(signal=brcaCov, signalCoord=brcaCoord,
+                                     GRList=wideGRList, rsNames=regionSetNames, 
+                                     signalCol=PCsToAnnotate, binNum=21, aggrMethod="default")
+
+multiProfileP2 = normalizeMRProfile(signal=brcaCov, signalCol=signalCol, 
+                                    mrProfileList$metaRegionData, 
+                                    names(mrProfileList$metaRegionData),
+                                    normMethod = "zscore")
+multiProfileP2[["metaRegionData"]] = multiProfileP2
+
+signalCol = paste0("PC", 1:4)
+for (i in seq_along(topRSNames)) {
+    minVal = -0.5
+    maxVal = 2.5
+    
+    pcP = multiProfileP2[["metaRegionData"]][topRSNames[i]]
+    
+    myPlot = ggplot(data = filter(pcP[[1]], PC %in% signalCol), mapping = aes(x =binID , y = loading_value)) + theme(panel.border = element_rect(fill = NA)) +
+        geom_line() + ylim(c(minVal, maxVal)) + geom_hline(yintercept = 0, col="red", alpha = 0.25) +
+        facet_wrap(facets = "PC", nrow = length(signalCol), ncol = 1) + 
+        ggtitle(label = wrapper(topRSNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
+        ylab("Normalized Covariance") + 
+        theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
+              axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
+              axis.title = element_blank(), title = element_blank(), axis.text.y=element_blank(),
+              strip.background = element_blank(), strip.text = element_blank()) 
+    myPlot
+    ggsave(filename = ffPlot(paste0(plotSubdir, 
+                                    "/mrProfilesWeightedMean_", abbrevNames[i],
+                                    ".svg")), 
+           plot = myPlot, device = "svg", height=150, width=35, units = "mm")
+}
+
+# one plot with legend
+myPlot = myPlot + theme(axis.text.y = element_text())
+ggsave(filename = ffPlot(paste0(plotSubdir, 
+                                "/mrProfilesWeightedMean_", abbrevNames[i],
+                                "_withLegend.svg")), 
+       plot = myPlot, device = "svg", height=150, width=35, units = "mm")
+
+
 
 ################################################################################
 # supplementary Fig
