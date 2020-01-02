@@ -44,7 +44,7 @@ tcount   <- t(counts)
 colnames(tcount) <- ryan_brca_count_matrix$sample
 
 # Add metadata for each sample that has it
-metadata <- fread(ffProc("COCOA_paper/analysis/atac/scores/brca/tcga_brca_metadata.csv"))
+metadata <- fread(ffCode("COCOA_paper/metadata/tcga_brca_atacseq_metadata.csv"))
 metadata <- metadata[!duplicated(metadata$subject_ID),]
 metadata <- metadata[order(subject_ID),]
 
