@@ -128,10 +128,10 @@ for (i in c(paste0("PC", 1:4))) {
 for (i in paste0("PC", 1:4)) {
     
     a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
-                          pattern = c("esr1|eralpha", "gata3|foxa1|h3r17"), 
-                          patternName = c("ER", "ER-related")) +
+                          pattern = c("esr1|eralpha", "gata3|foxa1|h3r17", "ezh2|suz12"), 
+                          patternName = c("ER", "ER-related", "polycomb")) +
         theme(legend.position = c(0.15, 0.15)) +
-        scale_color_manual(values = c("blue", "red", "orange")) + 
+        scale_color_manual(values = c("blue", "red", "gray", "orange")) + 
         xlab(paste0("Region set rank (", i, ")")) + 
         theme(axis.title.y = element_blank(), 
               legend.text = element_blank(), 
@@ -148,10 +148,10 @@ for (i in paste0("PC", 1:4)) {
 # making a plot with legend
 i="PC1"
 a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
-                      pattern = c("esr1|eralpha", "gata3|foxa1|h3r17"), 
-                      patternName = c("ER", "ER-related")) +
+                      pattern = c("esr1|eralpha", "gata3|foxa1|h3r17", "ezh2|suz12"), 
+                      patternName = c("ER", "ER-related", "Polycomb")) +
     theme(legend.position = c(0.15, 0.15)) +
-    scale_color_manual(values = c("blue", "red", "orange")) + 
+    scale_color_manual(values = c("blue", "red", "gray", "orange")) + 
     xlab(paste0("Region set rank (", i, ")"))
     
     a 
@@ -283,7 +283,8 @@ wideGRList <- lapply(topGRList, resize, width=14000, fix="center")
 
 mrProfileList  = makeMetaRegionPlots(signal=brcaCov, signalCoord=brcaCoord,
                     GRList=wideGRList, rsNames=regionSetNames, 
-                    signalCol=PCsToAnnotate, binNum=21, aggrMethod="default")
+                    signalCol=PCsToAnnotate, binNum=21, aggrMethod="default", 
+                    normMethod = "none")
 
 # for (i in seq_along(loadProfile)) {
 #     ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "metaRegionPlots/", regionSetNames[i], "_", i), plot = profilePList[[i]], device = "pdf")
@@ -354,6 +355,8 @@ for (i in seq_along(topRSNames)) {
                plot = myPlot, device = "svg", height=20, width=30, units = "mm")
     }
 }
+
+# with axis
 
 ####################
 # histone modification region sets: e.g. H3K9me3, H3K27me3

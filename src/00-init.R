@@ -390,12 +390,16 @@ getLowerBound <- function(rsScore, nullDistList, sampleSize, pc, regionCoverage)
 #' weight the signal value when calculating the mean. 
 #' The denominator of the mean
 #' is the sum of all the proportion overlaps. 
+#' @return returns a named list of three elements: "grob", "metaRegionData", 
+#' and "plotList". 1st element is the grob of all plots, which can be
+#' plotted with ggplot. 2nd element is normalized output of getMetaRegionProfile.
+#' 3rd element is a list where each item is a single plot.
 
 makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames, 
                                 signalCol, binNum, 
                                 # returnNormalizedVals=TRUE, 
                                 aggrMethod="default", absVal=TRUE, 
-                                normMethod = c("mean", "zscore")) {
+                                normMethod = c("mean", "none", "zscore")) {
     
     pcProf = lapply(X = GRList, function(x) getMetaRegionProfile(signal = signal, 
                                                               signalCoord = signalCoord, 
@@ -428,8 +432,10 @@ makeMetaRegionPlots <- function(signal, signalCoord, GRList, rsNames,
     # }
     
     pcP = normalizeMRProfile(signal=signal, signalCol=signalCol, 
-                             pcProf, rsNames = rsNames, absVal=TRUE, normMethod = normMethod)
-    
+                                 pcProf, rsNames = rsNames, absVal=TRUE, 
+                                 normMethod = normMethod)
+
+
     # for the plot scale
     maxVal = max(sapply(pcP, FUN = function(x) max(x[, loading_value])))
     minVal = min(sapply(pcP, FUN = function(x) min(x[, loading_value])))
@@ -472,7 +478,7 @@ wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n")
 # @param negLog logical. only applies if normMethod is making a pval, -log(x,10)
 normalizeMRProfile <- function(signal, signalCol, pList, rsNames, 
                                absVal=TRUE, 
-                               normMethod=c("mean", "zscore", "normPVal", "empPVal"),  negLog=TRUE) {
+                               normMethod=c("mean", "zscore", "none", "normPVal", "empPVal"),  negLog=TRUE) {
     
     pcP = copy(pList)
     
@@ -482,8 +488,7 @@ normalizeMRProfile <- function(signal, signalCol, pList, rsNames,
     pcP = pcP[notNull]
     rsNames = rsNames[notNull]
     pcP = lapply(pcP,FUN = as.data.table)
-    
-    
+
     # average loading value from each PC to normalize so PCs can be compared with each other
     if (absVal) {
         avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(abs(x)))
@@ -493,7 +498,9 @@ normalizeMRProfile <- function(signal, signalCol, pList, rsNames,
         sdLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) sd(x, na.rm = TRUE))
     }
     
-    if (normMethod == "mean") {
+    if (normMethod == "none") {
+        pcP = lapply(X = pcP, function(x) x[, signalCol, with=FALSE])
+    } else if (normMethod == "mean") {
         pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=signalCol, z = avLoad)])
     } else if (normMethod == "zscore") {
         pcP = lapply(pcP, FUN = function(x) as.data.table(x[, mapply(FUN = function(y, z) get(y) - z, y=signalCol, z = avLoad)]))
@@ -506,8 +513,8 @@ normalizeMRProfile <- function(signal, signalCol, pList, rsNames,
         if(negLog) {
             pcP = lapply(X = pcP, FUN = function(x) apply(X = x, FUN = function(y) -log10(y), MARGIN = 2))
         }
-    }
-    
+    } 
+
     pcP = lapply(pcP, FUN = function(x) data.table(binID=1:nrow(x), x))
     
     # convert to long format for plots
