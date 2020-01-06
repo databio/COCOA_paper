@@ -77,7 +77,7 @@ rsEnSortedInd = rsRankingIndex(rsScores = rsScores,
 
 ##############################################################################
 ########## make PCA plot
-aMetadata = read.csv(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/tcga_brca_metadata.csv"))
+aMetadata = read.csv(paste0(Sys.getenv("CODE"), "COCOA_paper/metadata/tcga_brca_atacseq_metadata.csv"))
 aMetadata$ER_status[aMetadata$ER_status == ""] = NA
 pcScores = data.frame(pcScores, pcaNames = row.names(pcScores))
 pcScoreAnno= merge(pcScores, aMetadata, by.x = "pcaNames", by.y= "subject_ID", all.x=TRUE)
@@ -95,19 +95,6 @@ ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_ATAC.svg")),
 
 # pcaWithAnno = cbind(mPCA$x, patientMetadata[row.names(mPCA$x) ,])
 
-# get unique samples
-pcaWithAnno = as.data.frame(pcScoreAnno)
-for (i in c(paste0("PC", 1:4))) {
-    print(
-        wilcox.test(pcaWithAnno[pcaWithAnno$ER_status == "Positive", i], 
-                    pcaWithAnno[pcaWithAnno$ER_status == "Negative", i], conf.int = TRUE)
-    )
-    print(
-        cor.test(pcaWithAnno[, i], as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3, method = "spearman")
-    )
-}
-
-
 #############################################################################
 # panel A
 # load(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/brca_peak_pca_sample_names.RData")) # pcaNames
@@ -115,10 +102,10 @@ for (i in c(paste0("PC", 1:4))) {
 myPCs = paste0("PC", 1:4)
 for (i in seq_along(myPCs)) {
     pcAnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = myPCs[i], 
-                                        pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2"), 
-                                        patternName = c("ER", "ER-related")) + 
+                                        pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2", hemaPattern), 
+                                        patternName = c("ER", "ER-related", "Hematopoietic TFs")) + 
         theme(legend.position = c(0.15, 0.15)) +
-        scale_color_manual(values = c("blue", "red", "orange"))
+        scale_color_manual(values = c("blue", "red", "orange", "gray"))
     # coord_fixed(ratio = 10)
     pcAnnoScoreDist 
     ggsave(filename = ffPlot(paste0(plotSubdir, myPCs[i], "AnnoScoreDistERRelated.svg")), 
@@ -164,6 +151,10 @@ hemaPattern = paste0(hemaTFs, collapse = "|")
 pc2AnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC2", 
                   pattern = hemaPattern, patternName = "Hematopoietic TFs") + 
     theme(legend.position = c(0.15, 0.15)) + scale_color_manual(values = c("red", "orange"))
+pc2AnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC2", 
+                                     pattern = c(hemaPattern, "EZH2|SUZ12"), 
+                                     patternName = c("Hematopoietic TFs", "polycomb")) + 
+    theme(legend.position = c(0.15, 0.15)) + scale_color_manual(values = c("blue", "red"))
 
 pc2AnnoScoreDist
 ggsave(ffPlot(paste0(plotSubdir, "pc2HemaATAC.svg")), 
@@ -195,7 +186,7 @@ for (i in seq_along(pcsToAnnotate)) {
 }
 
 ####################
-# panel B
+# panel C
 # ER status association with PC
 
 # order samples by PC score, color by ER status
@@ -213,9 +204,31 @@ erStatusPlot = ggplot(data = filter(erStatusDF, PC %in% c("PC1", "PC2")), mappin
                                                 axis.title.y = element_blank(), axis.line = element_blank())
 erStatusPlot
 
+
 ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/orderedERStatus.svg")), 
                 plot = erStatusPlot, device = "svg", height = plotHeight / 2, 
                 width = plotWidth, units = plotUnits)
+erStatusPlot = ggplot(data = filter(erStatusDF, PC %in% c("PC1", "PC2", "PC3", "PC4")), mapping = aes(x=rank, y=barHeight, group=PC)) + 
+    geom_col(aes(col=ER_status)) + scale_color_discrete(breaks=c("Positive", "Negative")) +
+    xlab("Samples ordered by PC score") + theme(axis.text = element_blank(), axis.ticks = element_blank(),
+                                                axis.title.y = element_blank(), axis.line = element_blank())
+erStatusPlot
+
+ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/orderedERStatus2.svg")), 
+                plot = erStatusPlot, device = "svg", height = plotHeight / 2, 
+                width = plotWidth, units = plotUnits)
+
+# correlation of each PC with ER status
+pcaWithAnno = as.data.frame(pcScoreAnno)
+for (i in c(paste0("PC", 1:4))) {
+    # print(
+    #     wilcox.test(pcaWithAnno[pcaWithAnno$ER_status == "Positive", i], 
+    #                 pcaWithAnno[pcaWithAnno$ER_status == "Negative", i], conf.int = TRUE)
+    # )
+    print(
+        cor.test(pcaWithAnno[, i], as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3, method = "spearman")
+    )
+}
 
 
 
@@ -244,7 +257,7 @@ multiProfileP2 = makeMetaRegionPlots(signal=atacCor,
                                     signalCoord=signalCoord, GRList=topRSList, 
                                     rsNames=topRSNames, 
                                     signalCol=signalCol, binNum=21, aggrMethod ="proportionWeightedMean", 
-                                    absVal = TRUE) 
+                                    absVal = TRUE, normMethod = "none") 
 
 ggsave(filename = ffPlot(paste0(plotSubdir,
                          "/metaRegionLoadingProfiles", 
@@ -259,6 +272,7 @@ multiProfileP2 = normalizeMRProfile(signal=atacCor, signalCol=signalCol,
                                     names(multiProfileP2$metaRegionData),
                                     normMethod = "zscore")
 
+multiProfileP2[["metaRegionData"]]=multiProfileP2
 names(multiProfileP2[["metaRegionData"]])
 topRSNames = c("wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak", 
                "Human_MCF-7_ESR1_E2-6hr_Jin.bed", 
@@ -266,15 +280,17 @@ topRSNames = c("wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak",
 abbrevNames = c("GATA3", "ESR1", "CEBPA", "ERG")
 # topRSNames = c("GSM835863_EP300.bed", 
 #                "GSM607949_GATA1.bed")
-minVal = .1
-maxVal = .6
+minVal = -1
+maxVal = 2
+pcP = list()
 for (i in seq_along(topRSNames)) {
     thisRS = multiProfileP2[["metaRegionData"]][topRSNames[i]]
-    pcP = lapply(X = thisRS, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))
-    pcP = lapply(X = pcP, as.data.table)
-    pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
+    pcP[1] = thisRS
+    # pcP = lapply(X = thisRS, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))
+    # pcP = lapply(X = pcP, as.data.table)
+    # pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
     
-    for (j in seq_along(signalCol[1:2])) {
+    for (j in seq_along(signalCol[1:4])) {
         myPlot = ggplot(data = filter(pcP[[1]], PC %in% signalCol[j]), mapping = aes(x =binID , y = loading_value)) + 
             # ggplot(data = pcP[[1]], mapping = aes(x =binID , y = loading_value)) + 
             geom_line() + ylim(c(minVal, maxVal)) + geom_hline(yintercept = 0, col="red", alpha = 0.25) +

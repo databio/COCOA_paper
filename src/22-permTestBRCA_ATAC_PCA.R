@@ -32,24 +32,6 @@ sampleLabels = brcaATACPCA_73$x
 dataID = paste0("brcaATAC", ncol(genomicSignal))
 
 colsToAnnotate = paste0("PC", 1:10)
-AGR2
-C10orf10
-CDS1
-FAM169A
-FXYD3
-KLK10
-LAD1
-MTUS1
-PLS1
-PRRG4
-RHOD
-SERPINB1
-SLPI
-TMEM30B
-TPD52L1
-TSPAN1
-ZHX2
-ZNF165
 
 ### get shared samples and put data in same order 
 sharedSamples = colnames(signalMat)[colnames(signalMat) %in% row.names(sampleLabels)]

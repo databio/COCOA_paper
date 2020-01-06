@@ -4,6 +4,10 @@ if (!dir.exists(ffPlot(.plotSubdir))) {
     dir.create(ffPlot(.plotSubdir))
 }
 
+# load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", nPerm, "_", variationMetric,
+#                    "_", dataID, ".RData")))
+# load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", dataID, ".RData")))
+
 # remove region sets that had no overlap
 keepInd = apply(rsPermScores[[1]], MARGIN = 1, FUN = function(x) !any(is.na(x)))
 
@@ -52,8 +56,9 @@ multiNiceHist(file = ffPlot(paste0(.plotSubdir, "zScoreDist", .analysisID, ".pdf
 #topRSInd = rsRankingIndex(rsScores = rsZScores, signalCol = colsToAnnotate)
 
 #################
-# simpleCache(paste0("rsScore_", dataID), assignToVariable = "realRSScores")
 # p-values based on fitted gamma distributions
+
+# simpleCache(paste0("rsScore_", dataID), assignToVariable = "realRSScores")
 correctionMethod = "BH" # input to p.adjust
 gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate, drop=FALSE], nullDistList = nullDistList, method = "mme", realScoreInDist = TRUE)
 gPValDF = apply(X = gPValDF, MARGIN = 2, FUN = function(x) p.adjust(p = x, method = correctionMethod))
@@ -131,29 +136,6 @@ for (i in seq_along(colsToAnnotate)) {
 write.csv(topRSZAnnoList, file = ffSheets(paste0("topRSPermpVals", .analysisID, ".csv")), row.names = FALSE)
 
 #############################################################################
-# # testing out ranking region sets by mean rank (p val and raw score)
-# # or ranking by max of those two ranks
-# pValColsToRank = paste0(colsToAnnotate, "_PVal")
-# scoreColsToRank = colsToAnnotate
-# for (i in seq_along(colsToAnnotate)) {
-#     
-#     pRankedScores = addRankCol(pRankedScores, 
-#                               colToRank = pValColsToRank[i], 
-#                               newColName = paste0(pValColsToRank[i], "Rank"),
-#                               decreasing = FALSE)
-#     pRankedScores = addRankCol(pRankedScores, 
-#                               colToRank = scoreColsToRank[i], 
-#                               newColName = paste0(scoreColsToRank[i], "_Rank"),
-#                               decreasing = TRUE)
-#     
-#     newRankCols = c(paste0(pValColsToRank[i], "Rank"), paste0(scoreColsToRank[i], "_Rank"))
-#     pRankedScores[, paste0(colsToAnnotate[i], "_meanRank")] = apply(pRankedScores[, newRankCols], MARGIN = 1, FUN = mean)
-#     pRankedScores[, paste0(colsToAnnotate[i], "_maxRank")] = apply(pRankedScores[, newRankCols], MARGIN = 1, FUN = max)
-# }
-# 
-# # View(arrange(pRankedScores, PC1_meanRank))
-# # View(arrange(pRankedScores, desc(PC1)))
-
 ################
 # get top region sets
 

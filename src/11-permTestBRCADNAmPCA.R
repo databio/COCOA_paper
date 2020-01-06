@@ -5,8 +5,8 @@ source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 nCores = 1 # detectCores() - 1
 options("mc.cores"=nCores)
 
-scriptID = "19-permBRCA_DNAm_PCA"
-plotSubdir = "19-permBRCA_DNAm_PCA/"
+scriptID = "11-permBRCA_DNAm_PCA"
+plotSubdir = "11-permBRCA_DNAm_PCA/"
 
 if (!dir.exists(ffPlot(plotSubdir))) {
     dir.create(ffPlot(plotSubdir))
@@ -67,3 +67,11 @@ source(ffProjCode("runPermTest.R"))
 # load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", nPerm, "_", variationMetric, 
 #                    "_", dataID, ".RData")))
 # load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", dataID, ".RData")))
+# .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
+simpleCache(paste0("permPValsCorrected", .analysisID), {
+    gPValDF
+}, recreate = FALSE, reload = TRUE)
+
+
+formattedCOCOAScores(rawScores = realRSScores, colsToAnnotate = , 
+                     numTopRS = nrow(), pVals = , rankBy = )

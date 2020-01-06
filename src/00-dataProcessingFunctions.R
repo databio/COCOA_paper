@@ -121,7 +121,7 @@ loadBRCAatac <- function(signalMat=TRUE, signalCoord=TRUE, pcScores=FALSE,
         # merged = merged[, 2:215921]
         
         # filter out samples that we do not have metadata for
-        metadata <- fread(ffProc("COCOA_paper/analysis/atac/scores/brca/tcga_brca_metadata.csv"))
+        metadata <- fread(ffCode("COCOA_paper/metadata/tcga_brca_atacseq_metadata.csv"))
         counts = counts[, colnames(counts) %in% metadata$subject_ID]
         assign("signalMat", counts, envir = .env)
     }

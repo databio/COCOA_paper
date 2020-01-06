@@ -91,46 +91,6 @@ write.csv(x = rsEnrichmentTop10,
           file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_657.csv"),
           quote = FALSE, row.names = FALSE)
 
-
-#################################################################
-# run COCOA again but with wilcoxon rank sum scoring method
-
-# gives output of rsEnrichment from PCA of all shared cytosines
-# and rsEnrichmentTop10 from PCA of 10% most variable shared cytosines
-enrichResults = COCOA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
-                               GRList=GRList, 
-                               PCsToAnnotate = c(paste0("PC", 1:4)), 
-                               scoringMetric = "rankSum",
-                               pcaCache=FALSE, 
-                               allMPCACacheName=allMPCAString,  
-                               overwritePCACaches = FALSE, 
-                               allMPCA = allMPCA, 
-                               rsName = rsName, rsDescription = rsDescription,
-                               rsEnCache = TRUE, rsEnCacheName = "rsEnrichment_ranksum_657",
-                               overwriteResultsCaches = TRUE) 
-
-rsEnrichment = enrichResults
-write.csv(x = rsEnrichment, 
-          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/PC_Enrichment_All_Shared_Cs_ranksum_657.csv"),
-          quote = FALSE, row.names = FALSE)
-
-# for top 10% variable CpGs
-enrichResults = COCOA_pipeline(mData=filteredMData, coordinates=brcaMList[["coordinates"]], 
-                               GRList=GRList, 
-                               PCsToAnnotate = c(paste0("PC", 1:4)), 
-                               scoringMetric = "rankSum",
-                               pcaCache=FALSE, 
-                               allMPCACacheName=top10MPCAString,  
-                               overwritePCACaches = FALSE, 
-                               allMPCA = top10MPCA,
-                               rsName = rsName, rsDescription = rsDescription,
-                               rsEnCache = TRUE, rsEnCacheName = "rsEnrichmentTop10_ranksum_657",
-                               overwriteResultsCaches = TRUE) 
-rsEnrichmentTop10 = enrichResults
-write.csv(x = rsEnrichmentTop10, 
-          file = paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_ranksum_657.csv"),
-          quote = FALSE, row.names = FALSE)
-
 #################################################################
 # run COCOA again but with mean of individual CpGs instead of mean of regions
 

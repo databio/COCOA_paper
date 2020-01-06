@@ -187,39 +187,81 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
 }
 
 #################################################################################
-formattedCOCOAScores  <- function(scores, colsToAnnotate=paste0("PC", 1:10), numTopRS=50) {
+
+# can order region sets by raw score or p value
+# rawScores and pVals should have same column names: colsToAnnotate
+# @param pVals data.frame
+# @param rankBy character. "pVals" ranks by pVal and then rawScore
+
+#' @return 
+formattedCOCOAScores  <- function(rawScores,
+                                  colsToAnnotate=paste0("PC", 1:10), 
+                                  numTopRS=50, pVals=NULL, rankBy=c("rawScores", "pVals")) {
+    
     topRSN = numTopRS # this many top RS for each colsToAnnotate
-    pRankedScores = scores
+    pRankedScores = rawScores
+    
+    # combine
+    if (!is.null(pVals)) {
+        if (pVals$rsName != rawScores$rsName) {
+            stop("rawScores and pVals must be in the same order and same length.")
+        }
+        if (is.data.table(pVals)) {
+            pVals = as.data.frame(pVals)
+        }
+        
+        pVals = pVals[, colsToAnnotate]
+        colnames(pVals) = paste0(colnames(pVals), "_pValue")
+        
+        pRankedScores = cbind(pRankedScores, pVals)
+    }
     
     pRankedScores$index = 1:nrow(pRankedScores)
     
-    # get top region sets for each colsToAnnotate based on p val
+    # get top region sets for each colsToAnnotate based on "rankBy"
     topRSZAnnoList = list()
     
     for (i in seq_along(colsToAnnotate)) {
         
-        theseTopInd = dplyr::arrange(pRankedScores,
-                                     desc(get(colsToAnnotate[i])))$index[1:topRSN]
-        thesePValRanks = order(pRankedScores[, paste0(colsToAnnotate[i])], decreasing = FALSE)
-        pRankedScores$index[thesePValRanks]
-        topRSZAnnoList[[i]] = data.frame(pRankedScores[theseTopInd, c("rsName", "rsDescription", colsToAnnotate[i],
-                                                                      "signalCoverage", "regionSetCoverage",
-                                                                      "totalRegionNumber", "meanRegionSize")])
-        
-        names(topRSZAnnoList[[i]]) <- paste0(colsToAnnotate[i], "_", c("rsName", "rsDescription", "rsScore",
-                                                                       "signalCoverage", "regionSetCoverage",
-                                                                       "totalRegionNumber", "meanRegionSize"))
+        if (is.null(pVals)) {
+            
+            theseTopInd = dplyr::arrange(pRankedScores,
+                                         desc(get(colsToAnnotate[i])))$index[1:topRSN]
+            # thesePValRanks = order(pRankedScores[, paste0(colsToAnnotate[i])], decreasing = FALSE)
+            # pRankedScores$index[thesePValRanks]
+            
+            topRSZAnnoList[[i]] = data.frame(pRankedScores[theseTopInd, c("rsName", "rsDescription", colsToAnnotate[i],
+                                                                          "signalCoverage", "regionSetCoverage",
+                                                                          "totalRegionNumber", "meanRegionSize")])
+            
+            names(topRSZAnnoList[[i]]) <- paste0(colsToAnnotate[i], "_", c("rsName", "rsDescription", "rsScore",
+                                                                           "signalCoverage", "regionSetCoverage",
+                                                                           "totalRegionNumber", "meanRegionSize"))
+        } else {
+            if (rankBy == "pVals") {
+                theseTopInd = dplyr::arrange(pRankedScores, 
+                                             desc(get(paste0(colsToAnnotate[i], "_PValue"))), 
+                                             desc(get(colsToAnnotate[i])))$index[1:topRSN]
+            } else {
+                theseTopInd = dplyr::arrange(pRankedScores, 
+                                             desc(get(colsToAnnotate[i])))$index[1:topRSN]
+            }
+
+            topRSZAnnoList[[i]] = data.frame(pRankedScores[theseTopInd, c("rsName", "rsDescription", colsToAnnotate[i], 
+                                                                          paste0(colsToAnnotate[i], "_PValue"),
+                                                                          "signalCoverage", "regionSetCoverage",
+                                                                          "totalRegionNumber", "meanRegionSize")])
+            
+            names(topRSZAnnoList[[i]]) <- paste0(colsToAnnotate[i], "_", c("rsName", "rsDescription", "rsScore",
+                                                                           "PValue",
+                                                                           "signalCoverage", "regionSetCoverage",
+                                                                           "totalRegionNumber", "meanRegionSize"))
+        }
     }
     
     
     return(topRSZAnnoList)
     
-    # realRSScores = rsScores
-    # 
-    # gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate, drop=FALSE], nullDistList = nullDistList, method = "mme", realScoreInDist = TRUE)
-    # gPValDF = apply(X = gPValDF, MARGIN = 2, FUN = function(x) p.adjust(p = x, method = correctionMethod))
-    # gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) %in% colsToAnnotate)]])
-    # 
     # # p val cutoffs
     # sigCutoff = 0.05
     # trendCutoff = 0.1
@@ -246,29 +288,7 @@ formattedCOCOAScores  <- function(scores, colsToAnnotate=paste0("PC", 1:10), num
     # gPValDF2 = as.data.frame(gPValDF)[, colsToAnnotate, drop=FALSE]
     # colnames(gPValDF2) <- paste0(colnames(gPValDF2), "_PVal")
     # pRankedScores = cbind(pRankedScores, gPValDF2)
-    # 
-    # # get top region sets for each colsToAnnotate based on p val
-    # topRSZAnnoList = list()
-    # topRSN = 50 # this many top RS for each colsToAnnotate
-    # for (i in seq_along(colsToAnnotate)) {
-    # 
-    #     theseTopInd = dplyr::arrange(pRankedScores,
-    #                                  desc(get(paste0(colsToAnnotate[i], "_PValGroup"))),
-    #                                  desc(get(colsToAnnotate[i])))$index[1:topRSN]
-    #     thesePValRanks = order(pRankedScores[, paste0(colsToAnnotate[i], "_PVal")], decreasing = FALSE)
-    #     pRankedScores$index[thesePValRanks]
-    #     topRSZAnnoList[[i]] = data.frame(pRankedScores[theseTopInd, c("rsName", "rsDescription", colsToAnnotate[i],
-    #                                                                   paste0(colsToAnnotate[i], "_PValGroup"),
-    #                                                                   paste0(colsToAnnotate[i], "_PVal"),
-    #                                                                   "signalCoverage", "regionSetCoverage",
-    #                                                                   "totalRegionNumber", "meanRegionSize")])
-    # 
-    #     names(topRSZAnnoList[[i]]) <- paste0(colsToAnnotate[i], "_", c("rsName", "rsDescription", "rsScore",
-    #                                                                    "PValGroup", "pVal", "signalCoverage", "regionSetCoverage",
-    #                                                                    "totalRegionNumber", "meanRegionSize"))
-    # }
-    # 
-    # write.csv(topRSZAnnoList, file = ffSheets(paste0("topRSPermpVals", .analysisID, ".csv")), row.names = FALSE)
+    # realRSScores = rsScores
 }
 
 
