@@ -99,20 +99,50 @@ ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_ATAC.svg")),
 # panel A
 # load(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/brca_peak_pca_sample_names.RData")) # pcaNames
 
+hemaTFs = c("RUNX1", "SCL|TAL1", "PU.1|PU1|SPI1", 
+            "CEBPA", "IRF8", "GFI1", "CEBPE")
+
+# general: http://www.jbc.org/content/270/10/4955.short
+# (table)
+# TCF3 (E2A), KLF1 (EKLF), GATA1, GATA2, Ikaros, c-MYB, p45 NF-E2, PAX5, PU.1, RBTN2, SCL/TAL1
+hemaTFs = c(hemaTFs, c("TCF3", "KLF1", "GATA1", "GATA2", "Ikaros|IKZF1", "CMYB", "NFE2"))
+
+# lymphoid: https://doi.org/10.1182/blood-2014-12-575688
+# (figure 1. table 1) IKZF1, TCF3, EBF1, PAX5, FOXO1, ID2, GATA3
+hemaTFs = c(hemaTFs, c("TCF3", "EBF1", "PAX5", "FOXO1", "ID2"))# "GATA3"))
+hemaTFs = unique(hemaTFs)
+hemaPattern = paste0(hemaTFs, collapse = "|")
+
 myPCs = paste0("PC", 1:4)
 for (i in seq_along(myPCs)) {
     pcAnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = myPCs[i], 
                                         pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2", hemaPattern), 
                                         patternName = c("ER", "ER-related", "Hematopoietic TFs")) + 
-        theme(legend.position = c(0.15, 0.15)) +
-        scale_color_manual(values = c("blue", "red", "orange", "gray"))
+        theme(legend.position = "none", axis.title.y = element_blank()) +
+        scale_color_manual(values = c("blue", "red", "orange", "gray")) + 
+        xlab(paste0("Region set rank (", myPCs[i],")")) +
+        scale_x_continuous(breaks = c(0, 1000, 2000), 
+                           labels= c("0", "1000", "2000"), limits=c(-25, nrow(rsScores) + 25)) + 
+        scale_y_continuous(breaks = scales::pretty_breaks(n=3))
     # coord_fixed(ratio = 10)
     pcAnnoScoreDist 
     ggsave(filename = ffPlot(paste0(plotSubdir, myPCs[i], "AnnoScoreDistERRelated.svg")), 
-           plot = pcAnnoScoreDist, device = "svg", height = plotHeight, width = plotWidth, units = "mm")
+           plot = pcAnnoScoreDist, device = "svg", height = plotHeight/2, width = plotWidth/2, units = "mm")
 }
 
-
+# one with legend
+i=1
+pcAnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = myPCs[i], 
+                                    pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2", hemaPattern), 
+                                    patternName = c("ER", "ER-related", "Hematopoietic TFs")) + 
+    theme(legend.position = c(0.15, 0.15)) +
+    scale_color_manual(values = c("blue", "red", "orange", "gray")) + 
+    scale_x_continuous(breaks = c(0, 1000, 2000), 
+                       labels= c("0", "1000", "2000"), limits=c(-25, nrow(rsScores) + 25))
+# coord_fixed(ratio = 10)
+pcAnnoScoreDist 
+ggsave(filename = ffPlot(paste0(plotSubdir, myPCs[i], "AnnoScoreDistERRelated_withLegend.svg")), 
+       plot = pcAnnoScoreDist, device = "svg", height = plotHeight, width = plotWidth, units = "mm")
 
 
 # inkscape uses 90 dpi instead of 72
@@ -151,10 +181,10 @@ hemaPattern = paste0(hemaTFs, collapse = "|")
 pc2AnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC2", 
                   pattern = hemaPattern, patternName = "Hematopoietic TFs") + 
     theme(legend.position = c(0.15, 0.15)) + scale_color_manual(values = c("red", "orange"))
-pc2AnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC2", 
-                                     pattern = c(hemaPattern, "EZH2|SUZ12"), 
-                                     patternName = c("Hematopoietic TFs", "polycomb")) + 
-    theme(legend.position = c(0.15, 0.15)) + scale_color_manual(values = c("blue", "red"))
+pc2AnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC10", 
+                                     pattern = c( "EZH2|SUZ12"),  # hemaPattern,
+                                     patternName = c( "polycomb")) + # "Hematopoietic TFs",
+    theme(legend.position = c(0.15, 0.15)) + scale_color_manual(values = c("gray", "blue", "red"))
 
 pc2AnnoScoreDist
 ggsave(ffPlot(paste0(plotSubdir, "pc2HemaATAC.svg")), 
@@ -245,8 +275,25 @@ topPC2Ind = rsEnSortedInd[, "PC2"][1:15]
 uTopInd = unique(c(topPC1Ind, topPC2Ind))
 
 # topRSList = GRList[uTopInd]
-topRSList = lapply(X = GRList[uTopInd], FUN = function(x) resize(x = x, width = 14000, fix = "center"))
-topRSNames = rsScores$rsName[uTopInd]
+topRSNames = as.character(rsScores$rsName[uTopInd])
+
+topRSNames = unique(c(topRSNames, 
+                      "wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak", 
+                      "Human_MCF-7_ESR1_E2-6hr_Jin.bed", 
+                      "GSM1501162_CEBPA.bed", "GSM1097879_ERG.bed",
+                      "Human_MCF-7_H3R17me2_No-treatment_Brown.bed", 
+                      "Human_MCF-7_FoxA1_No-treatment_Brown.bed",
+                      "wgEncodeAwgTfbsSydhH1hescSuz12UcdUniPk.narrowPeak",
+                      "E104-H3K27me3.narrowPeak",
+                      "E032-H3K9me3.narrowPeak", 
+                      "wgEncodeAwgTfbsBroadH1hescEzh239875UniPk.narrowPeak"))
+
+
+topRSList = lapply(X = GRList[topRSNames], FUN = function(x) resize(x = x, width = 14000, fix = "center"))
+
+
+
+
 
 
 multiProfileP = makeMetaRegionPlots(signal=atacCor, 
@@ -274,10 +321,21 @@ multiProfileP2 = normalizeMRProfile(signal=atacCor, signalCol=signalCol,
 
 multiProfileP2[["metaRegionData"]]=multiProfileP2
 names(multiProfileP2[["metaRegionData"]])
+
 topRSNames = c("wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak", 
                "Human_MCF-7_ESR1_E2-6hr_Jin.bed", 
-               "GSM1501162_CEBPA.bed", "GSM1097879_ERG.bed")
-abbrevNames = c("GATA3", "ESR1", "CEBPA", "ERG")
+               "GSM1501162_CEBPA.bed", "GSM1097879_ERG.bed",
+               "Human_MCF-7_H3R17me2_No-treatment_Brown.bed", 
+               "Human_MCF-7_FoxA1_No-treatment_Brown.bed",
+               "wgEncodeAwgTfbsSydhH1hescSuz12UcdUniPk.narrowPeak",
+               "E104-H3K27me3.narrowPeak",
+               "E032-H3K9me3.narrowPeak", 
+               "wgEncodeAwgTfbsBroadH1hescEzh239875UniPk.narrowPeak")
+abbrevNames = c("GATA3", "ESR1", "CEBPA", "ERG", 
+                "H3R17me2", "FOXA1",
+                "SUZ12", "H3K27me3", "H3K9me3",
+                "EZH2")
+
 # topRSNames = c("GSM835863_EP300.bed", 
 #                "GSM607949_GATA1.bed")
 minVal = -1
