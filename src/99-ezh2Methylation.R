@@ -219,6 +219,8 @@ for (i in seq_along(cancerID)) {
         sink()
         spearCorDF[2*(i-1)+j, "coxPVal"] = summary(myModel)$coefficients["methylScore", "Pr(>|z|)"]
         spearCorDF[2*(i-1)+j, "coxExp"] = summary(myModel)$coefficients["methylScore", "exp(coef)"]
+        spearCorDF[2*(i-1)+j, "coxUpper"] = summary(myModel)$conf.int["methylScore", "upper .95"]
+        spearCorDF[2*(i-1)+j, "coxLower"] = summary(myModel)$conf.int["methylScore", "lower .95"]
             })
         # kaplan meier
         # create groups
@@ -262,6 +264,22 @@ spearCorDF$holmSpearmanPVal = p.adjust(p = spearCorDF$spearmanPVal, method = "ho
 write.csv(spearCorDF, file = ffSheets("polycomb_TCGA_cancer_stage.csv"), quote = FALSE, 
           row.names = FALSE, col.names = TRUE)
 
+######################################################################################
+# figures
+
+# plotting confidence intervals for hazard ratios
+# forest plot
+fPlot <- ggplot(data=spearCorDF, aes(x=cancerID, y=coxExp, ymin=coxLower, ymax=coxUpper)) +
+    geom_pointrange() + 
+    geom_hline(yintercept=1, lty=2) +
+    coord_flip() +
+    xlab("Cancer") + ylab("Log10 hazard ratio (95% CI)") +
+    theme_classic() + scale_y_log10()
+
+ggsave(filename = ffPlot(paste0(plotSubdir, "coxHazardRatios.svg")), 
+       plot = fPlot, device = "svg")
+
+
 
 # #################################################################################
 # # are the same regions variable/associated with survival in each cancer?
@@ -302,14 +320,6 @@ write.csv(spearCorDF, file = ffSheets("polycomb_TCGA_cancer_stage.csv"), quote =
 # })
 # 
 # coef(myModel)
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
 # 
 # 
 # 
