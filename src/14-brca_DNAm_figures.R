@@ -88,6 +88,22 @@ for (i in seq_along(myPCList)) {
                     limitsize=FALSE)
 }
 
+# PC 1 and 2
+aPCAPlot = ggplot(data = pcaWithAnno, mapping = aes(x = PC1, y= PC2)) + 
+    geom_point(aes(col=ER_status), size = 1, alpha=0.3) + 
+    theme(legend.position = c(0.15, 0.15), aspect.ratio = 1 
+                          #axis.text = element_blank(), 
+                          # axis.ticks = element_blank()
+                          ) + scale_color_discrete(name="ER status") + 
+    scale_x_continuous(breaks = scales::pretty_breaks(n=3)) + 
+    scale_y_continuous(breaks = scales::pretty_breaks(n=3))
+    
+aPCAPlot
+ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_DNAm.svg")), 
+       height=(plotHeight/2)+10, width=(plotWidth/2)+10, units = "mm",
+       plot = aPCAPlot, device = "svg")
+
+
 pcaWithAnno = as.data.frame(pcaWithAnno)
 for (i in c(paste0("PC", 1:4))) {
     print(
