@@ -27,10 +27,10 @@ if (!exists("variationMetric")) {
 if (!exists("nPerm")) {
     nPerm = 300
 }
+if (!exists(".analysisID")) {
+    .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
+}
 
-
-
-# .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
 ################################################################################
 
 simpleCache(paste0("rsScores_", dataID, "_", variationMetric), assignToVariable = "realRSScores")
@@ -133,7 +133,7 @@ for (i in seq_along(abbrevName)) {
 corMat = cor(t(mBySampleDF[, 1:ncol(genomicSignal)]))
 
 ###############################################################################
-# Panel D and E
+# Panel
 
 # data.frame to store results 
 tmp = rep(-999, nrow(mBySampleDF))
@@ -272,6 +272,12 @@ for (i in 1:nrow(mBySampleDF)) {
     print(cModel)
     print(summary(cModel))
     sink()
+    
+    # create forest plot for hazard ratios
+    fPlot = ggforest(cModel)
+    ggsave(filename = ffPlot(paste0(plotSubdir, "forestPlot_validation_", abbrevName[i], ".svg")), 
+           plot = fPlot, device = "svg", width = plotWidth *(5/4), height = plotHeight, units = plotUnit)
+    
     
     # create groups
     kmThresh = 0.25

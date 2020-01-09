@@ -173,7 +173,7 @@ hemaTFs = c(hemaTFs, c("TCF3", "KLF1", "GATA1", "GATA2", "Ikaros|IKZF1", "CMYB",
 
 # lymphoid: https://doi.org/10.1182/blood-2014-12-575688
 # (figure 1. table 1) IKZF1, TCF3, EBF1, PAX5, FOXO1, ID2, GATA3
-hemaTFs = c(hemaTFs, c("TCF3", "EBF1", "PAX5", "FOXO1", "ID2", "GATA3"))
+hemaTFs = c(hemaTFs, c("TCF3", "EBF1", "PAX5", "FOXO1", "ID2")) #, "GATA3"))
 
 hemaTFs = unique(hemaTFs)
 
@@ -206,14 +206,28 @@ pcsToAnnotate = paste0("PC", 1:10)
 for (i in seq_along(pcsToAnnotate)) {
     thisPCPlot = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = pcsToAnnotate[i], 
                       pattern = hemaPattern, patternName = "Hematopoietic TFs") + 
-        theme(axis.title = element_text(size = 12.5), axis.text = element_text(size=10)) + 
-        scale_color_manual(values = c("red", "orange"), guide=FALSE) + 
+        theme(axis.title = element_text(size = 12.5), axis.text = element_text(size=10),
+              plot.title = element_text(hjust = 0.5, face="bold")) + 
+        scale_color_manual(values = c("red", "lightgray"), guide=FALSE) + 
         ggtitle(label = pcsToAnnotate[i])
     # Title with PC?
     ggsave(ffPlot(paste0(plotSubdir, "hemaRSDist/", pcsToAnnotate[i], "HemaATAC.svg")), 
            plot = thisPCPlot, device = "svg", width = 70, 
            height=70, units = "mm")
 }
+
+# one with legend
+
+thisPCPlot = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = pcsToAnnotate[i], 
+                               pattern = hemaPattern, patternName = "Hematopoietic TFs") + 
+    theme(axis.title = element_text(size = 12.5), axis.text = element_text(size=10),
+          plot.title = element_text(hjust = 0.5, face="bold")) + 
+    scale_color_manual(values = c("red", "lightgray")) + 
+    ggtitle(label = pcsToAnnotate[i])
+# Title with PC?
+ggsave(ffPlot(paste0(plotSubdir, "hemaRSDist/", pcsToAnnotate[i], "HemaATAC_withLegend.svg")), 
+       plot = thisPCPlot, device = "svg", width = 70, 
+       height=70, units = "mm")
 
 ####################
 # panel C

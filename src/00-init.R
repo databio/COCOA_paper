@@ -761,8 +761,8 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
                           makePairwisePCPlots=FALSE) {
     
     source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R"))
-    source(paste0(Sys.getenv("CODE"), "PCRSA_extra/R/visualization.R"))
-    source(paste0(Sys.getenv("CODE"), "PCRSA_extra/R/analysis.R"))
+    source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_extra/R/visualization.R"))
+    source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_extra/R/analysis.R"))
     library(grid)
     library(ggplot2)
     library(COCOA)

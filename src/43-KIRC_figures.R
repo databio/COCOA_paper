@@ -8,7 +8,20 @@ plotWidth = 100
 plotHeight = 100
 # loadProcessKIRCMethyl()
 
+if (!exists("dataID")) {
+    dataID = "kircMethyl214"
+}
+if (!exists("variationMetric")) {
+    variationMetric = "spearmanCor"    
+}
+if (!exists("nPerm")) {
+    nPerm = 300
+}
+if (!exists("plotSubdir")) {
+    plotSubdir = "41-tcgaCorCOCOA/"
+}
 
+plotSubdir = "41-tcgaCorCOCOA/"
 ###############################################################################
 simpleCache(paste0("rsScores_",  dataID, "_", variationMetric), 
             assignToVariable = "realRSScores")
@@ -41,7 +54,7 @@ rsAnnoDist = plotAnnoScoreDist(rsScores = realRSScores,
                                pattern = c("EZH2|SUZ12"),
                                patternName = "EZH2 or SUZ12") +
     theme(legend.position = c(.15, .15)) + 
-    scale_color_manual(values = c("red", "orange"))
+    scale_color_manual(values = c("red", "lightgray"))
     # scale_color_manual(values = c("purple", "green"))
 rsAnnoDist
 
