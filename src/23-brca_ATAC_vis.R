@@ -91,7 +91,17 @@ aPCAPlot
 ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_ATAC.svg")), 
        height=plotHeight-10, width=plotWidth-10, units = "mm",
        plot = aPCAPlot, device = "svg")
+########
+# bigger plot for presentations
+biggerPCA = aPCAPlot + theme(legend.position = "right",  axis.text = element_text(), axis.ticks = element_line()) + 
+    scale_x_continuous(breaks=scales::pretty_breaks(n=3)) + 
+    scale_y_continuous(breaks=scales::pretty_breaks(n=3)) 
+    
+biggerPCA
 
+ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_ATAC_presentation.svg")), 
+       height=80, width=100, units = "mm",
+       plot = biggerPCA, device = "svg")
 
 # pcaWithAnno = cbind(mPCA$x, patientMetadata[row.names(mPCA$x) ,])
 

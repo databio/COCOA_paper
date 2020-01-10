@@ -64,7 +64,14 @@ spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)),
                         coxExp=spearCor, coxPVal=spearCor,
                         stringsAsFactors = FALSE)
 
-
+# number of cancers * number of region sets * (cox variables + 1 for whole model stats)
+# number of cox variables is 4 (sex, genome-wide average methylation, age, methylScore) + 1 = 5
+coxVar=rep(NA, length(cancerID)*length(myTopRS) * 5)
+spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)), 
+                        rsName=spearCor, spearCor, spearmanPVal=spearCor, 
+                        coxExp=spearCor, coxPVal=spearCor,
+                        stringsAsFactors = FALSE)
+coxResults = data.frame()
 
 # get overlap between myTopRS (based on CpGs covered in epigenetic data)
 getOverlap=FALSE
@@ -152,14 +159,10 @@ for (i in seq_along(cancerID)) {
     
     # test association between avg methyl. and cancer stage, and survival
     
-    # data.frame to store results 
-    tmp = rep(-999, nrow(mBySampleDF))
-    trainResDF = data.frame(corPVal=tmp, 
-                            corCoef=tmp, 
-                            coxPVal=tmp, 
-                            coxEffect=tmp, 
-                            coxModel=tmp)
-    
+    # # data.frame to store results 
+    # spearCorDF
+
+
     # these patients have no survival data and so are not helpful for survival
     # analysis despite still being helpful for cancer stage analysis earlier
     removeInd = pMeta$days_to_last_followup == 0
@@ -217,10 +220,16 @@ for (i in seq_along(cancerID)) {
         print(myModel)
         print(summary(myModel))
         sink()
+        
+        # cox model information
         spearCorDF[2*(i-1)+j, "coxPVal"] = summary(myModel)$coefficients["methylScore", "Pr(>|z|)"]
         spearCorDF[2*(i-1)+j, "coxExp"] = summary(myModel)$coefficients["methylScore", "exp(coef)"]
         spearCorDF[2*(i-1)+j, "coxUpper"] = summary(myModel)$conf.int["methylScore", "upper .95"]
         spearCorDF[2*(i-1)+j, "coxLower"] = summary(myModel)$conf.int["methylScore", "lower .95"]
+        # information about tests of cox model assumptions
+        spearCorDF[2*(i-1)+j, "coxLower"] = summary(myModel)$conf.int["methylScore", "lower .95"]
+        
+        
             })
         # kaplan meier
         # create groups

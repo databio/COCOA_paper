@@ -9,7 +9,7 @@ set.seed(1234)
 plotSubdir = "14_brca_DNAm_figures/"
 createPlotSubdir(plotSubdir = plotSubdir)
 
-
+# assign if not assigned so far
 conAssign("dataID", "brcaDNAm657")
 conAssign("nPerm", 300)
 conAssign("variationMetric", "cov")
@@ -102,6 +102,23 @@ aPCAPlot
 ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_DNAm.svg")), 
        height=(plotHeight/2)+10, width=(plotWidth/2)+10, units = "mm",
        plot = aPCAPlot, device = "svg")
+
+
+# bigger one for presentation
+biggerPlot = aPCAPlot = ggplot(data = pcaWithAnno, mapping = aes(x = PC1, y= PC2)) + 
+    geom_point(aes(col=ER_status), size = 1, alpha=0.5) + 
+    theme(legend.position = "right"
+          #axis.text = element_blank(), 
+          # axis.ticks = element_blank()
+    ) + scale_color_discrete(name="ER status") + 
+    scale_x_continuous(breaks = scales::pretty_breaks(n=3)) + 
+    scale_y_continuous(breaks = scales::pretty_breaks(n=3)) + coord_equal()
+
+biggerPlot
+
+ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_DNAm_presentation.svg")), 
+           height=80, width=100, units = "mm",
+           plot = aPCAPlot, device = "svg")
 
 
 pcaWithAnno = as.data.frame(pcaWithAnno)
