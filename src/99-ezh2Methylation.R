@@ -66,12 +66,28 @@ spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)),
 
 # number of cancers * number of region sets * (cox variables + 1 for whole model stats)
 # number of cox variables is 4 (sex, genome-wide average methylation, age, methylScore) + 1 = 5
-coxVar=rep(NA, length(cancerID)*length(myTopRS) * 5)
-spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)), 
-                        rsName=spearCor, spearCor, spearmanPVal=spearCor, 
-                        coxExp=spearCor, coxPVal=spearCor,
+# global is not a variable, just a place to record stats about the model as a whole
+# if 
+myVar = c("methylScore", "age", "sex", 
+          "genomeMethyl", "globalStats") # name of variables in my results data.frame
+modelVar = c("methylScore", "years_to_birth","gender", "meanMethyl", "GLOBAL") #name of variables in the model (except GLOBAL)
+perModelNum = length(myVar)
+rsNum = length(myTopRS)
+coxVar=rep(NA, length(cancerID)*length(myTopRS) * perModelNum)
+coxResults = data.frame(cancerID = rep(cancerID, each=rsNum * perModelNum), 
+                        rsName=coxVar,
+                        variableName=rep(x = myVar, 
+                                         length(cancerID)*length(myTopRS)),
+                        obsNum=coxVar, # number of observations
+                        coxHRMean=coxVar, 
+                        coxHRLower=coxVar, 
+                        coxHRUpper=coxVar, 
+                        coxPVal=coxVar,
+                        schoRho=coxVar,
+                        schoX2=coxVar,
+                        schoPVal=coxVar,
+                        eventNum=coxVar, # deaths
                         stringsAsFactors = FALSE)
-coxResults = data.frame()
 
 # get overlap between myTopRS (based on CpGs covered in epigenetic data)
 getOverlap=FALSE
@@ -221,7 +237,36 @@ for (i in seq_along(cancerID)) {
         print(summary(myModel))
         sink()
         
+        # test that model meets proportional hazards assumption
+        phTest = cox.zph(myModel)
+        
         # cox model information
+        # i is for cancer type, j is for region set, k is for Cox model variable 
+        # myVar = c("methylScore", "age", "sex", "genomeMethyl", "globalStats")
+        # modelVar = c("methylScore", "years_to_birth","gender", "meanMethyl", "GLOBAL")
+        for (k in seq_along(myVar)) {
+            if (myVar[k] != "globalStats") {
+                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "variableName"] = myVar[k]
+                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "obsNum"] =
+                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "coxHRMean"] = summary(myModel)$coefficients[modelVar[k], "exp(coef)"]
+                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "coxHRUpper"] = summary(myModel)$conf.int[modelVar[k], "upper .95"]
+                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "coxHRLower"] = summary(myModel)$conf.int[modelVar[k], "lower .95"]
+                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "coxPVal"] = summary(myModel)$coefficients[modelVar[k], "Pr(>|z|)"]
+                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "schoRho"] = phTest$table[modelVar[k],"rho"]
+                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "schoX2"] = phTest$table[modelVar[k],"chisq"]
+                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "schoPVal"] = phTest$table[modelVar[k],"p"]
+                    
+                } else {
+                    coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "variableName"] = myVar[k]
+                    # log ratio/likelihood ratio test
+                    coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "coxPVal"] = summary(myModel)$logtest["pvalue"]  
+                    coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "schoX2"] = phTest$table[modelVar[k],"chisq"]
+                    coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "schoPVal"] = phTest$table[modelVar[k],"p"]
+                    coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "eventNum"] = summary(myModel)$nevent # deaths
+                    
+            }
+             
+        }
         spearCorDF[2*(i-1)+j, "coxPVal"] = summary(myModel)$coefficients["methylScore", "Pr(>|z|)"]
         spearCorDF[2*(i-1)+j, "coxExp"] = summary(myModel)$coefficients["methylScore", "exp(coef)"]
         spearCorDF[2*(i-1)+j, "coxUpper"] = summary(myModel)$conf.int["methylScore", "upper .95"]
@@ -229,6 +274,19 @@ for (i in seq_along(cancerID)) {
         # information about tests of cox model assumptions
         spearCorDF[2*(i-1)+j, "coxLower"] = summary(myModel)$conf.int["methylScore", "lower .95"]
         
+                                # rsName=coxVar,
+                                # variableName=rep(x = myVar, 
+                                #                  length(cancerID)*length(myTopRS)),
+                                # obsNum=coxVar, # number of observations
+                                # coxHRMean=coxVar, 
+                                # coxHRLower=coxVar, 
+                                # coxHRUpper=coxVar, 
+                                # coxPVal=coxVar,
+                                # schoRho=coxVar,
+                                # schoX2=coxVar,
+                                # schoPVal=coxVar,
+                                # eventNum=coxVar, # deaths
+                                # stringsAsFactors = FALSE)
         
             })
         # kaplan meier
