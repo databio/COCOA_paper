@@ -48,7 +48,59 @@ length(mergedTopEzh2) # 10994
 
 ###############################################################################
 
+# @param dfVar character. The column names of the new df
 
+makeCoxDF <- function(cModel, modelVar, dfVar, returnGlobalStats=TRUE) {
+    
+    if (returnGlobalStats) {
+        modelVar = c(modelVar, "GLOBAL")
+        dfVar = c(dfVar, "globalStats")
+    }
+    perModelNum = length(modelVar)
+    
+    phTest = cox.zph(cModel)
+    
+    coxVar=rep(NA, length(dfVar))
+    # cancerID = rep(cancerID, each=perModelNum), rsName=coxVar,
+    coxDF = data.frame(variableName=dfVar,
+                       obsNum=coxVar, # number of observations
+                       coxHRMean=coxVar, 
+                       coxHRLower=coxVar, 
+                       coxHRUpper=coxVar, 
+                       coxPVal=coxVar,
+                       schoRho=coxVar,
+                       schoX2=coxVar,
+                       schoPVal=coxVar,
+                       eventNum=coxVar, # deaths
+                       stringsAsFactors = FALSE)
+    
+    for (i in seq_along(modelVar)) {
+        if (modelVar[i] != "GLOBAL") {
+            coxDF[i, "variableName"] = dfVar[i]
+            # coxDF[i, "obsNum"] =
+            coxDF[i, "coxHRMean"] = summary(cModel)$coefficients[modelVar[i], "exp(coef)"]
+            coxDF[i, "coxHRUpper"] = summary(cModel)$conf.int[modelVar[i], "upper .95"]
+            coxDF[i, "coxHRLower"] = summary(cModel)$conf.int[modelVar[i], "lower .95"]
+            coxDF[i, "coxPVal"] = summary(cModel)$coefficients[modelVar[i], "Pr(>|z|)"]
+            # coxDF[i, "schoRho"] = phTest$table[modelVar[i],"rho"]
+            coxDF[i, "schoX2"] = phTest$table[modelVar[i],"chisq"]
+            coxDF[i, "schoPVal"] = phTest$table[modelVar[i],"p"]
+        } else {
+            coxDF[i, "variableName"] = dfVar[i]
+            # log ratio/likelihood ratio test
+            coxDF[i, "coxPVal"] = summary(cModel)$logtest["pvalue"]  
+            coxDF[i, "schoX2"] = phTest$table[modelVar[i],"chisq"]
+            coxDF[i, "schoPVal"] = phTest$table[modelVar[i],"p"]
+            coxDF[i, "eventNum"] = summary(cModel)$nevent # deaths
+        }
+        
+        
+    }
+    
+    return(coxDF)
+}
+
+###############################################################################
 
 # do for each cancer type
 cancerID= c("ACC", "BLCA", "BRCA", "CESC", "CHOL", 
@@ -56,7 +108,8 @@ cancerID= c("ACC", "BLCA", "BRCA", "CESC", "CHOL",
             "KICH", "KIRC", "KIRP", "LAML", "LGG", 
             "LIHC", "LUAD", "LUSC", "MESO", "OV", 
             "PAAD", "PCPG", "PRAD", "READ", "SARC", 
-            "SKCM", "STAD", "TGCT", "THCA", "THYM", "UCEC", "UCS", "UVM") 
+            "SKCM", "STAD", "TGCT", "THCA", "THYM", 
+            "UCEC", "UCS", "UVM") 
 
 spearCor=rep(NA, length(cancerID)*length(myTopRS))
 spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)), 
@@ -68,30 +121,35 @@ spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)),
 # number of cox variables is 4 (sex, genome-wide average methylation, age, methylScore) + 1 = 5
 # global is not a variable, just a place to record stats about the model as a whole
 # if 
+# redefined inside loop
 myVar = c("methylScore", "age", "sex", 
-          "genomeMethyl", "globalStats") # name of variables in my results data.frame
-modelVar = c("methylScore", "years_to_birth","gender", "meanMethyl", "GLOBAL") #name of variables in the model (except GLOBAL)
+          "genomeMethyl") # name of variables in my results data.frame
+modelVar = c("methylScore", "years_to_birth","gender", "meanMethyl") #name of variables in the model 
 perModelNum = length(myVar)
 rsNum = length(myTopRS)
 coxVar=rep(NA, length(cancerID)*length(myTopRS) * perModelNum)
-coxResults = data.frame(cancerID = rep(cancerID, each=rsNum * perModelNum), 
-                        rsName=coxVar,
-                        variableName=rep(x = myVar, 
-                                         length(cancerID)*length(myTopRS)),
-                        obsNum=coxVar, # number of observations
-                        coxHRMean=coxVar, 
-                        coxHRLower=coxVar, 
-                        coxHRUpper=coxVar, 
-                        coxPVal=coxVar,
-                        schoRho=coxVar,
-                        schoX2=coxVar,
-                        schoPVal=coxVar,
-                        eventNum=coxVar, # deaths
+# make data.frame to rbind() results to
+coxResults = data.frame(cancerID = NA, 
+                        rsName=NA,
+                        variableName=NA,
+                        obsNum=NA, # number of observations
+                        coxHRMean=NA, 
+                        coxHRLower=NA, 
+                        coxHRUpper=NA, 
+                        coxPVal=NA,
+                        schoRho=NA,
+                        schoX2=NA,
+                        schoPVal=NA,
+                        eventNum=NA, # deaths
                         stringsAsFactors = FALSE)
 
 # get overlap between myTopRS (based on CpGs covered in epigenetic data)
 getOverlap=FALSE
 for (i in seq_along(cancerID)) {
+    message(i)
+    myVar = c("methylScore", "age", "sex", 
+              "genomeMethyl") # name of variables in my results data.frame
+    modelVar = c("methylScore", "years_to_birth","gender", "meanMethyl") 
     
     allSampleLabels = NULL
     # assigns methylMat, signalCoord, pMeta, allSampleLabels to environment
@@ -214,23 +272,36 @@ for (i in seq_along(cancerID)) {
         covariateData = pMeta
         patSurv = Surv(covariateData$lastDate / (365/12), event=covariateData$vital_status)
         try({
-            if ("years_to_birth" %in% colnames(covariateData)) {
-                if ("gender" %in% colnames(covariateData)) {
-                    
-                    myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
-                } else {
-                    myModel = coxph(patSurv ~ years_to_birth + meanMethyl + methylScore, data = covariateData)
-                }
+            
+            # create model with only variables that are present
+            myVar = myVar[modelVar %in% colnames(covariateData)]
+            modelVar = modelVar[modelVar %in% colnames(covariateData)]
+            modelString = paste0("coxph(patSurv ~ ", paste0(modelVar, collapse = " + "),  ", data=covariateData)")
+            myModel = eval(parse(text=modelString))
+            thisCoxDF = makeCoxDF(myModel, modelVar=modelVar, dfVar=myVar, returnGlobalStats = TRUE)
 
-            } else {
-                if ("gender" %in% colnames(covariateData)) {
-                    myModel = coxph(patSurv ~ gender + meanMethyl + methylScore, data = covariateData)
-                } else {
-                    myModel = coxph(patSurv ~ meanMethyl + methylScore, data = covariateData)
-                }
-
-            }
-        
+            # if ("years_to_birth" %in% colnames(covariateData)) {
+            #     if ("gender" %in% colnames(covariateData)) {
+            #         myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
+            #         thisCoxDF = makeCoxDF(myModel, modelVar, dfVar, returnGlobalStats = TRUE)
+            #     } else {
+            #         myModel = coxph(patSurv ~ years_to_birth + meanMethyl + methylScore, data = covariateData)
+            #     }
+            # 
+            # } else {
+            #     if ("gender" %in% colnames(covariateData)) {
+            #         myModel = coxph(patSurv ~ gender + meanMethyl + methylScore, data = covariateData)
+            #     } else {
+            #         myModel = coxph(patSurv ~ meanMethyl + methylScore, data = covariateData)
+            #     }
+            # 
+            # }
+            # add cancerID and regionSet name columns
+            thisCoxDF = cbind(cancerID=rep(cancerID[i], nrow(thisCoxDF)), 
+                              rsName=rep(abbrevName[j], nrow(thisCoxDF)), 
+                              thisCoxDF)
+            coxResults = rbind(coxResults, thisCoxDF)    
+            
 
         sink(file = ffPlot(paste0(plotSubdir, "coxphModel", abbrevName[j], "_", cancerID[i], ".txt")))
         print(myModel)
@@ -238,35 +309,16 @@ for (i in seq_along(cancerID)) {
         sink()
         
         # test that model meets proportional hazards assumption
-        phTest = cox.zph(myModel)
+        # phTest = cox.zph(myModel)
         
         # cox model information
         # i is for cancer type, j is for region set, k is for Cox model variable 
         # myVar = c("methylScore", "age", "sex", "genomeMethyl", "globalStats")
         # modelVar = c("methylScore", "years_to_birth","gender", "meanMethyl", "GLOBAL")
-        for (k in seq_along(myVar)) {
-            if (myVar[k] != "globalStats") {
-                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "variableName"] = myVar[k]
-                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "obsNum"] =
-                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "coxHRMean"] = summary(myModel)$coefficients[modelVar[k], "exp(coef)"]
-                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "coxHRUpper"] = summary(myModel)$conf.int[modelVar[k], "upper .95"]
-                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "coxHRLower"] = summary(myModel)$conf.int[modelVar[k], "lower .95"]
-                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "coxPVal"] = summary(myModel)$coefficients[modelVar[k], "Pr(>|z|)"]
-                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "schoRho"] = phTest$table[modelVar[k],"rho"]
-                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "schoX2"] = phTest$table[modelVar[k],"chisq"]
-                coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "schoPVal"] = phTest$table[modelVar[k],"p"]
-                    
-                } else {
-                    coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "variableName"] = myVar[k]
-                    # log ratio/likelihood ratio test
-                    coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "coxPVal"] = summary(myModel)$logtest["pvalue"]  
-                    coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "schoX2"] = phTest$table[modelVar[k],"chisq"]
-                    coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "schoPVal"] = phTest$table[modelVar[k],"p"]
-                    coxResults[(i-1)*rsNum*perModelNum*+(j-1)*perModelNum+k, "eventNum"] = summary(myModel)$nevent # deaths
-                    
-            }
-             
-        }
+        
+       
+        
+
         spearCorDF[2*(i-1)+j, "coxPVal"] = summary(myModel)$coefficients["methylScore", "Pr(>|z|)"]
         spearCorDF[2*(i-1)+j, "coxExp"] = summary(myModel)$coefficients["methylScore", "exp(coef)"]
         spearCorDF[2*(i-1)+j, "coxUpper"] = summary(myModel)$conf.int["methylScore", "upper .95"]
@@ -274,20 +326,7 @@ for (i in seq_along(cancerID)) {
         # information about tests of cox model assumptions
         spearCorDF[2*(i-1)+j, "coxLower"] = summary(myModel)$conf.int["methylScore", "lower .95"]
         
-                                # rsName=coxVar,
-                                # variableName=rep(x = myVar, 
-                                #                  length(cancerID)*length(myTopRS)),
-                                # obsNum=coxVar, # number of observations
-                                # coxHRMean=coxVar, 
-                                # coxHRLower=coxVar, 
-                                # coxHRUpper=coxVar, 
-                                # coxPVal=coxVar,
-                                # schoRho=coxVar,
-                                # schoX2=coxVar,
-                                # schoPVal=coxVar,
-                                # eventNum=coxVar, # deaths
-                                # stringsAsFactors = FALSE)
-        
+
             })
         # kaplan meier
         # create groups
@@ -323,12 +362,15 @@ for (i in seq_along(cancerID)) {
     }
 
 }
+coxResults = coxResults[-1, ] # blank first row
 
 # spearCorDF = read.csv(ffSheets("EZH2_TCGA_cancer_stage.csv"))
 spearCorDF$holmCoxPVal = p.adjust(p = spearCorDF$coxPVal, method = "holm")
 spearCorDF$holmSpearmanPVal = p.adjust(p = spearCorDF$spearmanPVal, method = "holm")
 
 write.csv(spearCorDF, file = ffSheets("polycomb_TCGA_cancer_stage.csv"), quote = FALSE, 
+          row.names = FALSE, col.names = TRUE)
+write.csv(coxResults, file = ffSheets("polycomb_TCGA_cancer_stage_coxPH.csv"), quote = FALSE, 
           row.names = FALSE, col.names = TRUE)
 
 ######################################################################################
