@@ -378,13 +378,20 @@ write.csv(coxResults, file = ffSheets("polycomb_TCGA_cancer_stage_coxPH.csv"), q
 
 # plotting confidence intervals for hazard ratios
 # forest plot
-fPlot <- ggplot(data=spearCorDF, aes(x=cancerID, y=coxExp, ymin=coxLower, ymax=coxUpper)) +
+# CompHome()
+# coxResults=read.csv(file = "./processed/COCOA_paper/analysis/sheets/polycomb_TCGA_cancer_stage_coxPH.csv",
+#          stringsAsFactors = FALSE)
+coxResults$cancerID = factor(coxResults$cancerID, 
+                             levels = rev(unique(coxResults$cancerID)))
+fPlot <- ggplot(data=filter(coxResults, variableName=="methylScore"), 
+                aes(x=cancerID, y=coxHRMean, ymin=coxHRLower, ymax=coxHRUpper)) +
     geom_pointrange() + 
     geom_hline(yintercept=1, lty=2) +
     coord_flip() +
-    xlab("Cancer") + ylab("Log10 hazard ratio (95% CI)") +
-    theme_classic() + scale_y_log10()
+    xlab("Cancer type") + ylab("Hazard ratio (95% CI)") +
+    theme_classic() + scale_y_log10() 
 
+fPlot
 ggsave(filename = ffPlot(paste0(plotSubdir, "coxHazardRatios.svg")), 
        plot = fPlot, device = "svg")
 
