@@ -64,6 +64,8 @@ makeCoxDF <- function(cModel, modelVar, dfVar, returnGlobalStats=TRUE) {
     # cancerID = rep(cancerID, each=perModelNum), rsName=coxVar,
     coxDF = data.frame(variableName=dfVar,
                        obsNum=coxVar, # number of observations
+                       coxCoef=coxVar,
+                       coxCoefSE=coxVar,
                        coxHRMean=coxVar, 
                        coxHRLower=coxVar, 
                        coxHRUpper=coxVar, 
@@ -78,15 +80,18 @@ makeCoxDF <- function(cModel, modelVar, dfVar, returnGlobalStats=TRUE) {
         if (modelVar[i] != "GLOBAL") {
             coxDF[i, "variableName"] = dfVar[i]
             # coxDF[i, "obsNum"] =
+            coxDF[i, "coxCoef"] = summary(cModel)$coefficients[modelVar[i], "coef"]
             coxDF[i, "coxHRMean"] = summary(cModel)$coefficients[modelVar[i], "exp(coef)"]
             coxDF[i, "coxHRUpper"] = summary(cModel)$conf.int[modelVar[i], "upper .95"]
             coxDF[i, "coxHRLower"] = summary(cModel)$conf.int[modelVar[i], "lower .95"]
+            coxDF[i, "coxCoefSE"] = summary(cModel)$coefficients[modelVar[i], "se(coef)"]
             coxDF[i, "coxPVal"] = summary(cModel)$coefficients[modelVar[i], "Pr(>|z|)"]
             # coxDF[i, "schoRho"] = phTest$table[modelVar[i],"rho"]
             coxDF[i, "schoX2"] = phTest$table[modelVar[i],"chisq"]
             coxDF[i, "schoPVal"] = phTest$table[modelVar[i],"p"]
         } else {
             coxDF[i, "variableName"] = dfVar[i]
+            coxDF[i, "obsNum"] = summary(cModel)$n
             # log ratio/likelihood ratio test
             coxDF[i, "coxPVal"] = summary(cModel)$logtest["pvalue"]  
             coxDF[i, "schoX2"] = phTest$table[modelVar[i],"chisq"]
@@ -133,7 +138,9 @@ coxResults = data.frame(cancerID = NA,
                         rsName=NA,
                         variableName=NA,
                         obsNum=NA, # number of observations
-                        coxHRMean=NA, 
+                        coxCoef=NA,
+                        coxCoefSE=NA,
+                        coxHRMean=NA, # exp(coxParam)
                         coxHRLower=NA, 
                         coxHRUpper=NA, 
                         coxPVal=NA,
@@ -379,25 +386,43 @@ write.csv(coxResults, file = ffSheets("polycomb_TCGA_cancer_stage_coxPH.csv"), q
 # plotting confidence intervals for hazard ratios
 # forest plot
 # CompHome()
-# coxResults=read.csv(file = "./processed/COCOA_paper/analysis/sheets/polycomb_TCGA_cancer_stage_coxPH.csv",
-#          stringsAsFactors = FALSE)
+coxResults=read.csv(file = ffSheets("polycomb_TCGA_cancer_stage_coxPH.csv"),
+         stringsAsFactors = FALSE)
+coxResults = filter(coxResults, variableName=="methylScore") %>% arrange(desc(coxHRMean))
 coxResults$cancerID = factor(coxResults$cancerID, 
-                             levels = rev(unique(coxResults$cancerID)))
+                             levels = rev((coxResults$cancerID)))
+# only include methylScore variable
+coxResults$holmCoxPVal = p.adjust(p = coxResults$coxPVal, method = "holm")
+coxResults$sigType = rep(x = "p > 0.05", nrow(coxResults))
+coxResults$sigType[coxResults$coxPVal < 0.05] = "Uncorrected p < 0.05"
+coxResults$sigType[coxResults$holmCoxPVal < 0.05] = "Corrected p < 0.05"
+coxResults$sigType = factor(coxResults$sigType, 
+                            levels = c("Corrected p < 0.05", 
+                                        "Uncorrected p < 0.05", 
+                                       "p > 0.05"))
+
+# convert hazard ratios from 1 scale to 0.01 scale
+coxResults$coxHRMean0.01=coxResults$coxHRMean ^ (1/100)
+coxResults$coxHRUpper0.01=coxResults$coxHRUpper ^ (1/100)
+coxResults$coxHRLower0.01=coxResults$coxHRLower ^ (1/100)
+
 fPlot <- ggplot(data=filter(coxResults, variableName=="methylScore"), 
-                aes(x=cancerID, y=coxHRMean, ymin=coxHRLower, ymax=coxHRUpper)) +
-    geom_pointrange() + 
+                aes(x=cancerID, y=coxHRMean0.01, ymin=coxHRLower0.01, ymax=coxHRUpper0.01)) +
+    geom_pointrange(aes(col=sigType)) + 
     geom_hline(yintercept=1, lty=2) +
     coord_flip() +
-    xlab("Cancer type") + ylab("Hazard ratio (95% CI)") +
-    theme_classic() + scale_y_log10() 
+    xlab("Cancer type") + ylab("Hazard ratio per 0.01 change in DNA methylation level (95% CI)") +
+    # scale_y_log10() +
+    scale_y_continuous(breaks=seq(from=0.8, to=2, by=0.2)) +
+    theme_classic() + scale_color_manual(values = c("red", "orange", "darkgray"))
 
 fPlot
 ggsave(filename = ffPlot(paste0(plotSubdir, "coxHazardRatios.svg")), 
-       plot = fPlot, device = "svg")
+       plot = fPlot, device = "svg", height = 200, width=200, units = "mm")
 
 
 
-# #################################################################################
+ #################################################################################
 # # are the same regions variable/associated with survival in each cancer?
 # # are the same regions associated with cancer stage that are associated with survival?
 # 
