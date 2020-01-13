@@ -132,7 +132,16 @@ for (i in c(paste0("PC", 1:4))) {
     )
 }
 
+########
+# get % variance explained for top PCs
 
+varExpl = mPCA$sdev^2 / sum(mPCA$sdev^2) 
+svg(filename = ffPlot(paste0(plotSubdir, "brca_DNAm_varianceExplained.svg")))
+plot(varExpl)
+dev.off()
+
+plot(varExpl)
+# 0.14010195 0.11371591 0.04713953 0.04632531 0.02099366 0.01939229
 
 ##################
 # Fig 2. BRCA DNA methylation 

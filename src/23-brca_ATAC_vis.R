@@ -105,6 +105,18 @@ ggsave(filename = ffPlot(paste0(plotSubdir, "pc1_2_BRCA_ATAC_presentation.svg"))
 
 # pcaWithAnno = cbind(mPCA$x, patientMetadata[row.names(mPCA$x) ,])
 
+########
+# get % variance explained for top PCs
+simpleCache("brcaATACPCA_73", assignToVariable = "aPCA")
+varExpl = aPCA$sdev^2 / sum(aPCA$sdev^2)
+svg(filename = ffPlot(paste0(plotSubdir, "brca_ATAC73_varianceExplained.svg")))
+plot(varExpl)
+dev.off()
+
+
+
+# 0.21017435 0.07013775 0.05563048 0.03980693 0.03129236 0.02875776
+
 #############################################################################
 # panel A
 # load(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/atac/brca_peak_pca_sample_names.RData")) # pcaNames
