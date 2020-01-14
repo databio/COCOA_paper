@@ -98,8 +98,6 @@ makeCoxDF <- function(cModel, modelVar, dfVar, returnGlobalStats=TRUE) {
             coxDF[i, "schoPVal"] = phTest$table[modelVar[i],"p"]
             coxDF[i, "eventNum"] = summary(cModel)$nevent # deaths
         }
-        
-        
     }
     
     return(coxDF)
@@ -420,6 +418,31 @@ fPlot
 ggsave(filename = ffPlot(paste0(plotSubdir, "coxHazardRatios.svg")), 
        plot = fPlot, device = "svg", height = 200, width=200, units = "mm")
 
+spearCorDF=read.csv(file = ffSheets("polycomb_TCGA_cancer_stage.csv"),
+                    stringsAsFactors = FALSE)
+spearCorDF = filter(spearCorDF, spearCor !="NA") %>% arrange(desc(spearCor))
+spearCorDF$cancerID = factor(spearCorDF$cancerID, 
+                             levels = rev((spearCorDF$cancerID)))
+spearCorDF$spearSigType = rep(x = "p > 0.05", nrow(spearCorDF))
+spearCorDF$spearSigType[spearCorDF$spearmanPVal < 0.05] = "Uncorrected p < 0.05"
+spearCorDF$spearSigType[spearCorDF$holmSpearmanPVal < 0.05] = "Corrected p < 0.05"
+spearCorDF$spearSigType = factor(spearCorDF$spearSigType, 
+                            levels = c("Corrected p < 0.05", 
+                                       "Uncorrected p < 0.05", 
+                                       "p > 0.05"))
+fPlot <- ggplot(data=spearCorDF, 
+                aes(x=cancerID, y=spearCor)) +
+    geom_point(aes(col=spearSigType), size=4) + 
+    geom_hline(yintercept=0, lty=2) +
+    coord_flip() +
+    xlab("Cancer type") + ylab("Correlation between EZH2/SUZ12-binding region DNA methylation and cancer stage") +
+    # scale_y_log10() +
+    scale_y_continuous(breaks=seq(from=-1, to=1, by=0.1)) +
+    theme_classic() + scale_color_manual(values = c("red", "orange", "darkgray"))
+
+fPlot
+ggsave(filename = ffPlot(paste0(plotSubdir, "spearmanCorByCancer.svg")), 
+       plot = fPlot, device = "svg", height = 200, width=200, units = "mm")
 
 
  #################################################################################
