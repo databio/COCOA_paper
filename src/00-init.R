@@ -787,6 +787,17 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     if (!dir.exists(plotDir)) {
         dir.create(plotDir, recursive = TRUE)
     }
+    
+    #################################################################################
+    # plot of variance explained by top 50 PCs
+    
+    grDevices::svg(paste0(plotDir, "pcaVarianceExplained", inputID, ".svg"))
+    
+    varExpl = mPCA$sdev^2 / sum(mPCA$sdev^2)
+    plot(varExpl[1:25], xlab=paste0("PC", 1:25),ylab="Proportion variance explained")
+    
+    dev.off()
+    
     ##################################################################################
     # comparePCHeatmap
     # visualization of enrichment score results across PCs
@@ -811,6 +822,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     # only looking at regions with high average loading scores
     # still individual cytosine methylation
     
+    tryCatch({
     if (makeMAPC) {
         # one pdf for each PC given.
         for (i in seq_along(PCsToAnnotate_mAPC)) {
@@ -835,10 +847,16 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
             dev.off()
         }
     }
+        }, {message("Problem in makeMAPC")
+            return(NA)})
+    
+    
     ###################################################################################
     # regionQuantileByTargetVar
     # comparing loading scores/percentiles for individual regions among PCs
     # need region sets and PCA loadings
+    
+    tryCatch({
     
     if (makeRQBPC) {
         
@@ -858,6 +876,8 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
         
         dev.off()
     }
+    }, {message("Problem in makeRQBPC")
+        return(NA)})
     ##################################################################################
     # pcFromSubset Heatmap
     # seeing whether a subset of cytosines (ie a single region set) can
