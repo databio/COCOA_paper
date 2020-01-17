@@ -8,15 +8,16 @@ if (!dir.exists(ffPlot(.plotSubdir))) {
 #                    "_", dataID, ".RData")))
 # load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", dataID, ".RData")))
 
-# remove region sets that had no overlap
-keepInd = apply(rsPermScores[[1]], MARGIN = 1, FUN = function(x) !any(is.na(x)))
+# # remove region sets that had no overlap
+# keepInd = apply(rsPermScores[[1]], MARGIN = 1, FUN = function(x) !any(is.na(x)))
 
-nullDistList = lapply(X = 1:nrow(rsPermScores[[1]]),
-                      FUN = function(x) extractNullDist(resultsList=rsPermScores, rsInd = x))
+nullDistList = convertToFromNullDist(rsPermScores)
+# nullDistList = lapply(X = 1:nrow(rsPermScores[[1]]),
+#                       FUN = function(x) extractNullDist(resultsList=rsPermScores, rsInd = x))
 
-# screen out region sets with no overlap
-nullDistList = nullDistList[keepInd]
-realRSScores = realRSScores[keepInd, ]
+# # screen out region sets with no overlap
+# nullDistList = nullDistList[keepInd]
+# realRSScores = realRSScores[keepInd, ]
 
 
 # just an example of the null distributions for a single region set (arbitrarily rs1)
@@ -29,7 +30,7 @@ multiNiceHist(file = ffPlot(paste0(.plotSubdir, "nullDistRS1", .analysisID, ".pd
 
 simpleCache(paste0("permPValsUncorrected", .analysisID), {
     rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
-                          calcCols=colsToAnnotate, whichMetric = "pval")
+                          signalCol=colsToAnnotate, whichMetric = "pval")
     rsPVals
 }, recreate = recreate, reload = TRUE, assignToVariable = "rsPVals")
 multiNiceHist(file = ffPlot(paste0(.plotSubdir, "pValDistUncorrected", .analysisID, ".pdf")), dataDF = rsPVals, 
@@ -40,7 +41,7 @@ multiNiceHist(file = ffPlot(paste0(.plotSubdir, "pValDistUncorrected", .analysis
 
 simpleCache(paste0("permZScores", .analysisID), { 
     rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList, 
-                            calcCols=colsToAnnotate, whichMetric = "zscore")
+                            signalCol=colsToAnnotate, whichMetric = "zscore")
     rsZScores
     
 }, recreate = recreate, reload=TRUE, assignToVariable = "rsZScores")
@@ -60,7 +61,9 @@ multiNiceHist(file = ffPlot(paste0(.plotSubdir, "zScoreDist", .analysisID, ".pdf
 
 # simpleCache(paste0("rsScore_", dataID), assignToVariable = "realRSScores")
 correctionMethod = "BH" # input to p.adjust
-gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate, drop=FALSE], nullDistList = nullDistList, method = "mme", realScoreInDist = TRUE)
+gPValDF = getGammaPVal(rsScores = realRSScores[, colsToAnnotate, drop=FALSE], 
+                       nullDistList = nullDistList, signalCol = colsToAnnotate,
+                       method = "mme", realScoreInDist = TRUE)
 gPValDF = apply(X = gPValDF, MARGIN = 2, FUN = function(x) p.adjust(p = x, method = correctionMethod))
 gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) %in% colsToAnnotate)]])
 
@@ -114,7 +117,7 @@ simpleCache(paste0("pRankedScores", .analysisID), {
 }, recreate = recreate)
 # get top region sets for each colsToAnnotate based on p val
 topRSZAnnoList = list()
-topRSN = 50 # this many top RS for each colsToAnnotate
+topRSN = nrow(pRankedScores) # this many top RS for each colsToAnnotate
 for (i in seq_along(colsToAnnotate)) {
     
     theseTopInd = dplyr::arrange(pRankedScores, 

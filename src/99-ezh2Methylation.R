@@ -404,15 +404,23 @@ coxResults$coxHRMean0.01=coxResults$coxHRMean ^ (1/100)
 coxResults$coxHRUpper0.01=coxResults$coxHRUpper ^ (1/100)
 coxResults$coxHRLower0.01=coxResults$coxHRLower ^ (1/100)
 
-fPlot <- ggplot(data=filter(coxResults, variableName=="methylScore"), 
+
+plotData = filter(coxResults, variableName=="methylScore")
+
+fPlot <- ggplot(data=plotData, 
                 aes(x=cancerID, y=coxHRMean0.01, ymin=coxHRLower0.01, ymax=coxHRUpper0.01)) +
-    geom_pointrange(aes(col=sigType)) + 
+    geom_pointrange(aes(col=log10(coxPVal))) + 
     geom_hline(yintercept=1, lty=2) +
     coord_flip() +
     xlab("Cancer type") + ylab("Hazard ratio per 0.01 change in DNA methylation level (95% CI)") +
     # scale_y_log10() +
     scale_y_continuous(breaks=seq(from=0.8, to=2, by=0.2)) +
-    theme_classic() + scale_color_manual(values = c("red", "orange", "darkgray"))
+    theme_classic() + 
+    scale_color_gradient2(low="red", mid="orange", high="gray", midpoint = min(log10(plotData$coxPVal))/2) +
+    # scale_color_manual(values = c("red", "darkorange", "darkgray")) +
+    geom_text(mapping = aes(x=cancerID, y= 1.8), 
+              data = filter(plotData, as.character(sigType) == "Corrected p < 0.05"), 
+              label="*", size = 6)
 
 fPlot
 ggsave(filename = ffPlot(paste0(plotSubdir, "coxHazardRatios.svg")), 
@@ -432,13 +440,18 @@ spearCorDF$spearSigType = factor(spearCorDF$spearSigType,
                                        "p > 0.05"))
 fPlot <- ggplot(data=spearCorDF, 
                 aes(x=cancerID, y=spearCor)) +
-    geom_point(aes(col=spearSigType), size=4) + 
+    geom_point(aes(col=log10(spearmanPVal)), size=4) + 
     geom_hline(yintercept=0, lty=2) +
     coord_flip() +
     xlab("Cancer type") + ylab("Correlation between EZH2/SUZ12-binding region DNA methylation and cancer stage") +
     # scale_y_log10() +
     scale_y_continuous(breaks=seq(from=-1, to=1, by=0.1)) +
-    theme_classic() + scale_color_manual(values = c("red", "orange", "darkgray"))
+    scale_color_gradient2(low="red", mid="orange", high="gray", midpoint = min(log10(spearCorDF$spearmanPVal))/2) +
+    # scale_color_manual(values = c("red", "orange", "darkgray")) +
+    theme_classic() +
+    geom_text(mapping = aes(x=cancerID, y= max(spearCorDF$spearCor) + 0.05), 
+              data = filter(spearCorDF, as.character(spearSigType) == "Corrected p < 0.05"), 
+              label="*", size = 6)
 
 fPlot
 ggsave(filename = ffPlot(paste0(plotSubdir, "spearmanCorByCancer.svg")), 

@@ -69,10 +69,10 @@ source(ffProjCode("runPermTest.R"))
 # load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", dataID, ".RData")))
 conAssign(".analysisID", paste0("_", nPerm, "Perm_", variationMetric, "_", dataID))
 
-simpleCache(paste0("permPValsCorrected", .analysisID), {
-    gPValDF
-}, recreate = FALSE, reload = TRUE)
-
-
-formattedCOCOAScores(rawScores = realRSScores, colsToAnnotate = , 
-                     numTopRS = nrow(), pVals = , rankBy = )
+# simpleCache(paste0("permPValsUncorrected", .analysisID), {
+#     gPValDF
+# }, recreate = FALSE, reload = TRUE, assignToVariable = "permPVals")
+# 
+# 
+# formattedCOCOAScores(rawScores = realRSScores, colsToAnnotate = , 
+#                      numTopRS = nrow(), pVals = , rankBy = )

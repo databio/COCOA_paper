@@ -20,6 +20,7 @@ nPerm = 300
 ######################################################################
 # required inputs to permutation test
 
+recreate=TRUE
 variationMetric = "cor"
 
 # loads signalMat and signalCoord
@@ -59,7 +60,7 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
     actualResults = cbind(actualResults, rsName=rsName, 
                           rsDescription=rsDescription)
     actualResults
-}, assignToVariable = "realRSScores", recreate=TRUE)
+}, assignToVariable = "realRSScores")
 
 ############################################################################
 

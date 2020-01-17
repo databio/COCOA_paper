@@ -28,7 +28,7 @@ cocoa_dir <- ffCode("COCOA/R/") # feat-atac branch
 data_dir  <- ffProc("COCOA_paper/analysis/atac/")
 tcga_dir  <- "/scores/brca/tcga_brca_peaks-log2counts-dedup/"
 
-source(ffCode("COCOA_paper/src/load_process_regions_brca.R"))
+loadGRList(genomeV = "hg38")
 # reload my COCOA.R (from COCOA feat-atac branch)
 source(ffCode("COCOA/R/COCOA.R"))
 source(ffCode("COCOA/R/utility.R"))
