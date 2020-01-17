@@ -771,7 +771,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     }
     library(grid)
     library(ggplot2)
-    library(COCOA)
+    #library(COCOA)
     library(ComplexHeatmap)    
     
     # place to save plots
@@ -847,8 +847,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
             dev.off()
         }
     }
-        }, {message("Problem in makeMAPC")
-            return(NA)})
+        }, error=function(e){message("Problem in makeMAPC"); "Problem in makeMAPC"})
     
     
     ###################################################################################
@@ -876,8 +875,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
         
         dev.off()
     }
-    }, {message("Problem in makeRQBPC")
-        return(NA)})
+    }, error=function(e){message("Problem in makeRQBPC")})
     ##################################################################################
     # pcFromSubset Heatmap
     # seeing whether a subset of cytosines (ie a single region set) can
