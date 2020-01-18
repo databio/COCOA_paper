@@ -329,8 +329,7 @@ for (i in seq_along(cancerID)) {
         spearCorDF[2*(i-1)+j, "coxUpper"] = summary(myModel)$conf.int["methylScore", "upper .95"]
         spearCorDF[2*(i-1)+j, "coxLower"] = summary(myModel)$conf.int["methylScore", "lower .95"]
         # information about tests of cox model assumptions
-        spearCorDF[2*(i-1)+j, "coxLower"] = summary(myModel)$conf.int["methylScore", "lower .95"]
-        
+
 
             })
         # kaplan meier

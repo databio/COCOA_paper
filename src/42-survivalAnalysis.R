@@ -243,6 +243,35 @@ testResDF = data.frame(corPVal=tmp,
                         corCoef=tmp, 
                         coxPVal=tmp, 
                         coxEffect=tmp)
+##########################
+# object to save results
+myVar = c("methylScore", "age", "sex", 
+          "genomeMethyl") # name of variables in my results data.frame
+modelVar = c("methylScore", "years_to_birth","gender", "meanMethyl") #name of variables in the model 
+perModelNum = length(myVar)
+rsNum = length(myTopRS)
+cancerID = "KIRC"
+coxVar=rep(NA, length(cancerID)*length(myTopRS) * perModelNum)
+# make data.frame to rbind() results to
+coxResults = data.frame(cancerID = NA, 
+                        rsName=NA,
+                        variableName=NA,
+                        obsNum=NA, # number of observations
+                        coxCoef=NA,
+                        coxCoefSE=NA,
+                        coxHRMean=NA, # exp(coxParam)
+                        coxHRLower=NA, 
+                        coxHRUpper=NA, 
+                        coxPVal=NA,
+                        schoRho=NA,
+                        schoX2=NA,
+                        schoPVal=NA,
+                        eventNum=NA, # deaths
+                        stringsAsFactors = FALSE)
+
+
+#########################
+
 
 for (i in 1:nrow(mBySampleDF)) {
     mBySample = as.numeric(mBySampleDF[i, 1:ncol(vGenomicSignal)])
@@ -278,7 +307,18 @@ for (i in 1:nrow(mBySampleDF)) {
     ggsave(filename = ffPlot(paste0(plotSubdir, "forestPlot_validation_", abbrevName[i], ".svg")), 
            plot = fPlot, device = "svg", width = plotWidth *(5/4), height = plotHeight, units = plotUnit)
     
+    modelVar = c("years_to_birth", "gender", "meanMethyl", "methylScore")
+    myVar = c("age", "sex", "genomeMethyl", "methylScore")
+    thisCoxDF = makeCoxDF(cModel, 
+                         modelVar=modelVar, 
+                         dfVar=myVar, 
+                         returnGlobalStats = TRUE)
     
+    thisCoxDF = cbind(rsName=rep(abbrevName[i], nrow(thisCoxDF)), 
+                      thisCoxDF)
+    coxResults = rbind(coxResults, thisCoxDF)
+    
+
     # create groups
     kmThresh = 0.25
     covariateData$methylGroup = ecdf(covariateData$methylScore)(covariateData$methylScore)
@@ -297,5 +337,78 @@ for (i in 1:nrow(mBySampleDF)) {
     plot(kmFit)
 }
 
+coxResults = coxResults[-1, ]
+
+# convert hazard ratios from 1 scale to 0.01 scale
+coxResults$coxHRMean0.01=coxResults$coxHRMean ^ (1/100)
+coxResults$coxHRUpper0.01=coxResults$coxHRUpper ^ (1/100)
+coxResults$coxHRLower0.01=coxResults$coxHRLower ^ (1/100)
+
+# correct by variable
+
+coxResults$holmCoxPVal = p.adjust(p = coxResults$coxPVal, method = "holm")
+coxResults = data.table(coxResults)
+coxResults[, holmCoxPVal := p.adjust(coxPVal, method = "BH"), by=variableName]
+coxResults = as.data.frame(coxResults)
+all(filter(coxResults, variableName == "sex")$holmCoxPVal == p.adjust(filter(coxResults, variableName == "sex")$coxPVal, "BH"))
+#summarise(a, test=p.adjust(coxPVal, method = "BH"))
+
+coxResults$sigType = rep(x = "p > 0.05", nrow(coxResults))
+# coxResults$sigType[coxResults$coxPVal < 0.05] = "Uncorrected p < 0.05"
+coxResults$sigType[coxResults$holmCoxPVal < 0.05] = "Corrected p < 0.05"
+coxResults$sigType = factor(coxResults$sigType, 
+                            levels = c("Corrected p < 0.05", 
+                                       "Uncorrected p < 0.05", 
+                                       "p > 0.05"))
+
+
+###########################################################################
+# make forest plots
+
+for (i in seq_along(abbrevName)) {
+    
+    
+    plotData = filter(coxResults, (rsName == abbrevName[i])) 
+    
+    # create dummy variable to use for faceting and making different scales
+    plotData$facetVar = rep("normal scale", nrow(plotData))
+    plotData$facetVar[plotData$variableName %in% c("genomeMethyl", "methylScore")] = 
+        "special scale"
+    jForestPlot = function(plotData) {
+        fPlot <- ggplot(data=plotData,
+                        aes(x=variableName, y=coxHRMean0.01, ymin=coxHRLower0.01, ymax=coxHRUpper0.01)) +
+            geom_pointrange(aes(col=log10(coxPVal))) + 
+            geom_hline(yintercept=1, lty=2) + # facet_wrap(facetVar~., scales = "free") +
+            coord_flip() +
+            xlab("Variable") + 
+            # scale_y_log10() +
+            theme_classic() + 
+            scale_color_gradient2(low="red", mid="orange", high="gray", midpoint = min(log10(plotData$coxPVal))/2) #+
+        # scale_color_manual(values = c("red", "darkorange", "darkgray")) +
+
+        
+        return(fPlot)
+    }
+    fPlot = jForestPlot(plotData) + 
+        ylab("Hazard ratio per 0.01 change in DNA methylation level (95% CI)") +
+        geom_text(mapping = aes(x=variableName, y= 1.8),
+                  data = filter(plotData, as.character(sigType) == "Corrected p < 0.05"), 
+                  label="*", size = 6) + 
+        scale_y_continuous(breaks=seq(from=0.8, to=2, by=0.2)) 
+    fPlot
+    ggsave(filename = ffPlot(paste0(plotSubdir, "coxHazardRatios", abbrevName[i], ".svg")), 
+           plot = fPlot, device = "svg", height = 200, width=200, units = "mm")
+    
+    fPlot = jForestPlot(filter(plotData, variableName %in% c("sex", "age"))) + 
+        ylab("Hazard ratio") +
+        geom_text(mapping = aes(x=variableName, y= 1.2),
+                  data = filter(plotData, (variableName %in% c("sex", "age")) & 
+                                    (as.character(sigType) == "Corrected p < 0.05")), 
+                  label="*", size = 6) + 
+        scale_y_continuous(breaks=seq(from=0.8, to=1.1, by=0.2)) 
+    fPlot
+    ggsave(filename = ffPlot(paste0(plotSubdir, "coxHazardRatios", abbrevName[i], ".svg")), 
+           plot = fPlot, device = "svg", height = 200, width=200, units = "mm")
+}
 
 #############################################################################
