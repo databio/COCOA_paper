@@ -48,63 +48,6 @@ length(mergedTopEzh2) # 10994
 
 ###############################################################################
 
-# @param dfVar character. The column names of the new df
-
-makeCoxDF <- function(cModel, modelVar, dfVar, returnGlobalStats=TRUE) {
-    
-    if (returnGlobalStats) {
-        modelVar = c(modelVar, "GLOBAL")
-        dfVar = c(dfVar, "globalStats")
-    }
-    perModelNum = length(modelVar)
-    
-    phTest = cox.zph(cModel)
-    
-    coxVar=rep(NA, length(dfVar))
-    # cancerID = rep(cancerID, each=perModelNum), rsName=coxVar,
-    coxDF = data.frame(variableName=dfVar,
-                       obsNum=coxVar, # number of observations
-                       coxCoef=coxVar,
-                       coxCoefSE=coxVar,
-                       coxHRMean=coxVar, 
-                       coxHRLower=coxVar, 
-                       coxHRUpper=coxVar, 
-                       coxPVal=coxVar,
-                       schoRho=coxVar,
-                       schoX2=coxVar,
-                       schoPVal=coxVar,
-                       eventNum=coxVar, # deaths
-                       stringsAsFactors = FALSE)
-    
-    for (i in seq_along(modelVar)) {
-        if (modelVar[i] != "GLOBAL") {
-            coxDF[i, "variableName"] = dfVar[i]
-            # coxDF[i, "obsNum"] =
-            coxDF[i, "coxCoef"] = summary(cModel)$coefficients[modelVar[i], "coef"]
-            coxDF[i, "coxHRMean"] = summary(cModel)$coefficients[modelVar[i], "exp(coef)"]
-            coxDF[i, "coxHRUpper"] = summary(cModel)$conf.int[modelVar[i], "upper .95"]
-            coxDF[i, "coxHRLower"] = summary(cModel)$conf.int[modelVar[i], "lower .95"]
-            coxDF[i, "coxCoefSE"] = summary(cModel)$coefficients[modelVar[i], "se(coef)"]
-            coxDF[i, "coxPVal"] = summary(cModel)$coefficients[modelVar[i], "Pr(>|z|)"]
-            # coxDF[i, "schoRho"] = phTest$table[modelVar[i],"rho"]
-            coxDF[i, "schoX2"] = phTest$table[modelVar[i],"chisq"]
-            coxDF[i, "schoPVal"] = phTest$table[modelVar[i],"p"]
-        } else {
-            coxDF[i, "variableName"] = dfVar[i]
-            coxDF[i, "obsNum"] = summary(cModel)$n
-            # log ratio/likelihood ratio test
-            coxDF[i, "coxPVal"] = summary(cModel)$logtest["pvalue"]  
-            coxDF[i, "schoX2"] = phTest$table[modelVar[i],"chisq"]
-            coxDF[i, "schoPVal"] = phTest$table[modelVar[i],"p"]
-            coxDF[i, "eventNum"] = summary(cModel)$nevent # deaths
-        }
-    }
-    
-    return(coxDF)
-}
-
-###############################################################################
-
 # do for each cancer type
 cancerID= c("ACC", "BLCA", "BRCA", "CESC", "CHOL", 
             "COAD", "DLBC", "ESCA", "GBM", "HNSC", 

@@ -92,323 +92,282 @@ abbrevName = c("EZH2", "JUND", "TCF7L2")
 # KIRC Panel C
 # first test whether DNA methylation is associated with cancer stage 
 
+# # test how much methylation level in each region set is correlated with
+# # methylation level in other region sets
+# corMat = cor(t(mBySampleDF[, 1:ncol(genomicSignal)]))
 
-# "-" in name causes error
-colnames(genomicSignal) = gsub(pattern = "-", replacement = "_", x = colnames(genomicSignal))
-# average methylation per sample in these regions
-mBySampleDF = aggregateSignalGRList(signal=genomicSignal, 
-                    signalCoord=signalCoord, GRList=GRList[topRSInd[thisRSInd]], 
-                    signalCol = colnames(genomicSignal), 
-                    scoringMetric = "regionMean", verbose = TRUE)
-# convert to long format for plotting
-longMByS = transpose(mBySampleDF) 
-colnames(longMByS) = abbrevName
-longMByS$subjectID = colnames(mBySampleDF)
-longMByS = longMByS[1:ncol(genomicSignal), ]
-longMByS = cbind(longMByS, cancerStage=as.factor(sampleLabels))
-longMByS = gather(data = longMByS, "regionSetName", "methylScore", abbrevName)
-mByStagePlot = ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
-    geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
-mByStagePlot
-ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStageTraining.svg")), 
-       plot = mByStagePlot, device = "svg")
-
-# individual RS plots
-for (i in seq_along(abbrevName)) {
-    mByStagePlotSingle = ggplot(data=filter(longMByS, regionSetName == abbrevName[i]), 
-                              mapping = aes(x=cancerStage, y=methylScore)) + 
-        geom_violin() +
-        geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
-    mByStagePlotSingle
-    ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStageTraining", abbrevName[i], ".svg")), 
-           plot = mByStagePlotSingle, device = "svg", width=plotWidth, height = plotHeight / 2,
-           units = plotUnit)
-}
-
-
-
-
-# test how much methylation level in each region set is correlated with
-# methylation level in other region sets
-corMat = cor(t(mBySampleDF[, 1:ncol(genomicSignal)]))
-
-###############################################################################
-# Panel
-
-# data.frame to store results 
-tmp = rep(-999, nrow(mBySampleDF))
-trainResDF = data.frame(corPVal=tmp, 
-                        corCoef=tmp, 
-                        coxPVal=tmp, 
-                        coxEffect=tmp, 
-                        coxModel=tmp)
-
-# once for each region set
-for (i in 1:nrow(mBySampleDF)) {
-    mBySample = as.numeric(mBySampleDF[i, 1:ncol(genomicSignal)])
-    trainMeta$methylScore = mBySample
-    trainMeta$meanMethyl = colMeans(genomicSignal)
-    hist(mBySample)
-    plot(sampleLabels, mBySample)
-    print(cor.test(x = sampleLabels, mBySample, method = "spearman"))
-    print(cor.test(x = trainMeta$years_to_birth, mBySample))
-    
-    aliveMethyl = mBySample[trainMeta$vital_status == 0]
-    deadMethyl = mBySample[trainMeta$vital_status == 1]
-    print(wilcox.test(aliveMethyl, deadMethyl, conf.int = TRUE))
-    
-    # test whether DNA methylation is associated with survival
-    ###### cox proportional hazards model 
-    trainMeta$lastDate = trainMeta$days_to_last_followup
-    trainMeta$lastDate[is.na(trainMeta$lastDate)] = trainMeta$days_to_death[is.na(trainMeta$lastDate)]
-    
-    # covariates
-    covariateData = trainMeta
-    patSurv = Surv(covariateData$lastDate / (365/12), event=covariateData$vital_status)
-    myModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
-    
-    sink(file = ffPlot(paste0(plotSubdir, "coxphModel", abbrevName[i], ".txt")))
-        print(myModel)
-        print(summary(myModel))
-    sink()
-    
-        
-    # kaplan meier
-    # create groups
-    covariateData$methylGroup = ecdf(covariateData$methylScore)(covariateData$methylScore)
-    covariateData$methylGroup[covariateData$methylGroup < 0.25] = 0
-    covariateData$methylGroup[covariateData$methylGroup > 0.75] = 2
-    covariateData$methylGroup[(covariateData$methylGroup >= 0.25) & (covariateData$methylGroup <= 0.75)] = NA
-    
-    kmFit = survfit(patSurv ~ methylGroup, data=covariateData)
-    kmPlot = ggsurvplot(kmFit, risk.table = TRUE, conf.int = FALSE)
-    # cumcensor = TRUE, cumevents = TRUE,
-    # a$plot = a$plot + 
-        # scale_color_discrete(name="Strata", labels=c("Low methylation score", 
-        #                                                    "High methylation score"), breaks=c("red", "blue")) 
-        #theme(legend.text = element_text(c("Low methylation score", "High methylation score")))
-    svg(ffPlot(paste0(plotSubdir, "kmPlotTraining", abbrevName[i], ".svg")))
-    kmPlot
-    dev.off()
-
-}
-
-
-
-################################################################################
 # part of Panel B
-# validation data
-vGenomicSignal = methylMat[, -trainDataInd]
-vSampleLabels = as.numeric(allSampleLabels[-trainDataInd])
-colsToAnnotate = "cancerStage"
 
-valMeta = pMeta[-trainDataInd, ]
-
-
-# "-" in name causes error
-colnames(vGenomicSignal) = gsub(pattern = "-", replacement = "_", x = colnames(vGenomicSignal))
-
-mBySampleDF = aggregateSignalGRList(signal=vGenomicSignal, 
-                     signalCoord=signalCoord, GRList=GRList[topRSInd[thisRSInd]], 
-                     signalCol = colnames(vGenomicSignal), 
-                     scoringMetric = "regionMean", verbose = TRUE)
-# convert to long format for plotting
-longMByS = transpose(mBySampleDF) 
-colnames(longMByS) = abbrevName
-longMByS$subjectID = colnames(mBySampleDF)
-longMByS = longMByS[1:ncol(vGenomicSignal), ]
-longMByS = cbind(longMByS, cancerStage=as.factor(vSampleLabels))
-longMByS = gather(data = longMByS, "regionSetName", "methylScore", abbrevName)
-mByStagePlot = ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
-    geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
-mByStagePlot
-ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStageValidation.svg")), plot = mByStagePlot, device = "svg")
-
-
-# individual RS plots
-for (i in seq_along(abbrevName)) {
-    mByStagePlotSingle = ggplot(data=filter(longMByS, regionSetName == abbrevName[i]), 
-                                mapping = aes(x=cancerStage, y=methylScore)) + 
-        geom_violin() +
-        geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
-    mByStagePlotSingle
-    ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStageValidation", abbrevName[i], ".svg")), 
-           plot = mByStagePlotSingle, device = "svg", width=plotWidth, height = plotHeight / 2,
-           units = plotUnit)
-}
-
-
-tmp = rep(-999, nrow(mBySampleDF))
-testResDF = data.frame(corPVal=tmp, 
-                        corCoef=tmp, 
-                        coxPVal=tmp, 
-                        coxEffect=tmp)
 ##########################
 # object to save results
 myVar = c("methylScore", "age", "sex", 
           "genomeMethyl") # name of variables in my results data.frame
-modelVar = c("methylScore", "years_to_birth","gender", "meanMethyl") #name of variables in the model 
+modelVar = c("methylScore", "years_to_birth","gendermale", "meanMethyl") #name of variables in the model 
 perModelNum = length(myVar)
 rsNum = length(myTopRS)
 cancerID = "KIRC"
-coxVar=rep(NA, length(cancerID)*length(myTopRS) * perModelNum)
-# make data.frame to rbind() results to
-coxResults = data.frame(cancerID = NA, 
-                        rsName=NA,
-                        variableName=NA,
-                        obsNum=NA, # number of observations
-                        coxCoef=NA,
-                        coxCoefSE=NA,
-                        coxHRMean=NA, # exp(coxParam)
-                        coxHRLower=NA, 
-                        coxHRUpper=NA, 
-                        coxPVal=NA,
-                        schoRho=NA,
-                        schoX2=NA,
-                        schoPVal=NA,
-                        eventNum=NA, # deaths
-                        stringsAsFactors = FALSE)
-
+outerCoxResults = list()
+outerSpearmanResults = list()
 
 #########################
+dataSetType = c("training", "testing")
+colsToAnnotate = "cancerStage"
 
+for (dataInd in seq_along(dataSetType)) {
+    
+    # make data.frame to rbind() results to
+    coxResults = data.frame(dataSetType=NA, 
+                            cancerID = NA, 
+                            rsName=NA,
+                            variableName=NA,
+                            obsNum=NA, # number of observations
+                            coxCoef=NA,
+                            coxCoefSE=NA,
+                            coxHRMean=NA, # exp(coxParam)
+                            coxHRLower=NA, 
+                            coxHRUpper=NA, 
+                            coxPVal=NA,
+                            schoRho=NA,
+                            schoX2=NA,
+                            schoPVal=NA,
+                            eventNum=NA, # deaths
+                            stringsAsFactors = FALSE)
+    spearResults = data.frame(dataSetType=rep(dataSetType[dataInd], length(abbrevName)), 
+                              cancerID = rep(cancerID, length(abbrevName)), 
+                              rsName=rep(NA, length(abbrevName)),
+                              correlation=rep(NA, length(abbrevName)),
+                              spearmanPVal=rep(NA, length(abbrevName)),
+                              stringsAsFactors = FALSE)
+    
+    ###################################
+    # getting average methylation in each region set
+    
+    if (dataSetType[dataInd] == "training") {
+        # training data
+        genomicSignal = methylMat[, trainDataInd]
+        sampleLabels = as.numeric(allSampleLabels[trainDataInd])
+        thisMeta = pMeta[trainDataInd, ]
+    } else {
+        # validation data
+        genomicSignal = methylMat[, -trainDataInd]
+        sampleLabels = as.numeric(allSampleLabels[-trainDataInd])
+        thisMeta = pMeta[-trainDataInd, ]
+    }
 
-for (i in 1:nrow(mBySampleDF)) {
-    mBySample = as.numeric(mBySampleDF[i, 1:ncol(vGenomicSignal)])
-    valMeta$methylScore = mBySample
-    plot(vSampleLabels, mBySample)
-    print(cor.test(x = vSampleLabels, mBySample, method="spearman"))
-    print(cor.test(x = valMeta$years_to_birth, mBySample))
     
-    aliveMethyl = mBySample[valMeta$vital_status == 0]
-    deadMethyl = mBySample[valMeta$vital_status == 1]
-    print(wilcox.test(aliveMethyl, deadMethyl, conf.int = TRUE))
-    valMeta$meanMethyl = colMeans(vGenomicSignal)
-
+    ###################################
+    # "-" in name causes error
+    colnames(genomicSignal) = gsub(pattern = "-", replacement = "_", x = colnames(genomicSignal))
     
-    # test whether DNA methylation is associated with survival
-    ###### cox proportional hazards model 
-    valMeta$lastDate = valMeta$days_to_last_followup
-    valMeta$lastDate[is.na(valMeta$lastDate)] = valMeta$days_to_death[is.na(valMeta$lastDate)]
+    mBySampleDF = aggregateSignalGRList(signal=genomicSignal, 
+                                        signalCoord=signalCoord, GRList=GRList[topRSInd[thisRSInd]], 
+                                        signalCol = colnames(genomicSignal), 
+                                        scoringMetric = "regionMean", verbose = TRUE)
+    # convert to long format for plotting
+    longMByS = transpose(mBySampleDF) 
+    colnames(longMByS) = abbrevName
+    longMByS$subjectID = colnames(mBySampleDF)
+    longMByS = longMByS[1:ncol(genomicSignal), ]
+    longMByS = cbind(longMByS, cancerStage=as.factor(sampleLabels))
+    longMByS = gather(data = longMByS, "regionSetName", "methylScore", abbrevName)
+    mByStagePlot = ggplot(data=longMByS, mapping = aes(x=cancerStage, y=methylScore)) + geom_violin() + facet_wrap("regionSetName") + 
+        geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
+    mByStagePlot
+    ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStage", dataSetType[dataInd], "_", ".svg")), plot = mByStagePlot, device = "svg")
     
-    # covariates
-    covariateData = valMeta
-    patSurv = Surv(covariateData$lastDate / (365/12), covariateData$vital_status)
-    cModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
-    print(cModel)
     
-    sink(file = ffPlot(paste0(plotSubdir, "coxphModelValidation", abbrevName[i], ".txt")))
-    print(cModel)
-    print(summary(cModel))
-    sink()
+    # individual RS plots
+    for (i in seq_along(abbrevName)) {
+        mByStagePlotSingle = ggplot(data=filter(longMByS, regionSetName == abbrevName[i]), 
+                                    mapping = aes(x=cancerStage, y=methylScore)) + 
+            geom_violin() +
+            geom_smooth(mapping = aes(x = as.numeric(cancerStage), y=methylScore)) + xlab("Cancer stage") + ylab("Methylation proportion")
+        mByStagePlotSingle
+        ggsave(filename = ffPlot(paste0(plotSubdir, "methylByStage", dataSetType[dataInd], "_", abbrevName[i], ".svg")), 
+               plot = mByStagePlotSingle, device = "svg", width=plotWidth, height = plotHeight / 2,
+               units = plotUnit)
+    }
     
-    # create forest plot for hazard ratios
-    fPlot = ggforest(cModel)
-    ggsave(filename = ffPlot(paste0(plotSubdir, "forestPlot_validation_", abbrevName[i], ".svg")), 
-           plot = fPlot, device = "svg", width = plotWidth *(5/4), height = plotHeight, units = plotUnit)
-    
-    modelVar = c("years_to_birth", "gender", "meanMethyl", "methylScore")
-    myVar = c("age", "sex", "genomeMethyl", "methylScore")
-    thisCoxDF = makeCoxDF(cModel, 
-                         modelVar=modelVar, 
-                         dfVar=myVar, 
-                         returnGlobalStats = TRUE)
-    
-    thisCoxDF = cbind(rsName=rep(abbrevName[i], nrow(thisCoxDF)), 
-                      thisCoxDF)
-    coxResults = rbind(coxResults, thisCoxDF)
-    
-
-    # create groups
-    kmThresh = 0.25
-    covariateData$methylGroup = ecdf(covariateData$methylScore)(covariateData$methylScore)
-    covariateData$methylGroup[covariateData$methylGroup < kmThresh] = 0
-    covariateData$methylGroup[covariateData$methylGroup > (1-kmThresh)] = 2
-    covariateData$methylGroup[(covariateData$methylGroup >= kmThresh) & (covariateData$methylGroup <= (1-kmThresh))] = NA
-    
-    kmFit = survfit(patSurv ~ methylGroup, data=covariateData)
-    kPlot = ggsurvplot(kmFit, risk.table = TRUE)
-    kPlot
-    pdf(ffPlot(paste0(plotSubdir, abbrevName[i], "_Kaplan", kmThresh, "Validation", dataID, ".pdf")))
+    #############################################
+    # once for each region set
+    for (i in 1:nrow(mBySampleDF)) {
+        mBySample = as.numeric(mBySampleDF[i, 1:ncol(genomicSignal)])
+        thisMeta$methylScore = mBySample
+        plot(sampleLabels, mBySample)
+        thisSpear = cor.test(x = sampleLabels, mBySample, method="spearman")
+        spearResults[i, "rsName"] = abbrevName[i]
+        spearResults[i, "correlation"] = thisSpear$estimate
+        spearResults[i, "spearmanPVal"] =  thisSpear$p.value
+        outerSpearmanResults[[dataInd]] = spearResults
+        
+        print(cor.test(x = thisMeta$years_to_birth, mBySample))
+        
+        aliveMethyl = mBySample[thisMeta$vital_status == 0]
+        deadMethyl = mBySample[thisMeta$vital_status == 1]
+        print(wilcox.test(aliveMethyl, deadMethyl, conf.int = TRUE))
+        thisMeta$meanMethyl = colMeans(genomicSignal)
+        
+        
+        # test whether DNA methylation is associated with survival
+        ###### cox proportional hazards model 
+        thisMeta$lastDate = thisMeta$days_to_last_followup
+        thisMeta$lastDate[is.na(thisMeta$lastDate)] = thisMeta$days_to_death[is.na(thisMeta$lastDate)]
+        
+        # covariates
+        covariateData = thisMeta
+        patSurv = Surv(covariateData$lastDate / (365/12), covariateData$vital_status)
+        cModel = coxph(patSurv ~ years_to_birth + gender + meanMethyl + methylScore, data = covariateData)
+        print(cModel)
+        
+        sink(file = ffPlot(paste0(plotSubdir, "coxphModel_", dataSetType[dataInd], "_", abbrevName[i], ".txt")))
+        print(cModel)
+        print(summary(cModel))
+        sink()
+        
+        # create forest plot for hazard ratios
+        fPlot = ggforest(cModel)
+        ggsave(filename = ffPlot(paste0(plotSubdir, "forestPlot_", dataSetType[dataInd], "_", abbrevName[i], ".svg")), 
+               plot = fPlot, device = "svg", width = plotWidth *(5/4), height = plotHeight, units = plotUnit)
+        
+        modelVar = c("years_to_birth", "gendermale", "meanMethyl", "methylScore")
+        myVar = c("age", "sex", "genomeMethyl", "methylScore")
+        thisCoxDF = makeCoxDF(cModel, 
+                              modelVar=modelVar, 
+                              dfVar=myVar, 
+                              returnGlobalStats = TRUE)
+        
+        thisCoxDF = cbind(dataSetType=rep(dataSetType[dataInd], nrow(thisCoxDF)), 
+                          cancerID=rep(cancerID, nrow(thisCoxDF)),
+                          rsName=rep(abbrevName[i], nrow(thisCoxDF)), 
+                          thisCoxDF)
+        coxResults = rbind(coxResults, thisCoxDF)
+        
+        
+        # create groups
+        kmThresh = 0.25
+        covariateData$methylGroup = ecdf(covariateData$methylScore)(covariateData$methylScore)
+        covariateData$methylGroup[covariateData$methylGroup < kmThresh] = 0
+        covariateData$methylGroup[covariateData$methylGroup > (1-kmThresh)] = 2
+        covariateData$methylGroup[(covariateData$methylGroup >= kmThresh) & (covariateData$methylGroup <= (1-kmThresh))] = NA
+        
+        kmFit = survfit(patSurv ~ methylGroup, data=covariateData)
+        kPlot = ggsurvplot(kmFit, risk.table = TRUE, pval = TRUE, pval.method = TRUE)
+        kPlot
+        pdf(ffPlot(paste0(plotSubdir, abbrevName[i], "_Kaplan", kmThresh, dataSetType[dataInd], "_", dataID, ".pdf")))
         print(kPlot)
-    dev.off()
-    # ggsave(filename = ffPlot(paste0(plotSubdir, "EZH2", "Kaplan", kmThresh, dataID, ".svg")) , plot = kPlot, device = "svg")
+        dev.off()
+        # ggsave(filename = ffPlot(paste0(plotSubdir, "EZH2", "Kaplan", kmThresh, dataID, ".svg")) , plot = kPlot, device = "svg")
+        
+        plot(kmFit)
+    }
     
-    plot(kmFit)
-}
-
-coxResults = coxResults[-1, ]
-
-# convert hazard ratios from 1 scale to 0.01 scale
-coxResults$coxHRMean0.01=coxResults$coxHRMean ^ (1/100)
-coxResults$coxHRUpper0.01=coxResults$coxHRUpper ^ (1/100)
-coxResults$coxHRLower0.01=coxResults$coxHRLower ^ (1/100)
-
-# correct by variable
-
-coxResults$holmCoxPVal = p.adjust(p = coxResults$coxPVal, method = "holm")
-coxResults = data.table(coxResults)
-coxResults[, holmCoxPVal := p.adjust(coxPVal, method = "BH"), by=variableName]
-coxResults = as.data.frame(coxResults)
-all(filter(coxResults, variableName == "sex")$holmCoxPVal == p.adjust(filter(coxResults, variableName == "sex")$coxPVal, "BH"))
-#summarise(a, test=p.adjust(coxPVal, method = "BH"))
-
-coxResults$sigType = rep(x = "p > 0.05", nrow(coxResults))
-# coxResults$sigType[coxResults$coxPVal < 0.05] = "Uncorrected p < 0.05"
-coxResults$sigType[coxResults$holmCoxPVal < 0.05] = "Corrected p < 0.05"
-coxResults$sigType = factor(coxResults$sigType, 
-                            levels = c("Corrected p < 0.05", 
-                                       "Uncorrected p < 0.05", 
-                                       "p > 0.05"))
-
-
-###########################################################################
-# make forest plots
-
-for (i in seq_along(abbrevName)) {
+        coxResults = coxResults[-1, ]
     
+    # convert hazard ratios from 1 scale to 0.01 scale
+    coxResults$coxHRMean0.01=coxResults$coxHRMean ^ (1/100)
+    coxResults$coxHRUpper0.01=coxResults$coxHRUpper ^ (1/100)
+    coxResults$coxHRLower0.01=coxResults$coxHRLower ^ (1/100)
     
-    plotData = filter(coxResults, (rsName == abbrevName[i])) 
+    # correct by variable
     
-    # create dummy variable to use for faceting and making different scales
-    plotData$facetVar = rep("normal scale", nrow(plotData))
-    plotData$facetVar[plotData$variableName %in% c("genomeMethyl", "methylScore")] = 
-        "special scale"
-    jForestPlot = function(plotData) {
+    coxResults = data.table(coxResults)
+    coxResults[, holmCoxPVal := p.adjust(coxPVal, method = "BH"), by=variableName]
+    coxResults = as.data.frame(coxResults)
+    all(filter(coxResults, variableName == "sex")$holmCoxPVal == p.adjust(filter(coxResults, variableName == "sex")$coxPVal, "BH"))
+    #summarise(a, test=p.adjust(coxPVal, method = "BH"))
+    
+    coxResults$sigType = rep(x = "p > 0.05", nrow(coxResults))
+    # coxResults$sigType[coxResults$coxPVal < 0.05] = "Uncorrected p < 0.05"
+    coxResults$sigType[coxResults$holmCoxPVal < 0.05] = "Corrected p < 0.05"
+    coxResults$sigType = factor(coxResults$sigType, 
+                                levels = c("Corrected p < 0.05", 
+                                           "Uncorrected p < 0.05", 
+                                           "p > 0.05"))
+    
+    outerCoxResults[[dataInd]] = coxResults
+    
+    ###########################################################################
+    # make forest plots
+    
+    # @param hrScaleMod character e.g. "0.01" for methylation levels
+    # @param ggExpr character ggplot expression beginning with + (e.g. "+ xlab(..)")
+    jForestPlot = function(plotData, hrScaleMod=NULL, 
+                           ggExpr=NULL, minPVal=floor(log10(min(plotData$coxPVal)))) {
         fPlot <- ggplot(data=plotData,
-                        aes(x=variableName, y=coxHRMean0.01, ymin=coxHRLower0.01, ymax=coxHRUpper0.01)) +
+                        aes(x=variableName, y=get(paste0("coxHRMean", hrScaleMod)), 
+                            ymin=get(paste0("coxHRLower", hrScaleMod)), ymax=get(paste0("coxHRUpper", hrScaleMod)))) +
             geom_pointrange(aes(col=log10(coxPVal))) + 
             geom_hline(yintercept=1, lty=2) + # facet_wrap(facetVar~., scales = "free") +
             coord_flip() +
             xlab("Variable") + 
             # scale_y_log10() +
-            theme_classic() + 
-            scale_color_gradient2(low="red", mid="orange", high="gray", midpoint = min(log10(plotData$coxPVal))/2) #+
+            theme_classic() +
+            # 
+            scale_color_gradient2(low="red", mid="orange", high="gray", midpoint = minPVal/2, limits=c(minPVal, 0))
         # scale_color_manual(values = c("red", "darkorange", "darkgray")) +
-
+        if (!is.null(ggExpr)) {
+            fPlot = eval(parse(text = paste0("fPlot", ggExpr)))
+        }
+        
         
         return(fPlot)
     }
-    fPlot = jForestPlot(plotData) + 
-        ylab("Hazard ratio per 0.01 change in DNA methylation level (95% CI)") +
-        geom_text(mapping = aes(x=variableName, y= 1.8),
-                  data = filter(plotData, as.character(sigType) == "Corrected p < 0.05"), 
-                  label="*", size = 6) + 
-        scale_y_continuous(breaks=seq(from=0.8, to=2, by=0.2)) 
-    fPlot
-    ggsave(filename = ffPlot(paste0(plotSubdir, "coxHazardRatios", abbrevName[i], ".svg")), 
-           plot = fPlot, device = "svg", height = 200, width=200, units = "mm")
     
-    fPlot = jForestPlot(filter(plotData, variableName %in% c("sex", "age"))) + 
-        ylab("Hazard ratio") +
-        geom_text(mapping = aes(x=variableName, y= 1.2),
-                  data = filter(plotData, (variableName %in% c("sex", "age")) & 
-                                    (as.character(sigType) == "Corrected p < 0.05")), 
-                  label="*", size = 6) + 
-        scale_y_continuous(breaks=seq(from=0.8, to=1.1, by=0.2)) 
-    fPlot
-    ggsave(filename = ffPlot(paste0(plotSubdir, "coxHazardRatios", abbrevName[i], ".svg")), 
-           plot = fPlot, device = "svg", height = 200, width=200, units = "mm")
+    for (i in seq_along(abbrevName)) {
+        
+        
+        plotData = filter(coxResults, (rsName == abbrevName[i])) 
+        
+        # create dummy variable to use for faceting and making different scales
+        plotData$facetVar = rep("normal scale", nrow(plotData))
+        plotData$facetVar[plotData$variableName %in% c("genomeMethyl", "methylScore")] = 
+            "special scale"
+        # for color scale
+        minPVal = floor(log10(min(plotData$coxPVal)))
+        
+        fPlot = jForestPlot(filter(plotData, variableName %in% c("genomeMethyl", "methylScore")), 
+                            hrScaleMod="0.01", minPVal = minPVal) +
+                            #ggExpr = paste0("+ scale_color_gradient2(low='red', mid='orange', high='gray', midpoint = min(log10(plotData$coxPVal))/2, limits=c(0,", minPVal,"))")) + 
+            ylab("Hazard ratio per 0.01 change in DNA methylation level (95% CI)") +
+            scale_y_continuous(breaks=seq(from=0.8, to=2, by=0.2)) + theme(aspect.ratio = 1)
+            
+        if (nrow(filter(plotData, (as.character(sigType) == "Corrected p < 0.05") &
+                        (variableName %in% c("genomeMethyl", "methylScore")))) > 0) {
+            fPlot = fPlot + geom_text(mapping = aes(x=variableName, y= 1.8),
+                                     data = filter(plotData, (as.character(sigType) == "Corrected p < 0.05") &
+                                                       (variableName %in% c("genomeMethyl", "methylScore"))), 
+                                     label="*", size = 6)
+        }
+        
+        
+        fPlot
+        ggsave(filename = ffPlot(paste0(plotSubdir, "coxHazardRatios1Val_", dataSetType[dataInd], "_", cancerID, "_", abbrevName[i], ".svg")), 
+               plot = fPlot, device = "svg", height = 50, width=100, units = "mm")
+        
+        fPlot = jForestPlot(filter(plotData, variableName %in% c("sex", "age")), minPVal=minPVal) +
+                            # ggExpr = paste0("+ scale_color_gradient2(low='red', mid='orange', high='gray', midpoint = min(log10(plotData$coxPVal))/2, limits=c(0,", minPVal,"))")) + 
+        ylab("Hazard ratio") + theme(aspect.ratio = 1)
+        
+        if (nrow(filter(plotData, (variableName %in% c("sex", "age")) &
+                        (as.character(sigType) == "Corrected p < 0.05"))) > 0) {
+            fPlot = fPlot + geom_text(mapping = aes(x=variableName, y= 1.2),
+                                      data = filter(plotData, (variableName %in% c("sex", "age")) &
+                                                        (as.character(sigType) == "Corrected p < 0.05")),
+                                      label="*", size = 6) #+
+            
+        }
+        #scale_y_continuous(breaks=seq(from=0.8, to=1.1, by=0.2))
+        fPlot
+        ggsave(filename = ffPlot(paste0(plotSubdir, "coxHazardRatios2Val_", dataSetType[dataInd], "_", cancerID, "_", 
+                                        abbrevName[i], ".svg")), 
+               plot = fPlot, device = "svg", height = 50, width=100, units = "mm")
+    }
+    
+    #############################################################################
 }
 
-#############################################################################
+coxResults = rbindlist(outerCoxResults)
+write.csv(x = coxResults, file = ffSheets("KIRC_coxResults.csv"), quote = FALSE)
+
+spearmanResults = rbindlist(outerSpearmanResults)
+write.csv(x = spearmanResults, file = ffSheets("KIRC_spearmanCancerStageResults.csv"), quote = FALSE)
