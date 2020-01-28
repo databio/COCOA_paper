@@ -56,6 +56,7 @@ cancerID= c("ACC", "BLCA", "BRCA", "CESC", "CHOL",
             "PAAD", "PCPG", "PRAD", "READ", "SARC", 
             "SKCM", "STAD", "TGCT", "THCA", "THYM", 
             "UCEC", "UCS", "UVM") 
+# TGCT, PRAD, OV, UCEC, CESC, UCS
 
 spearCor=rep(NA, length(cancerID)*length(myTopRS))
 spearCorDF = data.frame(cancerID = rep(cancerID, each=length(myTopRS)), 
@@ -119,6 +120,11 @@ for (i in seq_along(cancerID)) {
 
     # if (!is(pMeta$vital_status, "integer")) {
     #     message(paste0(class(pMeta$vital_status), "_", unique(pMeta$vital_status)))
+    # }
+    
+    # # convert alternate names to standard if found
+    # if ("gendermale" %in% colnames(pMeta)) {
+    #     pMeta$gender = pMeta$gendermale   
     # }
     
     if (is(pMeta$gender, "character")) {
@@ -224,9 +230,21 @@ for (i in seq_along(cancerID)) {
             # create model with only variables that are present
             myVar = myVar[modelVar %in% colnames(covariateData)]
             modelVar = modelVar[modelVar %in% colnames(covariateData)]
-            modelString = paste0("coxph(patSurv ~ ", paste0(modelVar, collapse = " + "),  ", data=covariateData)")
-            myModel = eval(parse(text=modelString))
-            thisCoxDF = makeCoxDF(myModel, modelVar=modelVar, dfVar=myVar, returnGlobalStats = TRUE)
+            # for sex specific cancers
+            if (cancerID[i] %in% c("TGCT", "PRAD", "OV", "UCEC", "CESC", "UCS")) {
+                modelString = paste0("coxph(patSurv ~ ", 
+                                     paste0(modelVar[modelVar != "gender"], collapse = " + "),  ", data=covariateData)")
+                myModel = eval(parse(text=modelString))
+                thisCoxDF = makeCoxDF(myModel, modelVar=modelVar[modelVar != "gender"], 
+                                      dfVar=myVar[myVar != "sex"], returnGlobalStats = TRUE)
+                
+            } else {
+                modelString = paste0("coxph(patSurv ~ ", paste0(modelVar, collapse = " + "),  ", data=covariateData)")
+                myModel = eval(parse(text=modelString))
+                thisCoxDF = makeCoxDF(myModel, modelVar=modelVar, 
+                                      dfVar=myVar, returnGlobalStats = TRUE)
+            }
+            
 
             # if ("years_to_birth" %in% colnames(covariateData)) {
             #     if ("gender" %in% colnames(covariateData)) {
