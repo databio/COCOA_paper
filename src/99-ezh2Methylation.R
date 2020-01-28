@@ -230,6 +230,7 @@ for (i in seq_along(cancerID)) {
             # create model with only variables that are present
             myVar = myVar[modelVar %in% colnames(covariateData)]
             modelVar = modelVar[modelVar %in% colnames(covariateData)]
+
             # for sex specific cancers
             if (cancerID[i] %in% c("TGCT", "PRAD", "OV", "UCEC", "CESC", "UCS")) {
                 modelString = paste0("coxph(patSurv ~ ", 
@@ -328,6 +329,12 @@ for (i in seq_along(cancerID)) {
 
 }
 coxResults = coxResults[-1, ] # blank first row
+
+# coxResults=read.csv(file = ffSheets("polycomb_TCGA_cancer_stage_coxPH.csv")) #row.names = FALSE, col.names = TRUE))
+# correct by variable
+coxResults = data.table(coxResults)
+coxResults[, holmCoxPVal := p.adjust(coxPVal, method = "BH"), by=variableName]
+coxResults = as.data.frame(coxResults)
 
 # spearCorDF = read.csv(ffSheets("EZH2_TCGA_cancer_stage.csv"))
 spearCorDF$holmCoxPVal = p.adjust(p = spearCorDF$coxPVal, method = "holm")
