@@ -333,8 +333,21 @@ coxResults = coxResults[-1, ] # blank first row
 # coxResults=read.csv(file = ffSheets("polycomb_TCGA_cancer_stage_coxPH.csv")) #row.names = FALSE, col.names = TRUE))
 # correct by variable
 coxResults = data.table(coxResults)
-coxResults[, holmCoxPVal := p.adjust(coxPVal, method = "BH"), by=variableName]
+coxResults[, holmCoxPVal := p.adjust(coxPVal, method = "holm"), by=variableName]
 coxResults = as.data.frame(coxResults)
+
+# convert hazard ratios from 1 scale to 0.01 scale
+coxResults$coxHRMean0.01=coxResults$coxHRMean ^ (1/100)
+coxResults$coxHRUpper0.01=coxResults$coxHRUpper ^ (1/100)
+coxResults$coxHRLower0.01=coxResults$coxHRLower ^ (1/100)
+
+coxResults$sigType = rep(x = "p > 0.05", nrow(coxResults))
+coxResults$sigType[coxResults$coxPVal < 0.05] = "Uncorrected p < 0.05"
+coxResults$sigType[coxResults$holmCoxPVal < 0.05] = "Corrected p < 0.05"
+coxResults$sigType = factor(coxResults$sigType, 
+                            levels = c("Corrected p < 0.05", 
+                                       "Uncorrected p < 0.05", 
+                                       "p > 0.05"))
 
 # spearCorDF = read.csv(ffSheets("EZH2_TCGA_cancer_stage.csv"))
 spearCorDF$holmCoxPVal = p.adjust(p = spearCorDF$coxPVal, method = "holm")
@@ -347,32 +360,32 @@ write.csv(coxResults, file = ffSheets("polycomb_TCGA_cancer_stage_coxPH.csv"), q
 
 ######################################################################################
 # figures
+# cutoff for not meeting proportional hazards assumption
+phCutoff = 0.01 
 
 # plotting confidence intervals for hazard ratios
 # forest plot
 # CompHome()
-coxResults=read.csv(file = ffSheets("polycomb_TCGA_cancer_stage_coxPH.csv"),
-         stringsAsFactors = FALSE)
+spearCorDF = read.csv(file = ffSheets("polycomb_TCGA_cancer_stage.csv"))
+# coxResults=read.csv(file = ffSheets("polycomb_TCGA_cancer_stage_coxPH.csv"), stringsAsFactors = FALSE)
+# spearCorDF = arrange(spearCorDF, desc(coxExp))
 coxResults = filter(coxResults, variableName=="methylScore") %>% arrange(desc(coxHRMean))
+
+# all(spearCorDF$cancerID == coxResults$cancerID)
+# all(spearCorDF$coxPVal == coxResults$coxPVal)
+# View(cbind(as.character(spearCorDF$cancerID), spearCorDF$coxPVal, coxResults$coxPVal))
+# plot(spearCorDF$coxPVal - coxResults$coxPVal)
+# View(cbind(spearCorDF$holmCoxPVal, p.adjust(spearCorDF$coxPVal, "holm"),
+#            p.adjust(coxResults$coxPVal, method = "holm"), coxResults$holmCoxPVal))
+
 coxResults$cancerID = factor(coxResults$cancerID, 
                              levels = rev((coxResults$cancerID)))
 # only include methylScore variable
-coxResults$holmCoxPVal = p.adjust(p = coxResults$coxPVal, method = "holm")
-coxResults$sigType = rep(x = "p > 0.05", nrow(coxResults))
-coxResults$sigType[coxResults$coxPVal < 0.05] = "Uncorrected p < 0.05"
-coxResults$sigType[coxResults$holmCoxPVal < 0.05] = "Corrected p < 0.05"
-coxResults$sigType = factor(coxResults$sigType, 
-                            levels = c("Corrected p < 0.05", 
-                                        "Uncorrected p < 0.05", 
-                                       "p > 0.05"))
-
-# convert hazard ratios from 1 scale to 0.01 scale
-coxResults$coxHRMean0.01=coxResults$coxHRMean ^ (1/100)
-coxResults$coxHRUpper0.01=coxResults$coxHRUpper ^ (1/100)
-coxResults$coxHRLower0.01=coxResults$coxHRLower ^ (1/100)
-
+# coxResults$holmCoxPVal = p.adjust(p = coxResults$coxPVal, method = "holm")
 
 plotData = filter(coxResults, variableName=="methylScore")
+
+plotData = filter(plotData, schoPVal >= 0.01)
 
 fPlot <- ggplot(data=plotData, 
                 aes(x=cancerID, y=coxHRMean0.01, ymin=coxHRLower0.01, ymax=coxHRUpper0.01)) +
@@ -381,7 +394,7 @@ fPlot <- ggplot(data=plotData,
     coord_flip() +
     xlab("Cancer type") + ylab("Hazard ratio per 0.01 change in DNA methylation level (95% CI)") +
     # scale_y_log10() +
-    scale_y_continuous(breaks=seq(from=0.8, to=2, by=0.2)) +
+    scale_y_continuous(breaks=seq(from=0.4, to=2, by=0.2)) +
     theme_classic() + 
     scale_color_gradient2(low="red", mid="orange", high="gray", midpoint = min(log10(plotData$coxPVal))/2) +
     # scale_color_manual(values = c("red", "darkorange", "darkgray")) +
