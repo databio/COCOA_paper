@@ -252,7 +252,7 @@ ggsave(ffPlot(paste0(plotSubdir, "hemaRSDist/", pcsToAnnotate[i], "HemaATAC_with
        height=70, units = "mm")
 
 ####################
-# panel C
+# panel B
 # ER status association with PC
 
 # order samples by PC score, color by ER status
@@ -299,7 +299,7 @@ for (i in c(paste0("PC", 1:4))) {
 
 
 ######### make "meta-region" loading profiles
-# panel D
+# panel C
 atacCor = cor(x = t(signalMat), y = pcScores[, signalCol])
 all(colnames(signalMat) == row.names(pcScores))
 

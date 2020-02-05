@@ -216,18 +216,39 @@ corList = list()
 thesePCs = paste0("PC", 1:4)
 corVec = rep(-99, length(thesePCs))
 names(corVec) = thesePCs
+tmp = rep(-99, length(thesePCs))
+resultsDF = data.frame(spearmanCor=tmp,
+                       spearmanPVal=tmp,
+                       medianDiff=tmp, 
+                       wilcoxPVal=tmp)
+row.names(resultsDF) = thesePCs
+
 for (i in thesePCs) {
-    # print(
-    #     wilcox.test(pcaWithAnno[pcaWithAnno$ER_status == "Positive", i], 
-    #                 pcaWithAnno[pcaWithAnno$ER_status == "Negative", i], conf.int = TRUE)
-    # )
+    
+        tmp = wilcox.test(pcaWithAnno[pcaWithAnno$ER_status == "Positive", i],
+                    pcaWithAnno[pcaWithAnno$ER_status == "Negative", i], conf.int = TRUE)
+        resultsDF[i, "medianDiff"] = tmp$estimate
+        resultsDF[i, "wilcoxPVal"] = tmp$p.value
+        
+        
         corList[[i]]= cor.test(pcaWithAnno[, i], as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3, method = "spearman")
         corVec[i] = cor.test(pcaWithAnno[, i], 
                              as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3, 
                              method = "spearman")$estimate
+        tmp2 =  cor.test(pcaWithAnno[, i], 
+                         as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3, 
+                         method = "spearman")
+        resultsDF[i, "spearmanCor"] = tmp2$estimate
+        resultsDF[i, "spearmanPVal"] = tmp2$p.value
 }
 
+pcSD = apply(X = pcaWithAnno[, thesePCs], MARGIN = 2, FUN = sd)
+resultsDF$normMedianDiff = resultsDF$medianDiff / pcSD
+resultsDF = cbind(PC=thesePCs, resultsDF)
+resultsDF
 corVec
+write.csv(x = resultsDF, file = ffSheets(paste0("pcERStatusRelationship","_", 
+                                                         dataID, ".csv")),row.names = FALSE)
 tmedRank = rep(-99, length(thesePCs))
 minRank = rep(-99, length(thesePCs))
 for (i in seq_along(thesePCs)) {
@@ -398,7 +419,23 @@ for (i in seq_along(topRSNames)) {
     }
 }
 
-# with axis
+
+# get p-values 
+# this function currently requires that an odd number of bins was used (middle
+# bin is selected)
+# @param binDF one row per bin. Columns: average, coverage, standard deviation
+# @param ? test type?
+getMRPVal <- function(binDF, ) {
+    
+    if (nrow(binDF)) {
+        # compare means
+        
+        # need n (coverage) and standard deviation
+        
+        # wilcoxon rank sum test
+    }
+
+}
 
 ####################
 # histone modification region sets: e.g. H3K9me3, H3K27me3
