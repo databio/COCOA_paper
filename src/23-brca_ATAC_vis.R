@@ -286,15 +286,35 @@ ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/orderedERStatus2.svg")),
 
 # correlation of each PC with ER status
 pcaWithAnno = as.data.frame(pcScoreAnno)
-for (i in c(paste0("PC", 1:4))) {
-    # print(
-    #     wilcox.test(pcaWithAnno[pcaWithAnno$ER_status == "Positive", i], 
-    #                 pcaWithAnno[pcaWithAnno$ER_status == "Negative", i], conf.int = TRUE)
-    # )
-    print(
-        cor.test(pcaWithAnno[, i], as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3, method = "spearman")
-    )
+thesePCs = paste0("PC", 1:4)
+tmp = rep(-99, length(thesePCs))
+resultsDF = data.frame(spearmanCor=tmp,
+                       spearmanPVal=tmp,
+                       medianDiff=tmp, 
+                       wilcoxPVal=tmp)
+row.names(resultsDF) = thesePCs
+
+for (i in thesePCs) {
+    
+    tmp = wilcox.test(pcaWithAnno[pcaWithAnno$ER_status == "Positive", i],
+                      pcaWithAnno[pcaWithAnno$ER_status == "Negative", i], conf.int = TRUE)
+    resultsDF[i, "medianDiff"] = tmp$estimate
+    resultsDF[i, "wilcoxPVal"] = tmp$p.value
+    
+    
+    tmp2 =  cor.test(pcaWithAnno[, i], 
+                     as.numeric(as.factor(pcaWithAnno$ER_status)) * 2 - 3, 
+                     method = "spearman")
+    resultsDF[i, "spearmanCor"] = tmp2$estimate
+    resultsDF[i, "spearmanPVal"] = tmp2$p.value
 }
+
+pcSD = apply(X = pcaWithAnno[, thesePCs], MARGIN = 2, FUN = sd)
+resultsDF$normMedianDiff = resultsDF$medianDiff / pcSD
+resultsDF = cbind(PC=thesePCs, resultsDF)
+resultsDF
+write.csv(x = resultsDF, file = ffSheets(paste0("pcERStatusRelationship","_", 
+                                                dataID, ".csv")),row.names = FALSE)
 
 
 
