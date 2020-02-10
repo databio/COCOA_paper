@@ -761,17 +761,11 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
                           makePairwisePCPlots=FALSE) {
     
     source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R"))
-    if (file.exists(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_extra/R/visualization.R"))) {
-        source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_extra/R/visualization.R"))
-        source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_extra/R/analysis.R"))
-    }
-    if (file.exists(paste0(Sys.getenv("CODE"), "PCRSA_extra/R/visualization.R"))) {
-        source(paste0(Sys.getenv("CODE"), "PCRSA_extra/R/visualization.R"))
-        source(paste0(Sys.getenv("CODE"), "PCRSA_extra/R/analysis.R"))
-    }
+    source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_extra/R/visualization.R"))
+    source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_extra/R/analysis.R"))
     library(grid)
     library(ggplot2)
-    #library(COCOA)
+    library(COCOA)
     library(ComplexHeatmap)    
     
     # place to save plots
@@ -787,17 +781,6 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     if (!dir.exists(plotDir)) {
         dir.create(plotDir, recursive = TRUE)
     }
-    
-    #################################################################################
-    # plot of variance explained by top 50 PCs
-    
-    grDevices::svg(paste0(plotDir, "pcaVarianceExplained", inputID, ".svg"))
-    
-    varExpl = mPCA$sdev^2 / sum(mPCA$sdev^2)
-    plot(varExpl[1:25], xlab=paste0("PC", 1:25),ylab="Proportion variance explained")
-    
-    dev.off()
-    
     ##################################################################################
     # comparePCHeatmap
     # visualization of enrichment score results across PCs
@@ -822,7 +805,6 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     # only looking at regions with high average loading scores
     # still individual cytosine methylation
     
-    tryCatch({
     if (makeMAPC) {
         # one pdf for each PC given.
         for (i in seq_along(PCsToAnnotate_mAPC)) {
@@ -847,15 +829,10 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
             dev.off()
         }
     }
-        }, error=function(e){message("Problem in makeMAPC"); "Problem in makeMAPC"})
-    
-    
     ###################################################################################
     # regionQuantileByTargetVar
     # comparing loading scores/percentiles for individual regions among PCs
     # need region sets and PCA loadings
-    
-    tryCatch({
     
     if (makeRQBPC) {
         
@@ -875,7 +852,6 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
         
         dev.off()
     }
-    }, error=function(e){message("Problem in makeRQBPC")})
     ##################################################################################
     # pcFromSubset Heatmap
     # seeing whether a subset of cytosines (ie a single region set) can

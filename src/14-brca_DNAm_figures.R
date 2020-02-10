@@ -200,6 +200,27 @@ a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i,
 ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, "_withLegend.svg"), 
        plot = a, device = "svg", width = plotWidth, height = plotHeight, units = plotUnits)
 
+###################
+# making a plot with just polycomb regions sets for supplement
+for (i in paste0("PC", 1:10)) {
+    
+    a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
+                          pattern = c("ezh2|suz12"), 
+                          patternName = c("polycomb")) +
+        theme(legend.position = c(0.15, 0.15)) +
+        scale_color_manual(values = c("gray", "red")) + 
+        xlab(paste0("Region set rank (", i, ")")) + 
+        theme(axis.title.y = element_blank(), 
+              legend.text = element_blank(), 
+              legend.title = element_blank(), 
+              legend.position = "none") +
+        scale_x_continuous(breaks = c(0, 1000, 2000), 
+                           labels= c("0", "1000", "2000"), limits=c(-25, nrow(rsScores) + 25))
+    
+    a 
+    ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDistPolycomb_", i, "_", .analysisID, ".svg"), 
+           plot = a, device = "svg", width = plotWidth/2, height = plotHeight/2, units = plotUnits)
+}
 
 a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = "PC4", 
                       pattern = c("EZH2|SUZ12", "gata3|foxa1|h3r17"), 
@@ -418,6 +439,7 @@ for (i in seq_along(topRSNames)) {
                plot = myPlot, device = "svg", height=20, width=30, units = "mm")
     }
 }
+
 
 
 # get p-values 
