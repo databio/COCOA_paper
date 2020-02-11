@@ -3,6 +3,8 @@
 if (!dir.exists(ffPlot(.plotSubdir))) {
     dir.create(ffPlot(.plotSubdir))
 }
+devtools::load_all(ffCode("COCOA"))
+conAssign("removeLowCov", FALSE)
 
 # load(ffProc(paste0("COCOA_paper/RCache/rsPermScores_", nPerm, "_", variationMetric,
 #                    "_", dataID, ".RData")))
@@ -64,6 +66,14 @@ correctionMethod = "BH" # input to p.adjust
 gPValDF = getGammaPVal(rsScores = realRSScores[, colsToAnnotate, drop=FALSE], 
                        nullDistList = nullDistList, signalCol = colsToAnnotate,
                        method = "mme", realScoreInDist = TRUE)
+
+if (removeLowCov) {
+    belowCovInd = realRSScores$regionSetCoverage < covCutoff
+    gPValDF = gPValDF[!belowCovInd, , drop=FALSE]
+    realRSScores = realRSScores[!belowCovInd, , drop=FALSE]
+    rsZScores = rsZScores[!belowCovInd, , drop=FALSE]
+}
+
 gPValDF = apply(X = gPValDF, MARGIN = 2, FUN = function(x) p.adjust(p = x, method = correctionMethod))
 gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) %in% colsToAnnotate)]])
 

@@ -18,6 +18,9 @@ set.seed(1234)
 nPerm = 300
 dataID = "kircMethyl"
 variationMetric = "spearmanCor" 
+removeLowCov = TRUE
+covCutoff = 100
+
 ######################################################################
 # load data
 

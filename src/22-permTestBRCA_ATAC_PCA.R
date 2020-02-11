@@ -16,6 +16,8 @@ if (!dir.exists(ffPlot(plotSubdir))) {
 
 set.seed(1234)
 nPerm = 300
+removeLowCov=TRUE
+covCutoff=100
 
 ######################################################################
 # required inputs to permutation test

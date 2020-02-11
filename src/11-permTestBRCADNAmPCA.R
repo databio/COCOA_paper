@@ -14,6 +14,8 @@ if (!dir.exists(ffPlot(plotSubdir))) {
 
 set.seed(1234)
 nPerm = 300
+removeLowCov=TRUE
+covCutoff = 100
 
 ######################################################################
 # required inputs to permutation test
@@ -52,7 +54,7 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
 
 tmp = formattedCOCOAScores(rawScores = realRSScores, 
                            colsToAnnotate = colsToAnnotate, 
-                           numTopRS = 100)
+                           numTopRS = nrow(realRSScores))
 
 write.csv(tmp, file = ffSheets(paste0("topRSScores","_", 
                                       dataID, "_", variationMetric, ".csv")), 

@@ -19,6 +19,8 @@ set.seed(1234)
 nPerm = 300
 overwriteRSScoreResultsCaches = FALSE
 recreate=TRUE # for downstream caches
+removeLowCov = TRUE
+covCutoff = 100
 
 ######################################################################
 variationMetric = "cov"
