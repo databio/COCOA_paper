@@ -400,11 +400,12 @@ topRSNames = c("wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak",
                "wgEncodeAwgTfbsHaibT47dEraaV0416102Bpa1hUniPk.narrowPeak",
                "Human_MCF-7_FoxA1_No-treatment_Brown.bed",
                "GSM1501162_CEBPA.bed",
+               "GSM614003_TAL1.bed",
                "wgEncodeAwgTfbsSydhH1hescSuz12UcdUniPk.narrowPeak",
                "E104-H3K27me3.narrowPeak",
                "E032-H3K9me3.narrowPeak", 
                "wgEncodeAwgTfbsBroadH1hescEzh239875UniPk.narrowPeak")
-abbrevNames = c("GATA3", "H3R17me2", "ER", "FOXA1", "CEBPA",
+abbrevNames = c("GATA3", "H3R17me2", "ER", "FOXA1", 
                 "SUZ12", "H3K27me3", "H3K9me3",
                 "EZH2")
 # topRSNames = c("GSM835863_EP300.bed", 
@@ -434,7 +435,7 @@ for (i in seq_along(topRSNames)) {
                   axis.title = element_blank(), title = element_blank(), axis.text.y=element_blank()) 
         myPlot
         ggsave(filename = ffPlot(paste0(plotSubdir, 
-                                        "/mrProfilesWeightedMean_", abbrevNames[i],
+                                        "/mrProfiles_", abbrevNames[i],
                                         "_", signalCol[j], ".svg")), 
                plot = myPlot, device = "svg", height=20, width=30, units = "mm")
     }
@@ -460,16 +461,19 @@ getMRPVal <- function(binDF, ) {
 }
 
 ####################
+# supplementary figure
 # histone modification region sets: e.g. H3K9me3, H3K27me3
 
 # top 2 H3K9me3 and H3K27me3 from PC2
 topRSNames = c("E122-H3K9me3.narrowPeak",
                "E021-H3K9me3.narrowPeak",
                "E117-H3K27me3.narrowPeak",
-               "E104-H3K27me3.narrowPeak")
+               "E104-H3K27me3.narrowPeak",
+               "GSM1501162_CEBPA.bed",
+               "GSM614003_TAL1.bed")
                
-abbrevNames = c("HUVEC H3K9me3", "iPS_DF_6.9_Cell_Line H3K9me3", "t",
-                "Right Atrium H3K27me3")
+abbrevNames = c("HUVEC H3K9me3", "iPS_DF_6.9_Cell_Line H3K9me3", "HeLa_H3K27me3",
+                "Right Atrium H3K27me3", "CEBPA", "TAL1")
 
 topGRList = GRList[topRSNames]
 
@@ -478,7 +482,7 @@ wideGRList <- lapply(topGRList, resize, width=14000, fix="center")
 
 mrProfileList  = makeMetaRegionPlots(signal=brcaCov, signalCoord=brcaCoord,
                                      GRList=wideGRList, rsNames=regionSetNames, 
-                                     signalCol=PCsToAnnotate, binNum=21, aggrMethod="default")
+                                     signalCol=PCsToAnnotate, binNum=21, aggrMethod="default", normMethod = "none")
 
 multiProfileP2 = normalizeMRProfile(signal=brcaCov, signalCol=signalCol, 
                                     mrProfileList$metaRegionData, 
@@ -493,7 +497,8 @@ for (i in seq_along(topRSNames)) {
     
     pcP = multiProfileP2[["metaRegionData"]][topRSNames[i]]
     
-    myPlot = ggplot(data = filter(pcP[[1]], PC %in% signalCol), mapping = aes(x =binID , y = loading_value)) + theme(panel.border = element_rect(fill = NA)) +
+    myPlot = ggplot(data = filter(pcP[[1]], PC %in% signalCol), mapping = aes(x =binID , y = loading_value)) + 
+        theme(panel.border = element_rect(fill = NA)) +
         geom_line() + ylim(c(minVal, maxVal)) + geom_hline(yintercept = 0, col="red", alpha = 0.25) +
         facet_wrap(facets = "PC", nrow = length(signalCol), ncol = 1) + 
         ggtitle(label = wrapper(topRSNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
@@ -506,7 +511,7 @@ for (i in seq_along(topRSNames)) {
     ggsave(filename = ffPlot(paste0(plotSubdir, 
                                     "/mrProfilesWeightedMean_", abbrevNames[i],
                                     ".svg")), 
-           plot = myPlot, device = "svg", height=150, width=35, units = "mm")
+           plot = myPlot, device = "svg", height=100, width=25, units = "mm")
 }
 
 # one plot with legend
@@ -514,7 +519,7 @@ myPlot = myPlot + theme(axis.text.y = element_text())
 ggsave(filename = ffPlot(paste0(plotSubdir, 
                                 "/mrProfilesWeightedMean_", abbrevNames[i],
                                 "_withLegend.svg")), 
-       plot = myPlot, device = "svg", height=150, width=35, units = "mm")
+       plot = myPlot, device = "svg", height=100, width=25, units = "mm")
 
 
 
