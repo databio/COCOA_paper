@@ -221,6 +221,7 @@ ggsave(ffPlot(paste0(plotSubdir, "pc2HemaATAC2.svg")),
 
 #################
 # supplementary fig. immune region sets for other PCs
+# supplementary fig. polycomb region sets (EZH2/SUZ12)
 if (!dir.exists(ffPlot(plotSubdir, "hemaRSDist/"))) {
     dir.create(ffPlot(plotSubdir, "hemaRSDist/"))
 }
@@ -236,6 +237,19 @@ for (i in seq_along(pcsToAnnotate)) {
     ggsave(ffPlot(paste0(plotSubdir, "hemaRSDist/", pcsToAnnotate[i], "HemaATAC.svg")), 
            plot = thisPCPlot, device = "svg", width = 70, 
            height=70, units = "mm")
+    
+    # polycomb
+    thisPCPlot = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = pcsToAnnotate[i], 
+                                   pattern = "EZH2|SUZ12", patternName = "polycomb") + 
+        theme(axis.title = element_text(size = 12.5), axis.text = element_text(size=10),
+              plot.title = element_text(hjust = 0.5, face="bold")) + 
+        scale_color_manual(values = c("lightgray", "red"), guide=FALSE) + 
+        ggtitle(label = pcsToAnnotate[i])
+    
+    ggsave(ffPlot(paste0(plotSubdir, "polycombRSDist_",pcsToAnnotate[i], "_", dataID, ".svg")), 
+           plot = thisPCPlot, device = "svg", width = 70, 
+           height=70, units = "mm")
+    
 }
 
 # one with legend
@@ -342,8 +356,9 @@ topRSNames = unique(c(topRSNames,
                       "wgEncodeAwgTfbsSydhH1hescSuz12UcdUniPk.narrowPeak",
                       "E104-H3K27me3.narrowPeak",
                       "E032-H3K9me3.narrowPeak", 
-                      "wgEncodeAwgTfbsBroadH1hescEzh239875UniPk.narrowPeak"))
-
+                      "wgEncodeAwgTfbsBroadH1hescEzh239875UniPk.narrowPeak",
+                      "wgEncodeAwgTfbsBroadGm12878Ezh239875UniPk.narrowPeak"))
+# "wgEncodeAwgTfbsBroadGm12878Ezh239875UniPk.narrowPeak" top polycomb region set for PC4
 
 topRSList = lapply(X = GRList[topRSNames], FUN = function(x) resize(x = x, width = 14000, fix = "center"))
 
@@ -386,11 +401,12 @@ topRSNames = c("wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak",
                "wgEncodeAwgTfbsSydhH1hescSuz12UcdUniPk.narrowPeak",
                "E104-H3K27me3.narrowPeak",
                "E032-H3K9me3.narrowPeak", 
-               "wgEncodeAwgTfbsBroadH1hescEzh239875UniPk.narrowPeak")
+               "wgEncodeAwgTfbsBroadH1hescEzh239875UniPk.narrowPeak",
+               "wgEncodeAwgTfbsBroadGm12878Ezh239875UniPk.narrowPeak")
 abbrevNames = c("GATA3", "ESR1", "CEBPA", "ERG", 
                 "H3R17me2", "FOXA1",
                 "SUZ12", "H3K27me3", "H3K9me3",
-                "EZH2")
+                "EZH2", "EZH2_topRS_PC4")
 
 # topRSNames = c("GSM835863_EP300.bed", 
 #                "GSM607949_GATA1.bed")
