@@ -443,6 +443,107 @@ for (i in seq_along(topRSNames)) {
 }
 
 
+##############################################################################
+# supplementary figure: raw data in ER regions, ordered by PC score
+
+topRSInd = rsRankingIndex(rsScores = rsScores,
+                               signalCol = paste0("PC", 1:10), 
+                               decreasing = TRUE, 
+                          newColName = paste0("PC", 1:10))
+topRSNames = names(GRList)[unique(unlist(topRSInd[1:5, paste0("PC", 1:5)]))]
+# list(paste0(paste0("PC", 1:10), "_PValGroup")
+abbrevNames = gsub(pattern = ".", replacement = "_", x = topRSNames, fixed = TRUE)
+
+# top 2 region sets from PC1 and PC2
+# wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak
+# Human_MCF-7_ESR1_E2-6hr_Jin.bed
+# GSM1501162_CEBPA.bed
+# GSM1097879_ERG.bed
+
+# get uniform scale 
+max(signalMat)
+hist(signalMat)
+apply(X = signalMat, MARGIN = 2, FUN = median)
+
+# scaleMax = max(signalMat)
+# scaleMin = min(signalMat)
+# aMean = mean(signalMat)
+# aSD = sd(signalMat)
+# threeSDUp = aMean + 3 * aSD
+# threeSDDown = aMean - 3 * aSD
+# scaleMax = min(threeSDUp, scaleMax)
+# scaleMin = max(threeSDDown, scaleMin)
+# scaleMid = (scaleMin + scaleMax) / 2
+quantileMat = matrix(ecdf(signalMat)(signalMat), nrow = nrow(signalMat), ncol=ncol(signalMat))
+scaleMin = 0
+scaleMid = 0.5
+scaleMax = 1
+
+myPCs = paste0("PC", 1:4)
+colnames(quantileMat) = gsub(pattern = "-",
+                                        replacement = "_", 
+                                        x = colnames(signalMat))
+row.names(aPCA$x) = gsub(pattern = "-",
+                         replacement = "_", 
+                         x = row.names(aPCA$x))
+for (i in seq_along(topRSNames)) {
+    thisRSM = COCOA:::averagePerRegion(signal=quantileMat, 
+                                       signalCoord = signalCoord, 
+                                       regionSet = GRList[[topRSNames[i]]], 
+                                       signalCol = colnames(quantileMat))
+    thisRSCovScores = COCOA:::averagePerRegion(signal=loadingMat[, myPCs], 
+                                               signalCoord = signalCoord, 
+                                               regionSet = GRList[[topRSNames[i]]], 
+                                               signalCol = myPCs)
+    thisRSM = as.data.frame(thisRSM)
+    thisRSCovScores = as.data.frame(thisRSCovScores)
+    for (j in seq_along(myPCs)) {
+        
+        # pdf(file = ffPlot(paste0(plotSubdir, 
+        #                          "methylAlong", myPCs[j], "_", abbrevNames[i], ".pdf")))
+        png(filename = ffPlot(paste0(plotSubdir,
+                                     "signalAlong", myPCs[j], "_", abbrevNames[i], ".png")),
+            width = 100, height = 75, units = "mm", pointsize = 12,
+            bg = "white",  res = 300,
+            type = c("cairo", "cairo-png", "Xlib", "quartz"))
+        # # svg(filename = ffPlot(paste0(plotSubdir, "methylAlong", myPCs[j], "_", abbrevNames[i], ".svg")))
+        draw(signalAlongAxis(genomicSignal = thisRSM[, !(colnames(thisRSM) %in% c("chr", "start", "end"))], 
+                             signalCoord = thisRSM[, c("chr", "start", "end")], 
+                             regionSet = GRList[[topRSNames[i]]], 
+                             sampleScores= aPCA$x[, myPCs], orderByCol=myPCs[j], 
+                             topXVariables=100, variableScores = thisRSCovScores[, myPCs[j]], 
+                             cluster_columns=TRUE, show_row_names=FALSE, show_column_names=FALSE, 
+                             column_title = "Regions (top 100)", name = "chromatin accessibility (read counts)", 
+                             row_title = "Samples ordered by PC score", 
+                             row_title_gp = gpar(fontsize = 14), # 54
+                             column_title_gp = gpar(fontsize = 14),
+                             show_heatmap_legend = FALSE, 
+                             col=circlize::colorRamp2(breaks = c(scaleMin,scaleMid,scaleMax), 
+                                                      colors = c("blue", "#EEEEEE", "red"))
+        )
+        ) 
+        dev.off()
+        
+        if ((j == 1) && (i == 1)) {
+            svg(filename = ffPlot(paste0(plotSubdir, "signalAlong", myPCs[j], "_", abbrevNames[i], "_hasLegend.svg")), 
+                width = 10, height=10) # inches
+            draw(signalAlongAxis(genomicSignal = thisRSM[, !(colnames(thisRSM) %in% c("chr", "start", "end"))], 
+                                 signalCoord = thisRSM[, c("chr", "start", "end")], 
+                                 regionSet = GRList[[topRSNames[i]]], 
+                                 sampleScores= aPCA$x[, myPCs], orderByCol=myPCs[j], 
+                                 topXVariables=10, variableScores = thisRSCovScores[, myPCs[j]], 
+                                 cluster_columns=TRUE, show_row_names=FALSE, show_column_names=FALSE, 
+                                 column_title = "Regions (top 100)", name = "chromatin accessibility (read counts)", 
+                                 row_title = "Samples ordered by PC score",
+                                 col=circlize::colorRamp2(breaks = c(scaleMin,scaleMid,scaleMax), 
+                                                          colors = c("blue", "#EEEEEE", "red")))) 
+            dev.off()
+            # row_title_gp = gpar(fontsize = 14), # 54
+            # column_title_gp = gpar(fontsize = 14))
+        }
+        
+    }
+}
 
 
 
