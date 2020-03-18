@@ -60,8 +60,10 @@ signalMat
 ############################################################################
 # Chromvar R/Bioconductor package
 
-BiocManager::install("chromVAR", dependencies=TRUE)
-BiocManager::install("DirichletMultinomial", dependencies=TRUE)
+# BiocManager::install("chromVAR", dependencies=TRUE)
+# BiocManager::install("DirichletMultinomial", dependencies=TRUE)
+# BiocManager::install("JASPAR2016")
+# BiocManager::install("BSgenome.Hsapiens.UCSC.hg19", dependencies=TRUE)
 DirichletMultinomial
 library(chromVAR)
 library(motifmatchr)
@@ -74,22 +76,36 @@ library(SummarizedExperiment)
 
 data(example_counts, package = "chromVAR")
 head(example_counts)
+head(assay(example_counts, 1))
 
 library(BSgenome.Hsapiens.UCSC.hg19)
 example_counts <- addGCBias(example_counts, 
                             genome = BSgenome.Hsapiens.UCSC.hg19)
 head(rowData(example_counts))
 
-# according to chromvar, each peak must have at least one read for each sample
-# therefore, we add a psuedocount
+#find indices of samples to keep
+counts_filtered <- filterSamples(example_counts, min_depth = 1500, 
+                                 min_in_peaks = 0.15, shiny = FALSE)
+counts_filtered <- filterPeaks(counts_filtered, non_overlapping = TRUE)
 
 motifs <- getJasparMotifs()
 # out=matches or out=scores can be passed to 
 motif_ix <- matchMotifs(motifs, counts_filtered, 
                         genome = BSgenome.Hsapiens.UCSC.hg19)
+head(assay(motif_ix, 1))
 # see matchKmers() to use Kmers instead of motifs
 # kmer_ix <- matchKmers(6, counts_filtered, 
 #                       genome = BSgenome.Hsapiens.UCSC.hg19)
+
+dev <- computeDeviations(object = counts_filtered, annotations = motif_ix)
+
+# calculation of final "score" and p-value
+variability <- computeVariability(dev)
+
+# a plot similar to COCOA's region set score distribution
+plotVariability(variability, use_plotly = FALSE) 
+
+
 
 ####################################################################
 # BROCKMAN
