@@ -2,6 +2,7 @@
 
 # for rivanna only
 .libPaths(c("/home/jtl2hk/containerFiles/3.6/", .libPaths()))
+.libPaths(c(.libPaths(), "/home/jtl2hk/R/x86_64-pc-linux-gnu-library/3.6"))
 
 library(dplyr)
 library(tidyr)

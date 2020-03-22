@@ -51,19 +51,26 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric),
 # reprocess/reformat data for chromVAR and brockman
 
 # convert peak matrix to RangedSummarizedExperiment for chromVAR
-a = SummarizedExperiment(assays = list(signal=signalMat), 
+# assay name needs to be "counts" for future function, even though using normalized signal
+example_counts = SummarizedExperiment(assays = list(counts=signalMat+abs(min(signalMat))), 
                          rowRanges=signalCoord)#, colData=)
 # add coverage info?
 #rowData: score, qval, name
 # colData: Cell_Type, depth (samples are rows, row.names are the colnames of assay)
 
+#################### for Brockman
 # binarize peak matrix to either present or absent
 # only necessary for Brockman
-signalMat
+# signalMat
 
-# get sequence information for each peak
+median(signalMat)
+# could do high confidence peaks, only upper 20% considered open
 
-# for each sample, assign the sample the sequences for peaks that are present
+# find which motifs are present in each peak
+motif_ix <- matchMotifs(motifs, counts_filtered, 
+                        genome = BSgenome.Hsapiens.UCSC.hg38)
+
+# for each sample, count the motifs for the peaks that are present
 
 ############################################################################
 # Chromvar R/Bioconductor package
@@ -82,11 +89,10 @@ library("BSgenome.Hsapiens.UCSC.hg38")
 
 # input is aligned fragments
 
-data(example_counts, package = "chromVAR")
+# data(example_counts, package = "chromVAR")
 head(example_counts)
 head(assay(example_counts, 1))
 
-library(BSgenome.Hsapiens.UCSC.hg38)
 example_counts <- addGCBias(example_counts, 
                             genome = BSgenome.Hsapiens.UCSC.hg38)
 head(rowData(example_counts))
@@ -96,7 +102,7 @@ head(rowData(example_counts))
 # counts_filtered <- filterSamples(example_counts, min_depth = 1500, 
 #                                  min_in_peaks = 0.15, shiny = FALSE)
 # counts_filtered <- filterPeaks(counts_filtered, non_overlapping = TRUE)
-
+counts_filtered = example_counts
 motifs <- getJasparMotifs()
 # out=matches or out=scores can be passed to 
 motif_ix <- matchMotifs(motifs, counts_filtered, 
@@ -105,16 +111,27 @@ head(assay(motif_ix, 1))
 # see matchKmers() to use Kmers instead of motifs
 # kmer_ix <- matchKmers(6, counts_filtered, 
 #                       genome = BSgenome.Hsapiens.UCSC.hg38)
-
+assayNames(counts_filtered)
 dev <- computeDeviations(object = counts_filtered, annotations = motif_ix)
 
 # calculation of final "score" and p-value
 variability <- computeVariability(dev)
 
-# a plot similar to COCOA's region set score distribution
-plotVariability(variability, use_plotly = FALSE) 
+simpleCache("chromVAR_BRCA_variability", {
+    variability
+})
 
+# a plot similar to COCOA's region set score distribution
+pdf(file = ffPlot(paste0(plotSubdir, "chromVARScoreDist.pdf"))) 
+    plotVariability(variability, use_plotly = FALSE) 
+dev.off()
+svg(filename = ffPlot(paste0(plotSubdir, "chromVARScoreDist.svg"))) 
+    plotVariability(variability, use_plotly = FALSE) 
+dev.off()
 # do we need to make signal data non negative or transform it somehow? 
+# revisit this
+
+arrange(variability, desc(variability))
 
 ####################################################################
 # BROCKMAN
@@ -124,6 +141,8 @@ plotVariability(variability, use_plotly = FALSE)
 # maximum kmer length is 8
 # searched sequence for both strands
 # k-mer program AMUSED takes fasta as input
+
+# input for BROCKMAN is kmer count matrix (samples x kmers)
 
 # do PCA and tSNE on k-mer matrix
 pcs = doKMerPCA(allK562Data, nPCs = "jackstraw");
