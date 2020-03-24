@@ -684,7 +684,8 @@ plotAnnoScoreDist2 <- function(rsScores, colsToPlot, pattern, patternName=patter
 #' plotAnnoScoreDist(rsScores, colsToPlot="PC1", pattern="ER")
 #' plotAnnoScoreDist(rsScores, colsToPlot="PC2", pattern=c("ER", "GATA3")) + geom_point(size=5)
 #' @export
-plotAnnoScoreDist <- function(rsScores, colsToPlot, pattern, patternName=pattern) {
+plotAnnoScoreDist <- function(rsScores, colsToPlot, pattern, patternName=pattern, 
+                              alpha=0.5, shape=3) {
     
     rsScores$rank = order(order(as.numeric(rsScores[, colsToPlot]), decreasing = TRUE))
     
@@ -716,7 +717,7 @@ plotAnnoScoreDist <- function(rsScores, colsToPlot, pattern, patternName=pattern
     # of other points ('Other' plotted first)
     
     for (i in 1:(length(pattern) + 1)) {
-        rsCorP = rsCorP + geom_point(data = rsScores[as.numeric(rsScores$Group) == i, ], alpha=0.5, shape=3) 
+        rsCorP = rsCorP + geom_point(data = rsScores[as.numeric(rsScores$Group) == i, ], alpha=alpha, shape=shape) 
     }
     
     return(rsCorP)
