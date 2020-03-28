@@ -24,7 +24,6 @@ plotUnits = "mm"
 
 ######################################################################
 # load data
-
 variationMetric = "cor"
 
 # loads signalMat and signalCoord
@@ -43,9 +42,10 @@ sharedSamples = colnames(signalMat)[colnames(signalMat) %in% row.names(sampleLab
 genomicSignal = signalMat[, sharedSamples]
 sampleLabels = sampleLabels[sharedSamples, colsToAnnotate]
 
-# # loads database of region sets 
-# # (assigns GRList, rsName, rsDescription to global environment)
-# loadGRList(genomeV="hg38")
+# loads database of region sets
+# (assigns GRList, rsName, rsDescription to global environment)
+# Sys.setenv("RESOURCES"="/home/jtl2hk/resources/")
+loadGRList(genomeV="hg38")
 
 # get the "true" COCOA scores before doing the permutation test
 simpleCache(paste0("rsScores_", dataID, "_", variationMetric), 
@@ -122,12 +122,14 @@ motifCountsMin0=t(motif_ix) %*% signalMatMin0
 # BiocManager::install("JASPAR2016")
 # BiocManager::install("BSgenome.Hsapiens.UCSC.hg38", dependencies=TRUE)
 # BiocManager::install("motifmatchr")
+# devtools::install_github("GreenleafLab/chromVARmotifs")
 library(chromVAR)
 library(motifmatchr)
 # library(Matrix)
 library(SummarizedExperiment)
 library("BSgenome.Hsapiens.UCSC.hg38")
-
+library("chromVARmotifs")
+data("human_pwms_v1") # motif pwms used in chromVAR paper main figs
 
 
 # input is aligned fragments
@@ -146,24 +148,77 @@ head(rowData(example_counts))
 #                                  min_in_peaks = 0.15, shiny = FALSE)
 # counts_filtered <- filterPeaks(counts_filtered, non_overlapping = TRUE)
 counts_filtered = example_counts
-motifs <- getJasparMotifs()
+# motifs <- getJasparMotifs()
+motifs <- human_pwms_v1
 # out=matches or out=scores can be passed to 
 motif_ix <- matchMotifs(motifs, counts_filtered, 
                         genome = BSgenome.Hsapiens.UCSC.hg38)
-head(assay(motif_ix, 1))
+# head(assay(motif_ix, 1))
+
+# convert LOLA database to proper format for chromVAR
+anno_LOLA <- getAnnotations(GRList, 
+                          rowRanges = rowRanges(counts_filtered))
+
 # see matchKmers() to use Kmers instead of motifs
 # kmer_ix <- matchKmers(6, counts_filtered, 
 #                       genome = BSgenome.Hsapiens.UCSC.hg38)
-assayNames(counts_filtered)
+# assayNames(counts_filtered)
 dev <- computeDeviations(object = counts_filtered, annotations = motif_ix)
+devLOLA <- computeDeviations(object = counts_filtered, annotations = anno_LOLA)
+
+simpleCache("chromVAR_BRCA_dev_cisBP", {
+    dev
+}, assignToVariable = "dev")
+
+simpleCache("chromVAR_BRCA_dev_LOLA", {
+    devLOLA
+}, assignToVariable = "devLOLA")
 
 # calculation of final "score" and p-value
 variability <- computeVariability(dev)
+varLOLA <- computeVariability(devLOLA)
 
-simpleCache("chromVAR_BRCA_variability", {
+simpleCache("chromVAR_BRCA_variability_cisDB", {
     variability
 }, assignToVariable = "variability")
 
+simpleCache("chromVAR_BRCA_variability_LOLA", {
+    varLOLA
+}, assignToVariable = "varLOLA")
+
+
+# for LOLA database, screen out region sets with less than 200 region covered
+lowCov = realRSScores$regionSetCoverage < 200
+realRSScores = realRSScores[!lowCov,]
+varLOLA = varLOLA[realRSScores$rsName, ]
+varLOLA$rsName = realRSScores$rsName
+varLOLA$rsDescription = realRSScores$rsDescription
+
+################### # COCOA on motif cisDB region sets
+# convert motif regions to region sets
+motifLogMat = assays(motif_ix, 1)$motifMatches
+
+motifToGR = function(signalCoord, motifLogical) {
+    return(signalCoord[motifLogical])
+}
+
+# each column is a motif
+motifGRList = apply(X = motifLogMat, 
+                    MARGIN = 2, 
+                    FUN = function(x) motifToGR(signalCoord=rowRanges(example_counts), 
+                                                motifLogical = x))
+motifGRList = GRangesList(motifGRList)
+# run COCOA
+
+
+simpleCache(paste0("motifRSScores_", dataID), {
+    motifRSScores = runCOCOA(genomicSignal = assays(example_counts)$counts, 
+                             signalCoord = rowRanges(example_counts), GRList = motifGRList, 
+                             signalCol = paste0("PC", 1:4), targetVar = sampleLabels, absVal = TRUE, 
+                             centerGenomicSignal = TRUE, centerTargetVar = TRUE, 
+                             variationMetric = "cor")
+    motifRSScores
+}, assignToVariable = "motifRSScores")
 
 ################### visualization
 # a plot similar to COCOA's region set score distribution
@@ -177,8 +232,7 @@ dev.off()
 # do we need to make signal data non negative or transform it somehow? 
 # revisit this^
 
-chromScores = variability
-colnames(chromScores)[1] = "rsName"
+#chromScores = variability
 
 # see 23-atac visualization.R for source, not including GATA3 because it's ER-related
 hemaTFs = c("RUNX1", "SCL|TAL1", "PU.1|PU1|SPI1", 
@@ -189,44 +243,76 @@ hemaTFs = unique(hemaTFs)
 hemaPattern = paste0(hemaTFs, collapse = "|")
 
 
-plotAnnoScoreDist(rsScores = chromScores, colsToPlot = "variability", 
-                  pattern = "FOX-family", patternName = "FOX")
-plotAnnoScoreDist(rsScores = chromScores, colsToPlot = "variability", 
-                  pattern = "ESR|FOXA1|GATA3|H3R17me", patternName = "ER-related")
-annoScoreDist = plotAnnoScoreDist(rsScores = chromScores, colsToPlot = "variability", 
-                  pattern = c("JUN|FOS|JDP2", "ESR1|FOXA1|GATA3|H3R17me"), 
-                  patternName = c("AP1 (JUN or FOS)", "ER-related"),
-                  alpha=1) +
-theme(legend.position = c(0.6, 0.6)) +
-    scale_color_manual(values = c("black", "red", "gray")) + 
-    scale_x_continuous(breaks = c(0, 250, 500), 
-                       labels= c("0", "250", "500"), limits=c(-25, nrow(chromScores) + 25))
+allMotifScores = cbind(variability, motifRSScores)
 
-ggsave(filename = ffPlot(paste0(plotSubdir, "chromScoreDistERRelated_withLegend.svg")), 
-       plot = annoScoreDist, device = "svg", height = plotHeight, 
-       width = plotWidth, units = "mm")
-annoScoreDist = annoScoreDist + theme(legend.position = "none")
-ggsave(filename = ffPlot(paste0(plotSubdir, "chromScoreDistERRelated_noLegend.svg")), 
-       plot = annoScoreDist, device = "svg", height = plotHeight/2, 
-       width = plotWidth/2, units = "mm")
+####################################### visualize chromVAR motif database
 
+varToAnnotate = c("variability", paste0("PC", 1:4))
+
+chromScores = allMotifScores
+for (i in seq_along(varToAnnotate)) {
+    annoType = varToAnnotate[i]
+    
+    colnames(chromScores)[1] = "rsName"
+    
+
+    annoScoreDist = plotAnnoScoreDist(rsScores = chromScores, colsToPlot = varToAnnotate[i], 
+                                      pattern = c("JUN|FOS|JDP2", "ESR1|FOXA1|GATA3|H3R17me"), 
+                                      patternName = c("AP1 (JUN or FOS)", "ER-related"),
+                                      alpha=1) +
+        theme(legend.position = c(0.6, 0.6)) +
+        scale_color_manual(values = c("black", "red", "gray")) + 
+        scale_x_continuous(breaks = c(0, 500, 1000, 1500), 
+                           labels= c("0", "500", "1000", "1500"), limits=c(-25, nrow(chromScores) + 25))
+    
+    ggsave(filename = ffPlot(paste0(plotSubdir, "chromScoreDistERRelated_", annoType, "_withLegend.svg")), 
+           plot = annoScoreDist, device = "svg", height = plotHeight, 
+           width = plotWidth, units = "mm")
+    annoScoreDist = annoScoreDist + theme(legend.position = "none")
+    ggsave(filename = ffPlot(paste0(plotSubdir, "chromScoreDistERRelated_", annoType, "_noLegend.svg")), 
+           plot = annoScoreDist, device = "svg", height = plotHeight/2, 
+           width = plotWidth/2, units = "mm")
+    
+    annoScoreDist = plotAnnoScoreDist(rsScores = chromScores, colsToPlot = varToAnnotate[i], 
+                                      pattern = c("FOX", hemaPattern), 
+                                      patternName = c("FOX family", "Hematopoietic TFs"),
+                                      alpha=1) +
+        theme(legend.position = c(0.6, 0.6)) +
+        scale_color_manual(values = c("green", "orange", "gray")) + 
+        scale_x_continuous(breaks = c(0, 500, 1000, 1500), 
+                           labels= c("0", "500", "1000", "1500"), limits=c(-25, nrow(chromScores) + 25))
+    ggsave(filename = ffPlot(paste0(plotSubdir, "chromScoreDist_FOX_Hema_", annoType, "_withLegend.svg")), 
+           plot = annoScoreDist, device = "svg", height = plotHeight, 
+           width = plotWidth, units = "mm")
+    annoScoreDist = annoScoreDist + theme(legend.position = "none")
+    ggsave(filename = ffPlot(paste0(plotSubdir, "chromScoreDist_FOX_Hema_", annoType, "_noLegend.svg")), 
+           plot = annoScoreDist, device = "svg", height = plotHeight/2, 
+           width = plotWidth/2, units = "mm")
+    
+    # View(arrange(chromScores, desc(variability)))
+    
+}
+
+################################## plots for LOLA database
+chromScores = varLOLA
+annoType = "LOLADB"
 annoScoreDist = plotAnnoScoreDist(rsScores = chromScores, colsToPlot = "variability", 
-                  pattern = c("FOX", hemaPattern), 
-                  patternName = c("FOX family", "Hematopoietic TFs"),
-                  alpha=1) +
+                                  pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2", hemaPattern), 
+                                  patternName = c("ER", "ER-related", "Hematopoietic TFs"),
+                                  alpha=0.5) +
     theme(legend.position = c(0.6, 0.6)) +
-    scale_color_manual(values = c("green", "orange", "gray")) + 
-    scale_x_continuous(breaks = c(0, 250, 500), 
-                       labels= c("0", "250", "500"), limits=c(-25, nrow(chromScores) + 25))
-ggsave(filename = ffPlot(paste0(plotSubdir, "chromScoreDist_FOX_Hema_withLegend.svg")), 
+    scale_color_manual(values = c("blue", "red", "orange", "gray")) + 
+    scale_x_continuous(breaks = c(0, 1000, 2000), 
+                       labels= c("0", "1000", "2000"), limits=c(-25, nrow(chromScores) + 25))
+ggsave(filename = ffPlot(paste0(plotSubdir, "chromScoreDist_Fig3A_", annoType, "_withLegend.svg")), 
        plot = annoScoreDist, device = "svg", height = plotHeight, 
        width = plotWidth, units = "mm")
 annoScoreDist = annoScoreDist + theme(legend.position = "none")
-ggsave(filename = ffPlot(paste0(plotSubdir, "chromScoreDist_FOX_Hema_noLegend.svg")), 
+ggsave(filename = ffPlot(paste0(plotSubdir, "chromScoreDist_Fig3A_", annoType, "_noLegend.svg")), 
        plot = annoScoreDist, device = "svg", height = plotHeight/2, 
        width = plotWidth/2, units = "mm")
 
-View(arrange(variability, desc(variability)))
+
 
 # point out breast cancer related TFs
 # FOXA1 ESR1 ESR2
