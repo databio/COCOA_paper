@@ -190,8 +190,8 @@ simpleCache("chromVAR_BRCA_variability_LOLA", {
 }, assignToVariable = "varLOLA")
 
 
-# for LOLA database, screen out region sets with less than 200 region covered
-lowCov = realRSScores$regionSetCoverage < 200
+# for LOLA database, screen out region sets with less than 100 region covered
+lowCov = realRSScores$regionSetCoverage < 100
 realRSScores = realRSScores[!lowCov,]
 varLOLA = varLOLA[as.character(realRSScores$rsName), ]
 varLOLA$rsName = realRSScores$rsName
@@ -205,9 +205,11 @@ varLOLA = varLOLA[, c("rsName",
                       "rsDescription", 
                       colnames(varLOLA)[!(colnames(varLOLA) %in% c("rsName", 
                                                                    "rsDescription"))])]
-write.csv(x = arrange(varLOLA, desc(variability)), 
+colnames(varLOLA) = paste0("chromVAR_", colnames(varLOLA))
+write.csv(x = arrange(varLOLA, desc(chromVAR_variability)), 
           file = ffSheets(paste0("chromVAR_LOLADB_", dataID, ".csv")),
           quote = FALSE, row.names = FALSE)
+colnames(varLOLA) = gsub(pattern = "chromVAR_", replacement = "", x = colnames(varLOLA))
 
 ################### # COCOA on motif cisDB region sets
 # convert motif regions to region sets
