@@ -211,6 +211,26 @@ write.csv(x = arrange(varLOLA, desc(chromVAR_variability)),
           quote = FALSE, row.names = FALSE)
 colnames(varLOLA) = gsub(pattern = "chromVAR_", replacement = "", x = colnames(varLOLA))
 
+#######
+setnames(variability, "name", "rsName")
+variability$rsDescription = row.names(variability)
+
+setcolorder(variability, neworder = c("rsName", "rsDescription", "variability", 
+                                      "bootstrap_lower_bound", 
+                                      "bootstrap_upper_bound", 
+                                      "p_value", 
+                                      "p_value_adj"))
+
+varToAnnotate = c(paste0("PC", 1:4))
+tmp = formattedCOCOAScores(rawScores = motifRSScores, 
+                           colsToAnnotate = varToAnnotate, 
+                           numTopRS = nrow(motifRSScores))
+
+write.csv(x = cbind(arrange(variability, desc(variability)), tmp), 
+          file = ffSheets(paste0("chromVAR_COCOA_cisDB_", dataID, ".csv")),
+          quote = FALSE, row.names = FALSE)
+
+
 ################### # COCOA on motif cisDB region sets
 # convert motif regions to region sets
 motifLogMat = assays(motif_ix, 1)$motifMatches
@@ -238,17 +258,38 @@ simpleCache(paste0("motifRSScores_", dataID), {
     motifRSScores$rsName = variability$name
 }, assignToVariable = "motifRSScores")
 
+
+
+################### get median rank of ER
+realRSScores
+varLOLA
+
+tmpF = function(x, orderBy="PC1") {
+    x = arrange(x, desc(get(orderBy)))
+    hits = grep(pattern = "ESR1|eralpha", x = x$rsName, ignore.case = TRUE)
+    median(hits)
+    return(median(hits))
+}
+
+tmpF(realRSScores, "PC1")
+tmpF(varLOLA, "variability")
+##
+tmpF(variability, "variability")
+variability
+tmpF(motifRSScores, "PC1")
+
+
 ################### visualization
 # a plot similar to COCOA's region set score distribution
-pdf(file = ffPlot(paste0(plotSubdir, "chromVARScoreDist.pdf"))) 
-    scorePlot = plotVariability(variability, use_plotly = FALSE) 
-    scorePlot
-dev.off()
-svg(filename = ffPlot(paste0(plotSubdir, "chromVARScoreDist.svg"))) 
-    plotVariability(variability, use_plotly = FALSE) 
-dev.off()
+# pdf(file = ffPlot(paste0(plotSubdir, "chromVARScoreDist.pdf"))) 
+#     scorePlot = plotVariability(variability, use_plotly = FALSE) 
+#     scorePlot
+# dev.off()
+# svg(filename = ffPlot(paste0(plotSubdir, "chromVARScoreDist.svg"))) 
+#     plotVariability(variability, use_plotly = FALSE) 
+# dev.off()
 # do we need to make signal data non negative or transform it somehow? 
-# revisit this^
+
 
 #chromScores = variability
 # 359 FOX family motifs
@@ -268,26 +309,11 @@ ap1TFs = c("JUN", "FOS", "ATFa", "ATF2", "^ATF3", "ATF4", "BATF$", "MAF", "FRA1"
 ap1Pattern = paste0(ap1TFs, collapse = "|")
 # grep(pattern = ap1Pattern, x = variability$name, value = TRUE)
 
-setnames(variability, "name", "rsName")
-variability$rsDescription = row.names(variability)
 
-setcolorder(variability, neworder = c("rsName", "rsDescription", "variability", 
-                                      "bootstrap_lower_bound", 
-                                      "bootstrap_upper_bound", 
-                                      "p_value", 
-                                      "p_value_adj"))
 
-varToAnnotate = c(paste0("PC", 1:4))
-tmp = formattedCOCOAScores(rawScores = motifRSScores, 
-                                 colsToAnnotate = varToAnnotate, 
-                                 numTopRS = nrow(motifRSScores))
-
-write.csv(x = cbind(arrange(variability, desc(variability)), tmp), 
-          file = ffSheets(paste0("chromVAR_COCOA_cisDB_", dataID, ".csv")),
-          quote = FALSE, row.names = FALSE)
-
-variability = variability[, !(colnames(variability) %in% c("rsName", "rsDescription"))]
 ####################################### visualize chromVAR motif database
+# about to add this info through motifRSScores
+variability = variability[, !(colnames(variability) %in% c("rsName", "rsDescription"))]
 allMotifScores = cbind(variability, motifRSScores)
 
 varToAnnotate = c("variability", paste0("PC", 1:4))
@@ -305,7 +331,7 @@ for (i in seq_along(varToAnnotate)) {
     
 
     annoScoreDist = plotAnnoScoreDist(rsScores = chromScores, colsToPlot = varToAnnotate[i], 
-                                      pattern = c(ap1Pattern, "ESR1", "FOXA1|GATA3|H3R17me"), 
+                                      pattern = c(ap1Pattern, "ESR1|eralpha", "FOXA1|GATA3|H3R17me"), 
                                       patternName = c("AP1-related", "ER", "ER-related"),
                                       alpha=0.8) +
         theme(legend.position = c(0.6, 0.6), text = element_text(colour = "black", size = 10),
@@ -349,7 +375,7 @@ for (i in seq_along(varToAnnotate)) {
 chromScores = varLOLA
 annoType = "LOLADB"
 annoScoreDist = plotAnnoScoreDist(rsScores = chromScores, colsToPlot = "variability", 
-                                  pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2", hemaPattern), 
+                                  pattern = c("esr1|eralpha", "foxa1|gata3|H3R17me2", hemaPattern), 
                                   patternName = c("ER", "ER-related", "Hematopoietic TFs"),
                                   alpha=0.5) +
     theme(legend.position = c(0.6, 0.6), text = element_text(colour = "black", size = 10),

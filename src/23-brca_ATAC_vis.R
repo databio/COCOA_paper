@@ -138,7 +138,7 @@ hemaPattern = paste0(hemaTFs, collapse = "|")
 myPCs = paste0("PC", 1:4)
 for (i in seq_along(myPCs)) {
     pcAnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = myPCs[i], 
-                                        pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2", hemaPattern), 
+                                        pattern = c("esr1|eralpha", "foxa1|gata3|H3R17me2", hemaPattern), 
                                         patternName = c("ER", "ER-related", "Hematopoietic TFs")) + 
         theme(legend.position = "none", axis.title.y = element_blank()) +
         scale_color_manual(values = c("blue", "red", "orange", "gray")) + 
@@ -155,7 +155,7 @@ for (i in seq_along(myPCs)) {
 # one with legend
 i=1
 pcAnnoScoreDist = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = myPCs[i], 
-                                    pattern = c("esr|eralpha", "foxa1|gata3|H3R17me2", hemaPattern), 
+                                    pattern = c("esr1|eralpha", "foxa1|gata3|H3R17me2", hemaPattern), 
                                     patternName = c("ER", "ER-related", "Hematopoietic TFs")) + 
     theme(legend.position = c(0.15, 0.15)) +
     scale_color_manual(values = c("blue", "red", "orange", "gray")) + 
