@@ -255,14 +255,12 @@ simpleCache(paste0("motifRSScores_", dataID), {
                              centerGenomicSignal = TRUE, centerTargetVar = TRUE, 
                              variationMetric = "cor")
     motifRSScores$rsDescription = row.names(variability)
-    motifRSScores$rsName = variability$name
+    motifRSScores$rsName = variability$rsName
 }, assignToVariable = "motifRSScores")
 
 
 
 ################### get median rank of ER
-realRSScores
-varLOLA
 
 tmpF = function(x, orderBy="PC1") {
     x = arrange(x, desc(get(orderBy)))
@@ -271,12 +269,21 @@ tmpF = function(x, orderBy="PC1") {
     return(median(hits))
 }
 
-tmpF(realRSScores, "PC1")
-tmpF(varLOLA, "variability")
+View(arrange(realRSScores, desc(PC1)))
+View(arrange(varLOLA, desc(variability)))
+tmpF(realRSScores, "PC1") # 45 rank, score=0.4049084
+tmpF(varLOLA, "variability") # 607 rank score=28.141140
+length(grep(pattern = "ESR1|eralpha", 
+            x = realRSScores$rsName, 
+            ignore.case = TRUE))# 31 total ESR1 region sets
 ##
-tmpF(variability, "variability")
-variability
-tmpF(motifRSScores, "PC1")
+View(arrange(motifRSScores, desc(PC1))) 
+View(arrange(variability, desc(variability)))
+length(grep(pattern = "ESR1|eralpha", 
+            x = motifRSScores$rsName, 
+            ignore.case = TRUE)) # 3 total ESR1 motifs
+tmpF(variability, "variability") # 216-rank, score=13.519676
+tmpF(motifRSScores, "PC1")# 1309rank, score=0.3277310
 
 
 ################### visualization
