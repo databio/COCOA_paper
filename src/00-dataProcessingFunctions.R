@@ -3,15 +3,15 @@
 
 loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE, 
                          loadingMat=TRUE, pcScores=TRUE,
-                         patientMetadata=TRUE,
-                         .env=currentEnv) {
+                         patientMetadata=TRUE, 
+                         .env=currentEnv, cacheDir=getCacheDir()) {
     # making sure parent.frame is evaluated inside function (not outside as 
     # when listed as default argument)
     currentEnv = parent.frame(n=1) # env where function was called
     .env = currentEnv
     
     if (signalMat || signalCoord) {
-        simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
+        simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList", cacheDir=cacheDir)
     }
     if (signalMat) {
         #restrict patients included in this analysis
@@ -43,7 +43,7 @@ loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE,
     }
     
     if (loadingMat || pcScores) {
-        simpleCache("allMPCA_657", assignToVariable = "allMPCA")
+        simpleCache("allMPCA_657", assignToVariable = "allMPCA", cacheDir = cacheDir)
     }
     if (loadingMat) {
         assign("loadingMat", allMPCA$rotation, envir=.env)
@@ -90,7 +90,7 @@ loadBRCADNAm <- function(signalMat=TRUE, signalCoord=TRUE,
 }
 
 loadBRCAatac <- function(signalMat=TRUE, signalCoord=TRUE, pcScores=FALSE, 
-                         loadingMat=FALSE, .env=currentEnv){
+                         loadingMat=FALSE, .env=currentEnv, cacheDir=getCacheDir()){
     
     # making sure parent.frame is evaluated inside function (not outside as 
     # when listed as default argument)
@@ -134,7 +134,7 @@ loadBRCAatac <- function(signalMat=TRUE, signalCoord=TRUE, pcScores=FALSE,
     }
 
     if (pcScores | loadingMat) {
-        simpleCache("brcaATACPCA_73", assignToVariable = "aPCA")
+        simpleCache("brcaATACPCA_73", assignToVariable = "aPCA", cacheDir = cacheDir)
     }
     if (pcScores) {
         assign("pcScores", aPCA$x, envir = .env)
@@ -599,7 +599,7 @@ loadTCGAMethylation <- function(cancerID, methylList=TRUE, pMeta=TRUE,
 
 loadBRCAGeneExpression <- function(exprList=TRUE, pMeta=TRUE,
                                 removeXY=TRUE, removeCpGWithNA=TRUE, 
-                                genomeV="hg19", .env=currentEnv) {
+                                genomeV="hg19", .env=currentEnv, cacheDir=getCacheDir()) {
     # making sure parent.frame is evaluated inside function (not outside as 
     # when listed as default argument)
     currentEnv = parent.frame(n=1) # env where function was called
@@ -616,7 +616,7 @@ loadBRCAGeneExpression <- function(exprList=TRUE, pMeta=TRUE,
         testM = as.matrix(testM)
         
         
-        simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
+        simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList", cacheDir = cacheDir)
         
         #restrict patients included in this analysis
         

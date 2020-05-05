@@ -4,23 +4,23 @@
 .libPaths(c("/home/jtl2hk/containerFiles/3.6/", .libPaths()))
 .libPaths(c(.libPaths(), "/home/jtl2hk/R/x86_64-pc-linux-gnu-library/3.6"))
 
-library(dplyr)
-library(tidyr)
-library(LOLA)
-library(simpleCache)
-library(data.table)
-library(ggplot2)
-library(GenomicRanges) # GRangesList, resize
-# library(caret)
-# library(RGenomeUtils)
-library(MIRA)
-library(ComplexHeatmap)
-library(gridExtra) #marrangeGrob for colorClusterPlots()
+require(dplyr)
+require(tidyr)
+require(LOLA)
+require(simpleCache)
+require(data.table)
+require(ggplot2)
+require(GenomicRanges) # GRangesList, resize
+# require(caret)
+# require(RGenomeUtils)
+require(MIRA)
+require(ComplexHeatmap)
+require(gridExtra) #marrangeGrob for colorClusterPlots()
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-genericFunctions.R" )) 
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-dataProcessingFunctions.R" ))
-library(MultiAssayExperiment)
-library(folderfun)
-library(COCOA)
+require(MultiAssayExperiment)
+require(folderfun)
+require(COCOA)
 
 
 
@@ -602,7 +602,7 @@ multiNiceHist = function(file, dataDF, colsToPlot, xLabels=colsToPlot,
 # same as plotAnnoScoreDist but add an extra annotation bar on top of the plot
 # this requires using cowplot to put multiple plots together
 plotAnnoScoreDist2 <- function(rsScores, colsToPlot, pattern, patternName=pattern) {
-    library("cowplot")
+    require("cowplot")
     
     rsCorP = plotAnnoScoreDist(rsScores=rsScores, colsToPlot=colsToPlot, 
                                pattern=pattern, patternName=patternName)
@@ -742,6 +742,7 @@ plotAnnoScoreDist <- function(rsScores, colsToPlot, pattern, patternName=pattern
 # inputID # since a cache is saved, this marks what the methylation data source was
 # Sys.getenv("PLOTS") should be set
 
+
 cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsScores,
                           mPCA, PCSTOANNOTATE, methylData, plotDir, inputID, 
                           pMeta=NULL, colorByCols=NULL,
@@ -765,10 +766,10 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R"))
     source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_extra/R/visualization.R"))
     source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_extra/R/analysis.R"))
-    library(grid)
-    library(ggplot2)
-    library(COCOA)
-    library(ComplexHeatmap)    
+    require(grid)
+    require(ggplot2)
+    require(COCOA)
+    require(ComplexHeatmap)    
     
     # place to save plots
     plotDir = paste0(plotDir, "/")
@@ -793,6 +794,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     # TODO: filter out low coverage region sets
     # for rsScores
     if (makeCPCH) {
+        tryCatch({
         # necessary
         PCsToAnnotate_cPCH
         comparePCHeatmap(rsScores=rsScores, 
@@ -800,6 +802,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
                          PCsToInclude=PCsToAnnotate_cPCH,
                          fileName=paste0(plotDir, 
                                          "rsEnrichHeatmap", inputID, ".pdf"))
+        },error=function(cond) {message("Error with CPCH")}, finally = {})
     }
     ##################################################################################
     # methylAlongPC
@@ -808,6 +811,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     # still individual cytosine methylation
     
     if (makeMAPC) {
+        tryCatch({
         # one pdf for each PC given.
         for (i in seq_along(PCsToAnnotate_mAPC)) {
             
@@ -830,6 +834,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
             
             dev.off()
         }
+        },error=function(cond) {message("Error with MAPC")}, finally = {})
     }
     ###################################################################################
     # regionQuantileByTargetVar
@@ -837,7 +842,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     # need region sets and PCA loadings
     
     if (makeRQBPC) {
-        
+        tryCatch({
         grDevices::pdf(paste0(plotDir, 
                               "regionPercentileByPC", inputID, ".pdf"), 
                        width = 11, height = 8.5 * length(topRSInd_rQBPC))
@@ -853,6 +858,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
                                 cluster_rows = TRUE, absVal = TRUE)
         
         dev.off()
+        },error=function(cond) {message("Error with RQBPC")}, finally = {})
     }
     ##################################################################################
     # pcFromSubset Heatmap
@@ -860,6 +866,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     # recapitulate PC score from all cytosines
     
     if (makePCFSCH) {
+        tryCatch({
         .regionSetList = GRList[topRSInd_pcFSCH] 
         regionSetName = paste0(rsScores$rsName[topRSInd_pcFSCH], " : ", rsScores$rsDescription[topRSInd_pcFSCH])
         names(.regionSetList) <-  regionSetName
@@ -869,6 +876,16 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
                                                                                            mCoord = coordinateDT, 
                                                                                            pc = PCsToAnnotate_pcFSCH,
                                                                                            returnCor = TRUE))
+        # test=list()
+        # for (i in seq_along(.regionSetList)) {
+        #     message(i)
+        #     test[[i]] = pcFromSubset(regionSet = .regionSetList[i], 
+        #                              mPCA = mPCA, 
+        #                              methylData = methylData, 
+        #                              mCoord = coordinateDT, 
+        #                              pc = PCsToAnnotate_pcFSCH,
+        #                              returnCor = TRUE)
+        # }
         subsetCorMat = do.call(rbind, subsetCorList)
         colnames(subsetCorMat) <- PCsToAnnotate_pcFSCH
         
@@ -905,13 +922,14 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
             }
             dev.off()
         }
+        },error=function(cond) {message("Error with PCFSCH")}, finally = {})
     }
     ################################################################################
     # seeing how much overlap there is between region sets
     # based on overlap of covered cytosines, not the regions themselves
-    makeRSOLCP
-    topRSInd_rsOLCP
+
     if (makeRSOLCP) {
+        tryCatch({
         # total regions in column region sets are the denominator for the proportion
         .regionSetList = GRList[topRSInd_rsOLCP] 
         pOL = percentCOverlap(mCoord = MIRA:::dtToGr(coordinateDT), 
@@ -927,6 +945,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
         # numbers not included on plot squares
         # Heatmap(matrix = pOL[[1]], col = c("gray14", "gold"), cluster_rows = FALSE, cluster_columns = FALSE)
         dev.off()
+        },error=function(cond) {message("Error with RSOLCP")}, finally = {})
     }
     
     ####################################################################
@@ -940,6 +959,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
     #     'names' attribute [62] must be the same length as the vector [57]
     
     if (makeMRLP) {
+        tryCatch({
         .regionSetList = GRList[topRSInd_mrLP]
         .regionSetList = lapply(.regionSetList, resize, width = 14000, fix="center")
         .rsNames = paste0(rsScores$rsName[topRSInd_mrLP], "_:_", rsScores$rsDescription[topRSInd_mrLP])
@@ -959,20 +979,37 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
                                  inputID, ".pdf"), plot = mrPlotOutput$grob, device = "pdf", limitsize = FALSE)
         
         # check PPARG.bed, Jaspar motifs (had 18 rows instead of 21)
+        },error=function(cond) {message("Error with MRLP")}, finally = {})
     }
     
     ##########################################################################
     # make PC score plot where samples are colored by metadata
     
+    # TODO: add colored TSNE or UMAP
     if (!is.null(pMeta) && !is.null(colorByCols)) {
+        tryCatch({
         pcScores = mPCA$x
         sharedSamples = intersect(row.names(pcScores), pMeta$sample_name)
         row.names(pMeta) = pMeta$sample_name
         colorPlot = colorClusterPlots(clusteredDF = cbind(pcScores[sharedSamples, ], pMeta[sharedSamples, ]),
-                                      plotCols = c("PC1", "PC2"), colorByCols = colorByCols)
-        ggplot2::ggsave(filename=paste0(plotDir, "annoPCPlot", "_", inputID, ".pdf"),
+                                      plotCols = PCSTOANNOTATE[1:2], colorByCols = colorByCols)
+        ggplot2::ggsave(filename=paste0(plotDir, "annoPCPlot","_", PCSTOANNOTATE[1],"_", PCSTOANNOTATE[2], "_", inputID, ".pdf"),
                         plot = colorPlot, device = "pdf",
                         limitsize=FALSE)
+        if (length(PCSTOANNOTATE) > 2) {
+            colorPlot = colorClusterPlots(clusteredDF = cbind(pcScores[sharedSamples, ], pMeta[sharedSamples, ]),
+                                          plotCols = PCSTOANNOTATE[c(1,3)], colorByCols = colorByCols)
+            ggplot2::ggsave(filename=paste0(plotDir, "annoPCPlot","_", PCSTOANNOTATE[1],"_", PCSTOANNOTATE[3], "_", inputID, ".pdf"),
+                            plot = colorPlot, device = "pdf",
+                            limitsize=FALSE)
+            colorPlot = colorClusterPlots(clusteredDF = cbind(pcScores[sharedSamples, ], pMeta[sharedSamples, ]),
+                                          plotCols = PCSTOANNOTATE[c(2,3)], colorByCols = colorByCols)
+            ggplot2::ggsave(filename=paste0(plotDir, "annoPCPlot","_", PCSTOANNOTATE[2],"_", PCSTOANNOTATE[3], "_", inputID, ".pdf"),
+                            plot = colorPlot, device = "pdf",
+                            limitsize=FALSE)
+            
+        }
+        },error=function(cond) {message("Error with colored target variable plots")}, finally = {})
     }
     
     #########################################################################
