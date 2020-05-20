@@ -497,9 +497,12 @@ wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n")
 
 #a data.table. ouput includes columns "PC", "loading_value"
 # @param negLog logical. only applies if normMethod is making a pval, -log(x,10)
+# @param format character. long or wide. If "long" is not given as "format" (long is the default),
+# then wide format will be given regardless of the "format" argument
 normalizeMRProfile <- function(signal, signalCol, pList, rsNames, 
                                absVal=TRUE, 
-                               normMethod=c("mean", "zscore", "none", "normPVal", "empPVal"),  negLog=TRUE) {
+                               normMethod=c("mean", "zscore", "none", "normPVal", "empPVal"),  negLog=TRUE,
+                               format="long") {
     
     pcP = copy(pList)
     
@@ -538,10 +541,12 @@ normalizeMRProfile <- function(signal, signalCol, pList, rsNames,
 
     pcP = lapply(pcP, FUN = function(x) data.table(binID=1:nrow(x), x))
     
-    # convert to long format for plots
-    pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))
-    pcP = lapply(X = pcP, as.data.table)
-    pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
+    if (format == "long") {
+        # convert to long format for plots
+        pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", signalCol))
+        pcP = lapply(X = pcP, as.data.table)
+        pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = signalCol)])
+    } 
     normPList = pcP
     
     return(normPList)
