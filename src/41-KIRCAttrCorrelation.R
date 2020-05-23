@@ -4,6 +4,7 @@
 source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 library(COCOA)
 library(caret)
+library(minfi)
 
 scriptID = "41-tcgaCorCOCOA"
 plotSubdir = "41-tcgaCorCOCOA/"
@@ -108,5 +109,35 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
 # dataID, optional: recreate (for simpleCache)
 
 source(ffProjCode("runPermTest.R"))
+
+##########################################################################
+# differential methylation analysis of cancer stage
+# for comparison with COCOA
+
+# separate into two groups
+# stage1M = genomicSignal[, sampleLabels <= 1]
+# stage234M = genomicSignal[, sampleLabels >= 2]
+
+# try modeling as continuous variable
+designMat = model.matrix(object = ~ cancerStage, data=sampleLabels)
+# formula(~ cancerStage, data=sampleLabels)
+
+# diff methyl CpGs
+dmp <- dmpFinder(genomicSignal, pheno = sampleLabels$cancerStage, type = "continuous")
+hist(-log10(dmp$qval))
+
+# find differentially methylated regions
+signalCoord$index = 1:nrow(signalCoord)
+signalCoord = arrange(signalCoord, chr, start)
+genomicSignal = genomicSignal[signalCoord$index, ]
+# figure out how CpGs are being grouped and if altered CpG order is meesing things up
+a =bumphunter(object = genomicSignal, design=designMat, chr=signalCoord$chr, 
+           pos=signalCoord$start, coef=2, cutoff = 0.01, B=10)# , type="Beta")
+any(table(a$table$cluster) > 1)
+table(a$table$cluster)[table(a$table$cluster) > 1]
+a$table[names(table(a$table$cluster)[table(a$table$cluster) > 1]), ]
+
+# use LOLA to identify region sets associated with
+LOLA::runLOLA()
 
 
