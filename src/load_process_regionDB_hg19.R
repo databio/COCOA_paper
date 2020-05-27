@@ -23,6 +23,7 @@ sheff_dnaseInd = grep("sheffield_dnase", loRegionAnno$collection, ignore.case = 
 # GRList = GRangesList(regionSetDB$regionGRL[c(a549Ind, mcf7Ind)])
 fInd1 = filterFetal(lolaCoreRegionAnno)
 lolaCoreRegionAnno = lolaCoreRegionAnno[-sort(unique(c(sheff_dnaseInd, fInd1)))]
+allRegionAnno = lolaCoreRegionAnno
 GRList1 = GRangesList(regionSetDB$regionGRL[-sort(unique(c(sheff_dnaseInd, fInd1)))])
 
 # ROADMAP Epigenome project and Jaspar motifs
@@ -33,6 +34,7 @@ roadmapRegionAnno = loRegionAnno2[loRegionAnno2$collection == "roadmap_epigenomi
 GRList2 = GRangesList(regionSetDB2$regionGRL[loRegionAnno2$collection == "roadmap_epigenomics"])
 fInd2 = filterFetal(roadmapRegionAnno)
 roadmapRegionAnno = roadmapRegionAnno[-fInd2]
+allRegionAnno = rbind(allRegionAnno, roadmapRegionAnno)
 GRList2 = GRList2[-fInd2]
 
 # processing Jaspar motif regions
@@ -40,6 +42,7 @@ GRList2 = GRList2[-fInd2]
 # size was ~999
 motifRegionAnno = loRegionAnno2[loRegionAnno2$collection == "jaspar_motifs", ]
 GRList3 = GRangesList(regionSetDB2$regionGRL[loRegionAnno2$collection == "jaspar_motifs"])
+allRegionAnno = rbind(allRegionAnno, motifRegionAnno)
 # # filtering based on chromatin accessibility data from blood/AML
 # load(paste0(Sys.getenv("PROCESSED"), "/aml_e3999/prjResources/","bloodAccessibleRegions.RData"))
 # GRList3 = getOLRegions(GRList = GRList3, intGR=bloodAccessibleRegions, removeOL = FALSE)
@@ -48,7 +51,7 @@ GRList3 = GRangesList(regionSetDB2$regionGRL[loRegionAnno2$collection == "jaspar
 
 hemaATACRegionAnno = loRegionAnno2[loRegionAnno2$collection == "hematopoietic_ATACseq_GSE75384", ]
 GRList4 = GRangesList(regionSetDB2$regionGRL[loRegionAnno2$collection == "hematopoietic_ATACseq_GSE75384"])
-
+allRegionAnno = rbind(allRegionAnno, hemaATACRegionAnno)
 
 # combine into one GRList
 GRList = c(GRList1, GRList2, GRList3, GRList4)

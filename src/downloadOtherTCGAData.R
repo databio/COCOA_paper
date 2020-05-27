@@ -25,6 +25,12 @@ hist(hasNA)
 cpgHasNA = apply(testM, 1, function(x) sum(is.na(x)))
 table(cpgHasNA)
 
+#####
+# get healthy samples
+assays(mData)
+testM = assays(mData)[[1]]
+testM = as.matrix(testM)
+View(colData(mData))
 
 ##### get CpG coordinates
 # match probe names to coordinates

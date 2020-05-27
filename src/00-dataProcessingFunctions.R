@@ -454,6 +454,7 @@ loadGRList <- function(genomeV = "hg38", .env=currentEnv) {
         assign(x = "rsName", rsName, envir = .env)
         assign(x = "rsDescription", rsDescription, envir = .env)
         assign(x = "rsCollection", rsCollection, envir = .env)
+        assign(x = "rsAnno", allRegionAnno, envir = .env)
     } else if (genomeV == "hg19") {
         source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/load_process_regionDB_hg19.R"))
         names(GRList) = rsName
@@ -463,6 +464,7 @@ loadGRList <- function(genomeV = "hg38", .env=currentEnv) {
         assign(x = "rsName", rsName, envir = .env)
         assign(x = "rsDescription", rsDescription, envir = .env)
         assign(x = "rsCollection", rsCollection, envir = .env)
+        assign(x = "rsAnno", allRegionAnno, envir = .env)
     } else {
         stop("Only hg38 and hg19 are available in this function currently.")
     }

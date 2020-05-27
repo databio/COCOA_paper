@@ -122,9 +122,9 @@ source(ffProjCode("runPermTest.R"))
 designMat = model.matrix(object = ~ cancerStage, data=sampleLabels)
 # formula(~ cancerStage, data=sampleLabels)
 
-# diff methyl CpGs
-dmp <- dmpFinder(genomicSignal, pheno = sampleLabels$cancerStage, type = "continuous")
-hist(-log10(dmp$qval))
+# # diff methyl CpGs
+# dmp <- dmpFinder(genomicSignal, pheno = sampleLabels$cancerStage, type = "continuous")
+# hist(-log10(dmp$qval))
 
 # find differentially methylated regions
 signalCoord$index = 1:nrow(signalCoord)
@@ -132,12 +132,35 @@ signalCoord = arrange(signalCoord, chr, start)
 genomicSignal = genomicSignal[signalCoord$index, ]
 # figure out how CpGs are being grouped and if altered CpG order is meesing things up
 a =bumphunter(object = genomicSignal, design=designMat, chr=signalCoord$chr, 
-           pos=signalCoord$start, coef=2, cutoff = 0.01, B=10)# , type="Beta")
-any(table(a$table$cluster) > 1)
-table(a$table$cluster)[table(a$table$cluster) > 1]
-a$table[names(table(a$table$cluster)[table(a$table$cluster) > 1]), ]
+           pos=signalCoord$start, coef=2, cutoff = 0.02, B=1000)# , type="Beta")
+simpleCache(paste0("dmrs_cancer_stage_", dataID), {
+    a
+}, assignToVariable = "a")
+sum(a$table$fwer <= 0.05)
+# any(table(a$table$cluster) > 1)
+# table(a$table$cluster)[table(a$table$cluster) > 1]
+# a$table[names(table(a$table$cluster)[table(a$table$cluster) > 1]), ]
+dmrGR = COCOA:::dtToGr(a$table[a$table$fwer <=0.05, c("chr", "start", "end")])
 
-# use LOLA to identify region sets associated with
-LOLA::runLOLA()
+##### use LOLA to identify region sets associated with DMRs/cancer stage
 
+
+# reading in the region sets
+# load LOLA database
+
+uniGR = resize(x = COCOA:::dtToGr(signalCoord), width = 2000, fix = "center")
+uniGR = reduce(uniGR)
+genomeV = "hg19"
+loadGRList(genomeV)
+names(GRList) = NULL
+regionSetDB = list()
+regionSetDB$regionAnno = rsAnno
+regionSetDB$regionGRL = GRList
+lResults = LOLA::runLOLA(userSets = dmrGR, userUniverse = uniGR, regionDB = regionSetDB)
+View(arrange(lResults, desc(oddsRatio)))
+lResults = arrange(lResults, desc(oddsRatio))
+
+simpleCache(paste0("lolaResultsDMRs_", genomeV, "_", dataID), {
+    lResults
+})
 
