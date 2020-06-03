@@ -34,19 +34,38 @@ loadGRList(genomeV="hg38")
 
 
 ############################################################################
-
-simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
-    # create ATAC-protein correlation matrix
-    actualCorMat = createCorFeatureMat(dataMat = genomicSignal,
-                                       featureMat = as.matrix(sampleLabels[, colsToAnnotate]),
-                                       centerDataMat=TRUE, centerFeatureMat=TRUE, testType = variationMetric)
-    colnames(actualCorMat) <- colsToAnnotate
-    
+# test median for reviewers
+simpleCache(paste0("rsScores_", dataID, "_", variationMetric, "_median"), {
     #run COCOA
-    actualResults = runCOCOA(signal=actualCorMat, 
+    actualResults = runCOCOA(genomicSignal =genomicSignal, 
                              signalCoord=signalCoord, GRList=GRList, 
                              signalCol = colsToAnnotate, 
-                             scoringMetric = "default", verbose = TRUE)
+                             variationMetric = variationMetric, 
+                             targetVar = as.matrix(sampleLabels[, colsToAnnotate]),
+                             scoringMetric = "regionMedian", verbose = TRUE)
+    actualResults = cbind(actualResults, rsName=rsName, 
+                          rsDescription=rsDescription, rsCollection=rsCollection)
+    actualResults
+}, assignToVariable = "realRSScores")
+
+tmp = formattedCOCOAScores(rawScores = realRSScores, 
+                           colsToAnnotate = colsToAnnotate, 
+                           numTopRS = nrow(realRSScores))
+
+write.csv(tmp, file = ffSheets(paste0("topRSScores","_", 
+                                      dataID, "_", variationMetric, "_regionMedian.csv")), 
+          row.names = FALSE)
+
+############################################################################
+
+simpleCache(paste0("rsScores_", dataID, "_", variationMetric), {
+    #run COCOA
+    actualResults = runCOCOA(genomicSignal =genomicSignal, 
+                             signalCoord=signalCoord, GRList=GRList, 
+                             signalCol = colsToAnnotate, 
+                             variationMetric = variationMetric, 
+                             targetVar = as.matrix(sampleLabels[, colsToAnnotate]),
+                             scoringMetric = "regionMean", verbose = TRUE)
     actualResults = cbind(actualResults, rsName=rsName, 
                           rsDescription=rsDescription, rsCollection=rsCollection)
     actualResults

@@ -5,6 +5,7 @@ library(curatedTCGAData)
 library(TCGAutils)
 library(bumphunter)
 library(LOLA)
+loadCOCOA()
 
 setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
@@ -45,7 +46,7 @@ myGR = GRList[[c("Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.
 # # H1hesc_WE.bed
 fo = findOverlaps(query = myGR, subject = signalCoord)
 olCGInd = subjectHits(fo)
-tumor[olCGInd] = 1
+tumor[olCGInd] = 0.1
 # set healthy sample to opposite of tumor in this region set
 healthy[olCGInd] = 0
 
@@ -112,14 +113,62 @@ dmrLOLA = function(genomicSignal, signalCoord, GRList, rsAnno, targetVar, dataID
 }
 
 ##################################
-# running simulated data with noise
+# compare p-value approximation to actual p-value
+
+###########
+# create test region sets
+rsOlInd = queryHits(fo)
+myGR = myGR[unique(rsOlInd)]
+rs100 = myGR
+groupSize = floor(length(unique(rsOlInd))/ 20) 
+realRSSize = length(myGR)
+
+# make a region set of random regions (that do not overlap with GR of interest)
+randomGR = resize(signalCoord[-olCGInd][1:realRSSize * 100], width= 500, fix="center")
+mixedGRList = list()
+
+for (i in 1:20) {
+    mixedGRList[[i]] = c(myGR[(1+(i-1)*groupSize):length(myGR)], 
+                         randomGR[0:((i-1)*groupSize)])
+}
+# only include a few real regions and almost all random regions
+for (j in 1:5) {
+    mixedGRList[[i + j]] = c(myGR[(length(myGR)-5+j):length(myGR)], 
+                          randomGR[0:(length(myGR)-6+j)])
+}
+mixedGRList[[i+j+1]] = randomGR
+
+
+mixedGRList = GRangesList(mixedGRList)
+mixNames = c(paste0("gr", seq(100, 5, -5)), paste0("gr", seq(5,0, -1), "RealRegions"))
+#########
+
+
+smallChange = runCOCOA(genomicSignal = both, signalCoord = signalCoord, GRList = mixedGRList, 
+                       signalCol = c("PC1", "PC2"), targetVar = bothPCA, 
+                       variationMetric = "cov", scoringMetric = "regionMean", 
+                       absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
+smallChange = cbind(smallChange, rsName=mixNames)
+
+View(arrange(smallChange, desc(PC1)))
+signalCol = c("PC1", "PC2")
+a=runCOCOAPerm(nPerm = 300, rsScores = smallChange[, signalCol], useSimpleCache = FALSE, genomicSignal = both, signalCoord = signalCoord, GRList = mixedGRList, 
+             signalCol = signalCol, targetVar = bothPCA, 
+             variationMetric = "cov", scoringMetric = "regionMean", 
+             absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
+
+
+##################################
+# running simulated data with noise, compare COCOA to LOLA
 set.seed(1234)
 
-noise = matrix(rnorm(n = nrow(both) * ncol(both), mean = 0, sd = 0.05), 
+noise = matrix(rnorm(n = nrow(both) * ncol(both), mean = 0, sd = 0.1), 
                nrow = nrow(both), ncol = ncol(both))
 both = both +  noise
 both[both < 0] = 0
 both[both > 1] = 1
+
+##############
 lResults = dmrLOLA(genomicSignal=both, signalCoord=signalCoord, 
                    GRList=GRList, rsAnno=rsAnno, targetVar=sampleStatus, 
                    dataID=paste0(dataID, "_gauss05"))
@@ -129,6 +178,32 @@ simpleCache(paste0("lolaResults", dataID, "_gauss05"), {
 }, assignToVariable = "lResults")
 
 ###################################
+# compare empirical p-value to gamma pval after adding noise
+
+subCache = paste0(getCacheDir(), "/gammaSimulations")
+signalCol = c("PC1", "PC2")
+dir.create(subCache)
+smallChange = runCOCOA(genomicSignal = both, signalCoord = signalCoord, GRList = mixedGRList, 
+                       signalCol = c("PC1", "PC2"), targetVar = bothPCA, 
+                       variationMetric = "cov", scoringMetric = "regionMean", 
+                       absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
+smallChange = cbind(smallChange, rsName=mixNames)
+View(smallChange)
+
+set.seed(1234)
+
+a=runCOCOAPerm(nPerm = 200, rsScores = smallChange[, signalCol], useSimpleCache = TRUE, 
+               cacheDir = subCache, dataID = "simWithNoise05",
+               genomicSignal = both, signalCoord = signalCoord, GRList = mixedGRList, 
+               signalCol = signalCol, targetVar = bothPCA, 
+               variationMetric = "cov", scoringMetric = "regionMean", 
+               absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE, recreate=TRUE)
+View(a$empiricalPVals)
+View(a$gammaPVal)
+nullDistList = convertToFromNullDist(a$permRSScores)
+hist(nullDistList[[1]]$PC1)
+
+####################################
 sampleN = 20
 nCG = 10000
 trueProp = 0.05

@@ -29,6 +29,8 @@ loadGRList(genomeV = "hg38")
 
 simpleCache(paste0("rsScores_", dataID, "_", variationMetric), 
             assignToVariable = "rsScores")
+simpleCache(paste0("rsScores_", dataID, "_", variationMetric, "_median"), 
+            assignToVariable="rsScoresMed")
 # screen out region sets with less than 100 RS regions covered
 keepInd = rsScores$regionSetCoverage >= 100
 
@@ -37,6 +39,7 @@ rsName = rsName[keepInd]
 rsDescription = rsDescription[keepInd]
 rsCollection = rsCollection[keepInd]
 rsScores = rsScores[keepInd, ]
+rsScoresMed = rsScoresMed[rsScoresMed$regionSetCoverage >= 100, ]
 
 #################################################################
 
@@ -143,34 +146,14 @@ dev.off()
 plot(varExpl)
 # 0.14010195 0.11371591 0.04713953 0.04632531 0.02099366 0.01939229
 
-##################
-# Fig 2. BRCA DNA methylation 
-# simpleCache(paste0("rsScores_", dataID, "_", variationMetric), assignToVariable = "rsScores")
-# 
-# # summary figure of COCOA BRCA results: ER set relative ranking among region sets
-# esrConcentrationPlot = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
-#                                            colsToSearch = c("rsName", "rsDescription"), 
-#                                            pattern= "esr|eralpha|eraa") + ggtitle("Estrogen receptor region sets") + 
-#     theme(axis.title.x = element_text(size = 20), 
-#           axis.title.y = element_text(size=20), 
-#           axis.text.x = element_text(size=20), 
-#           axis.text.y = element_text(size=20), title = element_text(size = 20)) + scale_y_continuous(breaks = seq(from=0, to=10, by=2))
-# ggsave(filename = ffPlot(paste0(plotSubdir, "erRegionSetsDNAm.svg")), plot = esrConcentrationPlot, device = "svg")
-# 
-# erRelated = plotRSConcentration(rsScores, scoreColName=paste0("PC", 1), 
-#                                 colsToSearch = c("rsName", "rsDescription"), 
-#                                 pattern= "esr|eralpha|gata3|foxa1|h3r17") + ggtitle("Estrogen receptor-related region sets")
-# ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "ER_related_PC1.svg"), plot = erRelated, device = "svg")
-
 ####################
 # figure 2A
 # annoScoreDist
 
-
 for (i in paste0("PC", 1:4)) {
     
     a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
-                          pattern = c("esr1|eralpha", "gata3|foxa1|h3r17", "ezh2|suz12"), 
+                          pattern = c("esr1|eralpha|eraa", "gata3|foxa1|h3r17", "ezh2|suz12"), 
                           patternName = c("ER", "ER-related", "polycomb")) +
         theme(legend.position = c(0.15, 0.15)) +
         scale_color_manual(values = c("blue", "red", "gray", "orange")) + 
@@ -185,6 +168,26 @@ for (i in paste0("PC", 1:4)) {
     a 
     ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, ".svg"), 
            plot = a, device = "svg", width = plotWidth/2, height = plotHeight/2, units = plotUnits)
+    
+    ######################
+    # using median scoring method
+    a = plotAnnoScoreDist(rsScores = rsScoresMed, colsToPlot = i, 
+                          pattern = c("esr1|eralpha|eraa", "gata3|foxa1|h3r17", "ezh2|suz12"), 
+                          patternName = c("ER", "ER-related", "polycomb")) +
+        theme(legend.position = c(0.15, 0.15)) +
+        scale_color_manual(values = c("blue", "red", "gray", "orange")) + 
+        xlab(paste0("Region set rank (", i, ")")) + 
+        theme(axis.title.y = element_blank(), 
+              legend.text = element_blank(), 
+              legend.title = element_blank(), 
+              legend.position = "none") +
+        scale_x_continuous(breaks = c(0, 1000, 2000), 
+                           labels= c("0", "1000", "2000"), limits=c(-25, nrow(rsScores) + 25))
+    
+    a 
+    ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, "_regionMedian", ".svg"), 
+           plot = a, device = "svg", width = plotWidth/2, height = plotHeight/2, units = plotUnits)
+    
 }
 
 # making a plot with legend
@@ -304,46 +307,46 @@ ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/orderedERStatus.svg")),
 
 
 ####################
-# interpretation of PC2
-# EMT?
-
-emtSig = as.character(read.csv(ffCode("COCOA_paper/metadata/EMT_core_sig_Groger2012.csv"), 
-                  header = FALSE)[, 1])
-
-rnaMAE = curatedTCGAData(diseaseCode = "BRCA", assays = c("RNASeq2GeneNorm"), 
-                      dry.run = FALSE)
-rna = assay(rnaMAE, "BRCA_RNASeq2GeneNorm-20160128")
-colnames(rna) <- substr(colnames(rna), 1, 12)
-sharedSamples = row.names(mPCA$x)[row.names(mPCA$x) %in% colnames(rna)]
-
-rna <- rna[, sharedSamples]
-mPCScores = mPCA$x[sharedSamples, ]
-
-sGenes = intersect(emtSig, row.names(rna))
-rna = rna[sGenes, ]
-
-rnaPCA = prcomp(t(rna), center = TRUE, scale.=TRUE)
-plot(rnaPCA$x[, c("PC1", "PC2")])
-pcMean = colMeans(rnaPCA$x)
-pcSD = apply(X = rnaPCA$x, 2, sd)
-# zScorePC1 = abs((rnaPCA$x[, "PC1"] - pcMean[1]) / pcSD[1])
-# zScorePC2 = abs((rnaPCA$x[, "PC2"] - pcMean[2]) / pcSD[2])
-# sum(zScorePC1 > 3)
-# sum(zScorePC2 > 3)
-# outliers = row.names(rnaPCA$x[(zScorePC1 > 3) | (zScorePC2 > 3), ])
-
-plot((rnaPCA$sdev^2 / sum(rnaPCA$sdev^2) )[1:10])
-
-cor.test(rnaPCA$x[, "PC2"], mPCScores[, "PC2"])
-all(row.names(mPCScores) == row.names(rnaPCA))
-
-
-rnaD = dist(t(rna))
-rnaClust = kmeans(x = t(rna), centers = 2)
-table(rnaClust$cluster)
-all(row.names(mPCScores) == names(rnaClust$cluster))
-cor.test(x = mPCScores[, "PC2"], (rnaClust$cluster * 2 - 3), method = "spearman")
-# not significant
+# # interpretation of PC2
+# # EMT?
+# 
+# emtSig = as.character(read.csv(ffCode("COCOA_paper/metadata/EMT_core_sig_Groger2012.csv"), 
+#                   header = FALSE)[, 1])
+# 
+# rnaMAE = curatedTCGAData(diseaseCode = "BRCA", assays = c("RNASeq2GeneNorm"), 
+#                       dry.run = FALSE)
+# rna = assay(rnaMAE, "BRCA_RNASeq2GeneNorm-20160128")
+# colnames(rna) <- substr(colnames(rna), 1, 12)
+# sharedSamples = row.names(mPCA$x)[row.names(mPCA$x) %in% colnames(rna)]
+# 
+# rna <- rna[, sharedSamples]
+# mPCScores = mPCA$x[sharedSamples, ]
+# 
+# sGenes = intersect(emtSig, row.names(rna))
+# rna = rna[sGenes, ]
+# 
+# rnaPCA = prcomp(t(rna), center = TRUE, scale.=TRUE)
+# plot(rnaPCA$x[, c("PC1", "PC2")])
+# pcMean = colMeans(rnaPCA$x)
+# pcSD = apply(X = rnaPCA$x, 2, sd)
+# # zScorePC1 = abs((rnaPCA$x[, "PC1"] - pcMean[1]) / pcSD[1])
+# # zScorePC2 = abs((rnaPCA$x[, "PC2"] - pcMean[2]) / pcSD[2])
+# # sum(zScorePC1 > 3)
+# # sum(zScorePC2 > 3)
+# # outliers = row.names(rnaPCA$x[(zScorePC1 > 3) | (zScorePC2 > 3), ])
+# 
+# plot((rnaPCA$sdev^2 / sum(rnaPCA$sdev^2) )[1:10])
+# 
+# cor.test(rnaPCA$x[, "PC2"], mPCScores[, "PC2"])
+# all(row.names(mPCScores) == row.names(rnaPCA))
+# 
+# 
+# rnaD = dist(t(rna))
+# rnaClust = kmeans(x = t(rna), centers = 2)
+# table(rnaClust$cluster)
+# all(row.names(mPCScores) == names(rnaClust$cluster))
+# cor.test(x = mPCScores[, "PC2"], (rnaClust$cluster * 2 - 3), method = "spearman")
+# # not significant
 
 ###################
 # Fig. 2c, meta region loading profile plots, DNA methylation BRCA
@@ -440,9 +443,86 @@ for (i in seq_along(topRSNames)) {
                plot = myPlot, device = "svg", height=20, width=30, units = "mm")
     }
 }
+################################################################################
+# metaregion plots for the median score
+
+mrProfileList  = makeMetaRegionPlots(signal=brcaCov, signalCoord=brcaCoord,
+                                     GRList=wideGRList, rsNames=regionSetNames, 
+                                     signalCol=PCsToAnnotate, binNum=21, aggrMethod="regionMedian", 
+                                     normMethod = "none")
+
+# for (i in seq_along(loadProfile)) {
+#     ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "metaRegionPlots/", regionSetNames[i], "_", i), plot = profilePList[[i]], device = "pdf")
+# }
+ggsave(plot = mrProfileList$grob, 
+       filename = ffPlot(paste0(plotSubdir, "metaRegionPlots", .analysisID, "_regionMedian.pdf")), device = "pdf")
 
 
+# individual mr profiles
 
+# normalize so plots from different PCs will be comparable
+# multiProfileP2 = normalizeMRProfile(signal=brcaCov, signalCol=signalCol, 
+#                        mrProfileList$metaRegionData, 
+#                        names(mrProfileList$metaRegionData), 
+#                        normMethod = "mean")
+multiProfileP2 = normalizeMRProfile(signal=brcaCov, signalCol=signalCol, 
+                                    mrProfileList$metaRegionData, 
+                                    names(mrProfileList$metaRegionData),
+                                    normMethod = "medianZScore")
+# multiProfileP2 = normalizeMRProfile(signal=brcaCov, signalCol=signalCol, 
+#                                     mrProfileList$metaRegionData, 
+#                                     names(mrProfileList$metaRegionData),
+#                                     normMethod = "normPVal")
+
+multiProfileP2[["metaRegionData"]] = multiProfileP2
+names(multiProfileP2[["metaRegionData"]])
+topRSNames = c("wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak",
+               "Human_MCF-7_H3R17me2_No-treatment_Brown.bed", 
+               "wgEncodeAwgTfbsHaibT47dEraaV0416102Bpa1hUniPk.narrowPeak",
+               "Human_MCF-7_FoxA1_No-treatment_Brown.bed",
+               "GSM1501162_CEBPA.bed",
+               "GSM614003_TAL1.bed",
+               "wgEncodeAwgTfbsSydhH1hescSuz12UcdUniPk.narrowPeak",
+               "E104-H3K27me3.narrowPeak",
+               "E032-H3K9me3.narrowPeak", 
+               "wgEncodeAwgTfbsBroadH1hescEzh239875UniPk.narrowPeak")
+abbrevNames = c("GATA3", "H3R17me2", "ER", "FOXA1", 
+                "SUZ12", "H3K27me3", "H3K9me3",
+                "EZH2")
+# topRSNames = c("GSM835863_EP300.bed", 
+#                "GSM607949_GATA1.bed")
+
+for (i in seq_along(topRSNames)) {
+    minVal = -0.5
+    maxVal = 4.5
+    
+    pcP = multiProfileP2[["metaRegionData"]][topRSNames[i]]
+    
+    for (j in seq_along(signalCol[1:4])) {
+        
+        # if (j == 4) {
+        #     minVal = 0
+        #     maxVal = 0.5
+        # } 
+        
+        myPlot = ggplot(data = filter(pcP[[1]], PC %in% signalCol[j]), mapping = aes(x =binID , y = loading_value)) + 
+            # ggplot(data = pcP[[1]], mapping = aes(x =binID , y = loading_value)) + 
+            geom_line() + ylim(c(minVal, maxVal)) + geom_hline(yintercept = 0, col="red", alpha = 0.25) +
+            # facet_wrap(facets = "PC") + 
+            ggtitle(label = wrapper(topRSNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
+            ylab("Normalized Covariation") + 
+            theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
+                  axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
+                  axis.title = element_blank(), title = element_blank(), axis.text.y=element_blank()) 
+        myPlot
+        ggsave(filename = ffPlot(paste0(plotSubdir, 
+                                        "/mrProfiles_", abbrevNames[i],
+                                        "_", signalCol[j], "_regionMedian.svg")), 
+               plot = myPlot, device = "svg", height=20, width=30, units = "mm")
+    }
+}
+
+###############################################################################
 # get p-values 
 # this function currently requires that an odd number of bins was used (middle
 # bin is selected)
@@ -593,21 +673,67 @@ for (i in seq_along(topRSNames)) {
 
 # make one plot as svg, with the legend 
 
-
-########
-### figures for PC4, Supplementary?
-View(rsScores[order(rsScores$PC4, decreasing = TRUE), ])
-#
-plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "mcf7|mcf-7")
-plotRSConcentration(rsScores, scoreColName=paste0("PC", 1:9), 
-                    colsToSearch = c("rsName", "rsDescription"), 
-                    pattern= "h3k9|h3k27me|suz12|ezh2")
-# meta-region loading profile
-
-
 ########################################################################################
+# for supplementary fig comparing mean to median scoring
+rsScores
+rsScoresMed
+signalCol = paste0("PC", 1:10)
+
+# convert to long format
+lRSScores = tidyr::pivot_longer(rsScores, cols = all_of(signalCol), names_to = "PC", values_to = "meanScore")
+# lRSScores$scoringMetric = "mean"
+
+lRSScoresMed = tidyr::pivot_longer(rsScoresMed, cols = all_of(signalCol), names_to = "PC", values_to = "medianScore")
+# lRSScoresMed$scoringMetric = "median"
+
+all(lRSScores$rsName == lRSScoresMed$rsName)
+
+
+lRSScoresBoth = inner_join(lRSScores, lRSScoresMed, by=c("rsName", "rsDescription", "PC"))
+
+# annotation for color in plots
+lRSScoresBoth$rsGroup = NA
+
+myPattern = c("esr1|eralpha|eraa", "gata3|foxa1|h3r17", "ezh2|suz12")
+patternName = c("ER", "ER-related", "polycomb")
+for (i in seq_along(myPattern)) {
+    lRSScoresBoth$rsGroup[grep(pattern = myPattern[i], x = lRSScoresBoth$rsName, 
+                               ignore.case = TRUE)] = patternName[i]
+    lRSScoresBoth$rsGroup[grep(pattern = myPattern[i], x = lRSScoresBoth$rsDescription, 
+                               ignore.case = TRUE)] = patternName[i]
+                                                                      
+}
+lRSScoresBoth$rsGroup = as.factor(lRSScoresBoth$rsGroup)
+
+# color by region set category
+
+for (i in 1:4) {
+    a = ggplot(data = filter(lRSScoresBoth, PC == paste0("PC", i)), mapping = aes(x=meanScore, y=medianScore)) + 
+        geom_point(aes(col=rsGroup), alpha=0.5, shape=3) +
+        scale_color_manual(values = c("blue", "red", "orange"), na.value=alpha("gray", 0.01)) + 
+        xlab("Mean scoring method") + ylab("Median scoring method") +
+        theme(legend.text = element_blank(),
+              legend.title = element_blank(),
+              legend.position = "none")
+    
+    ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/median_mean_correlation_", signalCol[i], 
+                                           ".svg")), plot = a, device = "svg",
+                    width =  plotWidth/2, height = plotHeight/2, units = plotUnits)
+
+    
+}
+
+# legend
+
+a = ggplot(data = filter(lRSScoresBoth, PC == paste0("PC", i)), mapping = aes(x=meanScore, y=medianScore)) + 
+    geom_point(aes(col=rsGroup), alpha=0.5, shape=3) +
+    theme(legend.position = c(0.8, 0.1)) +
+    scale_color_manual(values = c("blue", "red", "orange"), na.value="gray") + 
+    xlab("Mean scoring method") + ylab("Median scoring method")
+
+ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/median_mean_correlation_", signalCol[i], 
+                                       "_withLegend.svg")), plot = a, device = "svg")
+t########################################################################################
 # ROC curve
 simpleCache(paste0("rsPermScores_",  nPerm, "Perm_", variationMetric, "_", dataID), 
             assignToVariable = "rsPermScores")

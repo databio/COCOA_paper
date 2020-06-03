@@ -501,7 +501,8 @@ wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n")
 # then wide format will be given regardless of the "format" argument
 normalizeMRProfile <- function(signal, signalCol, pList, rsNames, 
                                absVal=TRUE, 
-                               normMethod=c("mean", "zscore", "none", "normPVal", "empPVal"),  negLog=TRUE,
+                               normMethod=c("mean", "zscore", "none", "normPVal", "empPVal",
+                                            "medianZScore"),  negLog=TRUE,
                                format="long") {
     
     pcP = copy(pList)
@@ -515,11 +516,21 @@ normalizeMRProfile <- function(signal, signalCol, pList, rsNames,
 
     # average loading value from each PC to normalize so PCs can be compared with each other
     if (absVal) {
-        avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(abs(x)))
-        sdLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) sd(abs(x), na.rm = TRUE))
+        if (normMethod == "medianZScore") {
+            medLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) median(abs(x), na.rm = TRUE))
+            medDevLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mad(abs(x), na.rm = TRUE))
+        } else {
+            avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(abs(x)))
+            sdLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) sd(abs(x), na.rm = TRUE))
+        }
     } else {
-        avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(x))
-        sdLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) sd(x, na.rm = TRUE))
+        if (normMethod == "medianZScore") {
+            medLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) median(x, na.rm = TRUE))
+            medDevLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mad(x, na.rm = TRUE))
+        } else {
+            avLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) mean(x))
+            sdLoad = apply(X = signal[, signalCol], MARGIN = 2, FUN = function(x) sd(x, na.rm = TRUE))
+        }
     }
     
     if (normMethod == "none") {
@@ -537,7 +548,10 @@ normalizeMRProfile <- function(signal, signalCol, pList, rsNames,
         if(negLog) {
             pcP = lapply(X = pcP, FUN = function(x) apply(X = x, FUN = function(y) -log10(y), MARGIN = 2))
         }
-    } 
+    } else if (normMethod == "medianZScore") {
+        pcP = lapply(pcP, FUN = function(x) as.data.table(x[, mapply(FUN = function(y, z) get(y) - z, y=signalCol, z = medLoad)]))
+        pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) / z, y=signalCol, z = medDevLoad)])
+    }
 
     pcP = lapply(pcP, FUN = function(x) data.table(binID=1:nrow(x), x))
     
