@@ -64,13 +64,6 @@ both = cbind(both, mixed)
 bothPCA = prcomp(t(both))$x
 plot(bothPCA[, c(1, 2)])
 
-smallChange = runCOCOA(genomicSignal = both, signalCoord = signalCoord, GRList = GRList, 
-         signalCol = c("PC1", "PC2"), targetVar = bothPCA, 
-         variationMetric = "cov", scoringMetric = "regionMean", 
-         absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
-smallChange = cbind(smallChange, rsName)
-
-View(arrange(smallChange, desc(PC1)))
 
 ###############
 # get DMRs with bumphunter
@@ -141,23 +134,6 @@ mixedGRList[[i+j+1]] = randomGR
 
 mixedGRList = GRangesList(mixedGRList)
 mixNames = c(paste0("gr", seq(100, 5, -5)), paste0("gr", seq(5,0, -1), "RealRegions"))
-#########
-
-
-smallChange = runCOCOA(genomicSignal = both, signalCoord = signalCoord, GRList = mixedGRList, 
-                       signalCol = c("PC1", "PC2"), targetVar = bothPCA, 
-                       variationMetric = "cov", scoringMetric = "regionMean", 
-                       absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
-smallChange = cbind(smallChange, rsName=mixNames)
-
-View(arrange(smallChange, desc(PC1)))
-signalCol = c("PC1", "PC2")
-a=runCOCOAPerm(nPerm = 300, rsScores = smallChange[, signalCol], useSimpleCache = FALSE, genomicSignal = both, signalCoord = signalCoord, GRList = mixedGRList, 
-             signalCol = signalCol, targetVar = bothPCA, 
-             variationMetric = "cov", scoringMetric = "regionMean", 
-             absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
-
-
 ##################################
 # running simulated data with noise, compare COCOA to LOLA
 set.seed(1234)
@@ -169,13 +145,13 @@ both[both < 0] = 0
 both[both > 1] = 1
 
 ##############
-lResults = dmrLOLA(genomicSignal=both, signalCoord=signalCoord, 
-                   GRList=GRList, rsAnno=rsAnno, targetVar=sampleStatus, 
-                   dataID=paste0(dataID, "_gauss05"))
-View(arrange(lResults, desc(oddsRatio)))
-simpleCache(paste0("lolaResults", dataID, "_gauss05"), {
-    lResults
-}, assignToVariable = "lResults")
+# lResults = dmrLOLA(genomicSignal=both, signalCoord=signalCoord, 
+#                    GRList=GRList, rsAnno=rsAnno, targetVar=sampleStatus, 
+#                    dataID=paste0(dataID, "_gauss05"))
+# View(arrange(lResults, desc(oddsRatio)))
+# simpleCache(paste0("lolaResults", dataID, "_gauss05"), {
+#     lResults
+# }, assignToVariable = "lResults")
 
 ###################################
 # compare empirical p-value to gamma pval after adding noise
@@ -188,16 +164,15 @@ smallChange = runCOCOA(genomicSignal = both, signalCoord = signalCoord, GRList =
                        variationMetric = "cov", scoringMetric = "regionMean", 
                        absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
 smallChange = cbind(smallChange, rsName=mixNames)
-View(smallChange)
 
 set.seed(1234)
-
-a=runCOCOAPerm(nPerm = 200, rsScores = smallChange[, signalCol], useSimpleCache = TRUE, 
+setLapplyAlias(cores = 6)
+a=runCOCOAPerm(nPerm = 20000, rsScores = smallChange[, signalCol], useSimpleCache = TRUE, 
                cacheDir = subCache, dataID = "simWithNoise05",
                genomicSignal = both, signalCoord = signalCoord, GRList = mixedGRList, 
                signalCol = signalCol, targetVar = bothPCA, 
                variationMetric = "cov", scoringMetric = "regionMean", 
-               absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE, recreate=TRUE)
+               absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE, recreate=FALSE)
 View(a$empiricalPVals)
 View(a$gammaPVal)
 nullDistList = convertToFromNullDist(a$permRSScores)
