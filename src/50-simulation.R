@@ -9,6 +9,15 @@ loadCOCOA()
 
 setwd(paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/"))
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
+plotSubdir = "50-Sim/"
+
+if (!dir.exists(ffPlot(plotSubdir))) {
+    dir.create(ffPlot(plotSubdir))
+}
+
+plotWidth = 80
+plotHeight = 80
+plotUnits = "mm"
 
 genomeV = "hg19"
 dataID = "KIRC_simulated"
@@ -20,55 +29,62 @@ set.seed(1234)
 # start from single healthy sample
 loadGRList(genomeV = genomeV)
 
-loadTCGAMethylation(cancerID = "KIRC")
-methylMat = methylList$methylProp
+simpleCache(paste0("healthy_KIRC_methyl_", dataID) , {
+    loadTCGAMethylation(cancerID = "KIRC")
+    methylMat = methylList$methylProp
+    signalCoord = methylList$coordinates
+    
+    sampleType = substr(colnames(methylMat), start = 14, stop = 15)
+    # 01 is primary solid tumor, 11 is solid normal tissue, 05 is new primary tumor
+    # https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/sample-type-codes
+    # https://docs.gdc.cancer.gov/Encyclopedia/pages/TCGA_Barcode/
+    normalSampleInd = (sampleType == "11")
+    tumorSampleInd = (sampleType == "01") # exclude the extra sample 05
+    methylMat = methylMat[, normalSampleInd]
+    # now I only need patient ID
+    colnames(methylMat) = substr(colnames(methylMat), start = 1, stop = 12)
+    
+    # average of all normal samples (160 samples)
+    healthy = apply(X = methylMat, 1, mean)
+    methylList$methylProp = healthy
+    methylList
+}, assignToVariable = "methylList")
+
 signalCoord = methylList$coordinates
-
-sampleType = substr(colnames(methylMat), start = 14, stop = 15)
-# 01 is primary solid tumor, 11 is solid normal tissue, 05 is new primary tumor
-# https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/sample-type-codes
-# https://docs.gdc.cancer.gov/Encyclopedia/pages/TCGA_Barcode/
-normalSampleInd = (sampleType == "11")
-tumorSampleInd = (sampleType == "01") # exclude the extra sample 05
-methylMat = methylMat[, normalSampleInd]
-# now I only need patient ID
-colnames(methylMat) = substr(colnames(methylMat), start = 1, stop = 12)
-
-# average of all normal samples (160 samples)
-healthy = apply(X = methylMat, 1, mean)
-
-# fake tumor profile, only changing DNA methylation in one region set
-tumor = healthy
-
-# find CpGs that overlap region set
 signalCoord = COCOA:::dtToGr(signalCoord)
-myGR = GRList[[c("Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed")]] # 356 
-# # H1hesc_WE.bed
-fo = findOverlaps(query = myGR, subject = signalCoord)
-olCGInd = subjectHits(fo)
-tumor[olCGInd] = 0.1
-# set healthy sample to opposite of tumor in this region set
-healthy[olCGInd] = 0
 
-# make samples with varying proportion healthy vs "tumor"
-# name says what percent tumor
-percTumor = seq(10, 100, 10)
-percHealth = 100 - percTumor
-mixed = ((tumor %*% t(percTumor)) + (healthy %*% t(percHealth))) / 100
-colnames(mixed) = paste0("tumor", percTumor)
+simpleCache(paste0("both_", dataID, "_no_noise"), {
+    healthy = methylList$methylProp
+    
+    # fake tumor profile, only changing DNA methylation in one region set
+    tumor = healthy
+    
+    # find CpGs that overlap region set
+    myGR = GRList[[c("Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed")]] # 356 
+    # # H1hesc_WE.bed
+    fo = findOverlaps(query = myGR, subject = signalCoord)
+    olCGInd = subjectHits(fo)
+    tumor[olCGInd] = 0.1
+    # set healthy sample to opposite of tumor in this region set
+    healthy[olCGInd] = 0
+    
+    # make samples with varying proportion healthy vs "tumor"
+    # name says what percent tumor
+    percTumor = seq(10, 100, 10)
+    percHealth = 100 - percTumor
+    mixed = ((tumor %*% t(percTumor)) + (healthy %*% t(percHealth))) / 100
+    colnames(mixed) = paste0("tumor", percTumor)
+    
+    both = matrix(data = healthy, nrow = length(healthy), ncol=10)
+    colnames(both) = paste0("healthy", 1:10)
+    # 10 healthy, 10 tumor
+    both = cbind(both, mixed) 
+}, assignToVariable = "both")
 
-both = matrix(data = healthy, nrow = length(healthy), ncol=10)
-colnames(both) = paste0("healthy", 1:10)
-# 10 healthy, 10 tumor
-both = cbind(both, mixed) 
-bothPCA = prcomp(t(both))$x
-plot(bothPCA[, c(1, 2)])
 
 
 ###############
-# get DMRs with bumphunter
-sampleStatus = as.numeric(grepl(pattern = "tumor", 
-                               x = colnames(both), ignore.case = TRUE))
+
 
 # Function gets DMRs with bumphunter then runs LOLA on those
 # @param signalCoord GRanges.
@@ -81,15 +97,19 @@ dmrLOLA = function(genomicSignal, signalCoord, GRList, rsAnno, targetVar, dataID
     sampleStatus = targetVar
     
     designMat = model.matrix(object = ~ sampleStatus)
-    tumorDMR =bumphunter(object = both, design=designMat, chr=COCOA:::grToDt(signalCoord)$chr, 
-                         pos=COCOA:::grToDt(signalCoord)$start, coef=2, cutoff = 0.1, B=1000)# , type="Beta")
+
     
     simpleCache(paste0("tumorDMR_", dataID), {
+        tumorDMR =bumphunter(object = both, design=designMat, chr=COCOA:::grToDt(signalCoord)$chr, 
+                             pos=COCOA:::grToDt(signalCoord)$start, coef=2, cutoff = 0.1, B=1000)# , type="Beta")
         tumorDMR
     }, assignToVariable = "tumorDMR")
-    View(tumorDMR$table)
+    # View(tumorDMR$table)
     
     # LOLA
+    if (nrow(tumorDMR$table[tumorDMR$table$fwer <=0.05, c("chr", "start", "end")]) == 0) {
+        return(NULL)
+    }
     dmrGR = COCOA:::dtToGr(tumorDMR$table[tumorDMR$table$fwer <=0.05, c("chr", "start", "end")])
     uniGR = resize(x = signalCoord, width = 2000, fix = "center")
     uniGR = reduce(uniGR)
@@ -109,81 +129,256 @@ dmrLOLA = function(genomicSignal, signalCoord, GRList, rsAnno, targetVar, dataID
 # compare p-value approximation to actual p-value
 
 ###########
-# create test region sets
-rsOlInd = queryHits(fo)
-myGR = myGR[unique(rsOlInd)]
-rs100 = myGR
-groupSize = floor(length(unique(rsOlInd))/ 20) 
-realRSSize = length(myGR)
-
-# make a region set of random regions (that do not overlap with GR of interest)
-randomGR = resize(signalCoord[-olCGInd][1:realRSSize * 100], width= 500, fix="center")
-mixedGRList = list()
-
-for (i in 1:20) {
-    mixedGRList[[i]] = c(myGR[(1+(i-1)*groupSize):length(myGR)], 
-                         randomGR[0:((i-1)*groupSize)])
-}
-# only include a few real regions and almost all random regions
-for (j in 1:5) {
-    mixedGRList[[i + j]] = c(myGR[(length(myGR)-5+j):length(myGR)], 
-                          randomGR[0:(length(myGR)-6+j)])
-}
-mixedGRList[[i+j+1]] = randomGR
-
-
-mixedGRList = GRangesList(mixedGRList)
-mixNames = c(paste0("gr", seq(100, 5, -5)), paste0("gr", seq(5,0, -1), "RealRegions"))
+simpleCache("mixedGRList", {
+    
+    fo = findOverlaps(query = myGR, subject = signalCoord)
+    olCGInd = subjectHits(fo)
+    # create test region sets
+    rsOlInd = queryHits(fo)
+    myGR = myGR[unique(rsOlInd)]
+    rs100 = myGR
+    groupSize = floor(length(unique(rsOlInd))/ 20) 
+    realRSSize = length(myGR)
+    
+    # make a region set of random regions (that do not overlap with GR of interest)
+    randomGR = resize(signalCoord[-olCGInd][1:realRSSize * 100], width= 500, fix="center")
+    mixedGRList = list()
+    
+    for (i in 1:20) {
+        mixedGRList[[i]] = c(myGR[(1+(i-1)*groupSize):length(myGR)], 
+                             randomGR[0:((i-1)*groupSize)])
+    }
+    # only include a few real regions and almost all random regions
+    for (j in 1:5) {
+        mixedGRList[[i + j]] = c(myGR[(length(myGR)-5+j):length(myGR)], 
+                                 randomGR[0:(length(myGR)-6+j)])
+    }
+    mixedGRList[[i+j+1]] = randomGR
+    
+    
+    mixedGRList = GRangesList(mixedGRList)
+    mixNames = c(paste0("gr", seq(100, 5, -5)), paste0("gr", seq(5,0, -1), "RealRegions"))
+    names(mixedGRList) = mixNames
+    mixedGRList
+    
+}, assignToVariable = "mixedGRList")
+mixNames = names(mixedGRList)
 ##################################
 # running simulated data with noise, compare COCOA to LOLA
 set.seed(1234)
 
-noise = matrix(rnorm(n = nrow(both) * ncol(both), mean = 0, sd = 0.1), 
+noise = matrix(rnorm(n = nrow(both) * ncol(both), mean = 0, sd = 0.05), 
                nrow = nrow(both), ncol = ncol(both))
-both = both +  noise
-both[both < 0] = 0
-both[both > 1] = 1
+bothHigh = both +  noise
+bothHigh[bothHigh < 0] = 0
+bothHigh[bothHigh > 1] = 1
+bothHPCA = prcomp(t(bothHigh))$x
+plot(bothHPCA[, c(1, 2)])
+wApplyFun = function(x, pcScores) {
+    wilcox.test(pcScores[paste0("healthy", 1:10), x], pcScores[paste0("tumor", 1:10 *10), x])$p.value
+}
+wRes = sapply(X = paste0("PC", 1:10), FUN = function(x) wApplyFun(x,bothHPCA))
+wRes
 
-##############
-# lResults = dmrLOLA(genomicSignal=both, signalCoord=signalCoord, 
-#                    GRList=GRList, rsAnno=rsAnno, targetVar=sampleStatus, 
-#                    dataID=paste0(dataID, "_gauss05"))
-# View(arrange(lResults, desc(oddsRatio)))
-# simpleCache(paste0("lolaResults", dataID, "_gauss05"), {
-#     lResults
-# }, assignToVariable = "lResults")
+noise = matrix(rnorm(n = nrow(both) * ncol(both), mean = 0, sd = 0.025), 
+               nrow = nrow(both), ncol = ncol(both))
+bothLow = both +  noise
+bothLow[bothLow < 0] = 0
+bothLow[bothLow > 1] = 1
+bothLPCA = prcomp(t(bothLow))$x
+wRes = sapply(X = paste0("PC", 1:10), FUN = function(x) wApplyFun(x, bothLPCA))
+wRes
 
 ###################################
 # compare empirical p-value to gamma pval after adding noise
 
+# filter data to only relevant CpGs and coordinates to speed things up
+resList = getOLRegions(GRList = mixedGRList, intGR = signalCoord)
+signalCoord = signalCoord[resList$intGROverlapInd]
+bothHigh = bothHigh[resList$intGROverlapInd, ]
+
 subCache = paste0(getCacheDir(), "/gammaSimulations")
 signalCol = c("PC1", "PC2")
 dir.create(subCache)
-smallChange = runCOCOA(genomicSignal = both, signalCoord = signalCoord, GRList = mixedGRList, 
-                       signalCol = c("PC1", "PC2"), targetVar = bothPCA, 
+smallChange = runCOCOA(genomicSignal = bothHigh, signalCoord = signalCoord, GRList = mixedGRList, 
+                       signalCol = c("PC1", "PC2"), targetVar = bothHPCA, 
                        variationMetric = "cov", scoringMetric = "regionMean", 
                        absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
 smallChange = cbind(smallChange, rsName=mixNames)
 
+# rm(list = c("methylList", "regionSetDB"))
+# gc()
 set.seed(1234)
 setLapplyAlias(cores = 6)
-a=runCOCOAPerm(nPerm = 20000, rsScores = smallChange[, signalCol], useSimpleCache = TRUE, 
+a=runCOCOAPerm(nPerm = 100000, rsScores = smallChange[, signalCol], useSimpleCache = TRUE, 
                cacheDir = subCache, dataID = "simWithNoise05",
-               genomicSignal = both, signalCoord = signalCoord, GRList = mixedGRList, 
-               signalCol = signalCol, targetVar = bothPCA, 
+               genomicSignal = bothHigh, signalCoord = signalCoord, GRList = mixedGRList, 
+               signalCol = signalCol, targetVar = bothHPCA[, signalCol], 
                variationMetric = "cov", scoringMetric = "regionMean", 
                absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE, recreate=FALSE)
 View(a$empiricalPVals)
 View(a$gammaPVal)
 nullDistList = convertToFromNullDist(a$permRSScores)
 hist(nullDistList[[1]]$PC1)
-
-####################################
-sampleN = 20
-nCG = 10000
-trueProp = 0.05
-cgProps = rep(-1, nCG)
-for (i in 1:nCG) {
-  cgProps[i] = mean(sample(c(0, 1), size = sampleN, replace = TRUE, prob = c(1-trueProp, trueProp)))
+loadPermCaches = function(n, cacheDir, cacheString, assignToVariable) {
+    rsPermScores = list()
+    for (i in n) {
+        simpleCache(paste0(cacheString, i), cacheDir = cacheDir, assignToVariable = "rsPermScoresTmp")
+        rsPermScores[[i]] <- rsPermScoresTmp
+    }
+    assign(x =assignToVariable, value = rsPermScores, envir = parent.frame(n=1))
 }
-hist(cgProps, breaks = seq(0, 1, by=0.05))
+loadPermCaches(n=1:5538, paste0(getCacheDir(), "/gammaSimulations/rsPermScores_20000Perm_cov_simWithNoise05/"), 
+               cacheString = "rsPermScores_20000Perm_cov_simWithNoise05_Cache", 
+               assignToVariable = "rsPermScores")
+nullDist = COCOA::convertToFromNullDist(rsPermScores)
+hist(nullDist[[26]]$PC1)
+rsPVals <- COCOA:::getPermStat(rsScores=smallChange, nullDistList=nullDist,
+                       signalCol=signalCol, whichMetric = "pval",
+                       testType="greater")
+View(rsPVals)
+length(rsPVals)
+hist(nullDist[[26]]$PC1)
+
+##############
+# #bumphunter and LOLA
+sampleStatus = as.numeric(grepl(pattern = "tumor", 
+                                x = colnames(bothHigh), ignore.case = TRUE))
+designMat = model.matrix(object = ~ sampleStatus)
+
+simpleCache(paste0("tumorDMR_", dataID, "_gauss025"), {
+    tumorDMRL =bumphunter(object = bothLow, design=designMat, chr=COCOA:::grToDt(signalCoord)$chr,
+                          pos=COCOA:::grToDt(signalCoord)$start, coef=2, cutoff = 0.05, B=1000)# , type="Beta")
+    tumorDMRL
+}, assignToVariable = "tumorDMRL")
+
+simpleCache(paste0("tumorDMR_", dataID, "_gauss05"), {
+    tumorDMRH =bumphunter(object = bothHigh, design=designMat, chr=COCOA:::grToDt(signalCoord)$chr,
+                          pos=COCOA:::grToDt(signalCoord)$start, coef=2, cutoff = 0.05, B=1000)# , type="Beta")
+    tumorDMRH
+}, assignToVariable = "tumorDMRH")
+
+simpleCache(paste0("lolaResults_", dataID, "_gauss025"), {
+    lowResults = dmrLOLA(genomicSignal=bothLow, signalCoord=signalCoord,
+                         GRList=GRList, rsAnno=rsAnno, targetVar=sampleStatus,
+                         dataID=paste0(dataID, "_gauss025"))
+    lowResults
+}, assignToVariable = "lResults")
+View(arrange(lResults, desc(oddsRatio)))
+
+simpleCache(paste0("lolaResults_", dataID, "_gauss05"), {
+    hResults = dmrLOLA(genomicSignal=bothHigh, signalCoord=signalCoord,
+                         GRList=GRList, rsAnno=rsAnno, targetVar=sampleStatus,
+                         dataID=paste0(dataID, "_gauss05"))
+    hResults
+}, assignToVariable = "hResults")
+
+# COCOA
+setLapplyAlias(6)
+simpleCache(paste0("cocoaRes_", dataID, "_gauss025"), {
+    smallChange = runCOCOA(genomicSignal = bothLow, signalCoord = signalCoord, GRList = GRList, 
+                           signalCol = c("PC1", "PC2"), targetVar = bothLPCA, 
+                           variationMetric = "cov", scoringMetric = "regionMean", 
+                           absVal = FALSE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
+    smallChange = cbind(smallChange, rsName)
+    smallChange
+}, assignToVariable = "rsScores025")
+
+simpleCache(paste0("cocoaRes_", dataID, "_gauss05"), {
+smallChange = runCOCOA(genomicSignal = bothHigh, signalCoord = signalCoord, GRList = GRList, 
+                       signalCol = c("PC1", "PC2"), targetVar = bothHPCA, 
+                       variationMetric = "cov", scoringMetric = "regionMean", 
+                       absVal = FALSE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
+smallChange = cbind(smallChange, rsName)
+smallChange
+}, assignToVariable = "rsScores05")
+###################################
+# make plots comparing LOLA and COCOA
+
+# identify region sets that overlap with region set of interest
+anyOverlap = function(gr1, gr2) {
+    fo = findOverlaps(gr1, gr2)
+    if (length(subjectHits(fo)) == 0) {
+        return(FALSE)
+    } else {
+        return(TRUE)
+    }
+}
+
+GLL = getOLRegions(GRList = GRList, intGR = signalCoord)
+GRList = GLL$GRList
+
+whichOL = sapply(X = GRList, 
+                 FUN = function(x) anyOverlap(x, GRList[["Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed"]]))
+jacOL = sapply(X = GRList, FUN = function(x) getJaccard(rs1 = x, rs2 = GRList[["Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed"]]))
+jacOL[jacOL > 1] = 0
+hist(jacOL, breaks=seq(0, 1, 0.01))
+head(names(sort(jacOL, decreasing = TRUE))[2:21])
+
+belowCovInd = rsScores025$regionSetCoverage < 100
+GRList = GRList[!belowCovInd]
+rsScores025 = rsScores025[!belowCovInd, ]
+rsScores05 = rsScores025[!belowCovInd, ]
+rsName = rsName[!belowCovInd]
+rsDescription = rsDescription[!belowCovInd]
+lResults = lResults[lResults$filename %in% rsName]
+
+similarRS = names(sort(jacOL, decreasing = TRUE))[2:21]
+olPattern = paste0(similarRS, collapse = "|")
+.analysisID = paste0(dataID, "_test")
+rsScores = rsScores025
+View(arrange(rsScores025, desc(PC1)))
+
+
+# region score distribution
+for (i in paste0("PC", 1:2)) {
+    
+    a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
+                          pattern = c("Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed", 
+                                      olPattern), 
+                          patternName = c("Region set of interest", "Some overlap with region set")) +
+        theme(legend.position = c(0.15, 0.15)) +
+        scale_color_manual(values = c("gray", "blue", "red")) + 
+        xlab(paste0("Region set rank (", i, ")")) + 
+        theme(axis.title.y = element_blank(), 
+              legend.text = element_blank(), 
+              legend.title = element_blank(), 
+              legend.position = "none") +
+        scale_x_continuous(breaks = c(0, 1000, 2000), 
+                           labels= c("0", "1000", "2000"), limits=c(-25, nrow(rsScores) + 25))
+    
+    a 
+    ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, ".svg"), 
+           plot = a, device = "svg", width = plotWidth/2, height = plotHeight/2, units = plotUnits)
+    
+}
+
+# making a plot with legend
+i="PC1"
+a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
+                      pattern = c("Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed", olPattern), 
+                      patternName = c("Region set of interest", "Some overlap with region set")) +
+    theme(legend.position = c(0.85, 0.85)) +
+    scale_color_manual(values = c("gray", "blue", "red")) + 
+    xlab(paste0("Region set rank (", i, ")"))
+
+a 
+ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, "_withLegend.svg"), 
+       plot = a, device = "svg", width = plotWidth, height = plotHeight, units = plotUnits)
+
+#################
+# plots for LOLA results
+lResults = arrange(lResults, desc(oddsRatio))
+lResults$oddsRank = 1:nrow(lResults)
+rsGroup = rep("Other", nrow(lResults))
+rsGroup[lResults$filename == "Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed"] = "Region set of interest"
+rsGroup[lResults$filename %in% similarRS] = "Some overlap with region set"
+lResults$rsGroup = factor(rsGroup)
+
+ggplot(data = lResults, aes(x=oddsRank, y = oddsRatio)) + geom_point(shape=3, aes(col=rsGroup)) 
+
+
+########################################################################
+
+
+##########################################################################
