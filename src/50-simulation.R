@@ -194,13 +194,13 @@ wRes
 
 # filter data to only relevant CpGs and coordinates to speed things up
 resList = getOLRegions(GRList = mixedGRList, intGR = signalCoord)
-signalCoord = signalCoord[resList$intGROverlapInd]
-bothHigh = bothHigh[resList$intGROverlapInd, ]
+signalCoordTmp = signalCoord[resList$intGROverlapInd]
+bothHighTmp = bothHigh[resList$intGROverlapInd, ]
 
 subCache = paste0(getCacheDir(), "/gammaSimulations")
 signalCol = c("PC1", "PC2")
 dir.create(subCache)
-smallChange = runCOCOA(genomicSignal = bothHigh, signalCoord = signalCoord, GRList = mixedGRList, 
+smallChange = runCOCOA(genomicSignal = bothHighTmp, signalCoord = signalCoordTmp, GRList = mixedGRList, 
                        signalCol = c("PC1", "PC2"), targetVar = bothHPCA, 
                        variationMetric = "cov", scoringMetric = "regionMean", 
                        absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
@@ -212,7 +212,7 @@ set.seed(1234)
 setLapplyAlias(cores = 6)
 a=runCOCOAPerm(nPerm = 100000, rsScores = smallChange[, signalCol], useSimpleCache = TRUE, 
                cacheDir = subCache, dataID = "simWithNoise05",
-               genomicSignal = bothHigh, signalCoord = signalCoord, GRList = mixedGRList, 
+               genomicSignal = bothHighTmp, signalCoord = signalCoordTmp, GRList = mixedGRList, 
                signalCol = signalCol, targetVar = bothHPCA[, signalCol], 
                variationMetric = "cov", scoringMetric = "regionMean", 
                absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE, recreate=FALSE)
@@ -264,7 +264,6 @@ simpleCache(paste0("lolaResults_", dataID, "_gauss025"), {
                          dataID=paste0(dataID, "_gauss025"))
     lowResults
 }, assignToVariable = "lResults")
-View(arrange(lResults, desc(oddsRatio)))
 
 simpleCache(paste0("lolaResults_", dataID, "_gauss05"), {
     hResults = dmrLOLA(genomicSignal=bothHigh, signalCoord=signalCoord,
@@ -282,7 +281,7 @@ simpleCache(paste0("cocoaRes_", dataID, "_gauss025"), {
                            absVal = FALSE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
     smallChange = cbind(smallChange, rsName)
     smallChange
-}, assignToVariable = "rsScores025")
+}, assignToVariable = "rsScores025", recreate = FALSE)
 
 simpleCache(paste0("cocoaRes_", dataID, "_gauss05"), {
 smallChange = runCOCOA(genomicSignal = bothHigh, signalCoord = signalCoord, GRList = GRList, 
@@ -291,7 +290,7 @@ smallChange = runCOCOA(genomicSignal = bothHigh, signalCoord = signalCoord, GRLi
                        absVal = FALSE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
 smallChange = cbind(smallChange, rsName)
 smallChange
-}, assignToVariable = "rsScores05")
+}, assignToVariable = "rsScores05", recreate=FALSE)
 ###################################
 # make plots comparing LOLA and COCOA
 
@@ -308,59 +307,72 @@ anyOverlap = function(gr1, gr2) {
 GLL = getOLRegions(GRList = GRList, intGR = signalCoord)
 GRList = GLL$GRList
 
-whichOL = sapply(X = GRList, 
-                 FUN = function(x) anyOverlap(x, GRList[["Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed"]]))
-jacOL = sapply(X = GRList, FUN = function(x) getJaccard(rs1 = x, rs2 = GRList[["Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed"]]))
-jacOL[jacOL > 1] = 0
-hist(jacOL, breaks=seq(0, 1, 0.01))
-head(names(sort(jacOL, decreasing = TRUE))[2:21])
 
 belowCovInd = rsScores025$regionSetCoverage < 100
 GRList = GRList[!belowCovInd]
 rsScores025 = rsScores025[!belowCovInd, ]
-rsScores05 = rsScores025[!belowCovInd, ]
+rsScores05 = rsScores05[!belowCovInd, ]
 rsName = rsName[!belowCovInd]
 rsDescription = rsDescription[!belowCovInd]
 lResults = lResults[lResults$filename %in% rsName]
 
-similarRS = names(sort(jacOL, decreasing = TRUE))[2:21]
+myGR = GRList[["Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed"]]
+
+# jacOL = sapply(X = GRList, FUN = function(x) getJaccard(rs1 = x, 
+#                                                         rs2 = myGR))
+# jacOL[jacOL > 1] = 0
+# hist(jacOL, breaks=seq(0, 1, 0.01))
+# head(names(sort(jacOL, decreasing = TRUE))[2:21])
+
+propOL = sapply(X = GRList, FUN = function(x) percentOL(query = myGR, subject = x))
+
+whichOL = sapply(X = GRList, 
+                 FUN = function(x) anyOverlap(x, myGR))
+olRSNum = sum(whichOL)
+similarRS = names(sort(propOL, decreasing = TRUE))[1:round((olRSNum-1)/100)]
+similarRS = similarRS[similarRS != "Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed"]
 olPattern = paste0(similarRS, collapse = "|")
-.analysisID = paste0(dataID, "_test")
-rsScores = rsScores025
-View(arrange(rsScores025, desc(PC1)))
 
 
-# region score distribution
-for (i in paste0("PC", 1:2)) {
+loopNames = c("025", "05")
+
+for (j in seq_along(loopNames)) {
     
-    a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
-                          pattern = c("Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed", 
-                                      olPattern), 
-                          patternName = c("Region set of interest", "Some overlap with region set")) +
-        theme(legend.position = c(0.15, 0.15)) +
-        scale_color_manual(values = c("gray", "blue", "red")) + 
-        xlab(paste0("Region set rank (", i, ")")) + 
-        theme(axis.title.y = element_blank(), 
-              legend.text = element_blank(), 
-              legend.title = element_blank(), 
-              legend.position = "none") +
-        scale_x_continuous(breaks = c(0, 1000, 2000), 
-                           labels= c("0", "1000", "2000"), limits=c(-25, nrow(rsScores) + 25))
+    rsScores = get(paste0("rsScores", loopNames[j]))
+    .analysisID = paste0(dataID, "_gauss", loopNames[j])
     
-    a 
-    ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, ".svg"), 
-           plot = a, device = "svg", width = plotWidth/2, height = plotHeight/2, units = plotUnits)
-    
+    # region score distribution
+    for (i in paste0("PC", 1:2)) {
+        
+        a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
+                              pattern = c("Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed", 
+                                          olPattern), 
+                              patternName = c("Region set of interest", "Some overlap with region set")) +
+            theme(legend.position = c(0.15, 0.15)) +
+            scale_color_manual(values = c("gray", "blue", "red")) + 
+            xlab(paste0("Region set rank (", i, ")")) + 
+            theme(axis.title.y = element_blank(), 
+                  legend.text = element_blank(), 
+                  legend.title = element_blank(), 
+                  legend.position = "none") +
+            scale_x_continuous(breaks = c(0, 1000, 2000), 
+                               labels= c("0", "1000", "2000"), limits=c(-25, nrow(rsScores) + 25))
+        
+        a 
+        ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, ".svg"), 
+               plot = a, device = "svg", width = plotWidth * .8, height = plotHeight * .8, units = plotUnits)
+    }
 }
+
 
 # making a plot with legend
 i="PC1"
 a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
                       pattern = c("Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed", olPattern), 
                       patternName = c("Region set of interest", "Some overlap with region set")) +
-    theme(legend.position = c(0.85, 0.85)) +
+    theme(legend.position = c(0.15, 0.15)) +
     scale_color_manual(values = c("gray", "blue", "red")) + 
-    xlab(paste0("Region set rank (", i, ")"))
+    xlab(paste0("Region set rank (", i, ")")) 
 
 a 
 ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, "_withLegend.svg"), 
@@ -368,6 +380,8 @@ ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "
 
 #################
 # plots for LOLA results
+.analysisID = paste0(dataID, "_gauss025")
+
 lResults = arrange(lResults, desc(oddsRatio))
 lResults$oddsRank = 1:nrow(lResults)
 rsGroup = rep("Other", nrow(lResults))
@@ -375,10 +389,20 @@ rsGroup[lResults$filename == "Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katze
 rsGroup[lResults$filename %in% similarRS] = "Some overlap with region set"
 lResults$rsGroup = factor(rsGroup)
 
-ggplot(data = lResults, aes(x=oddsRank, y = oddsRatio)) + geom_point(shape=3, aes(col=rsGroup)) 
+myPlot = ggplot(data = lResults, aes(x=oddsRank, y = oddsRatio)) + geom_point(shape=3, aes(col=rsGroup), alpha=0.5) +
+    scale_color_manual(values = c("gray", "blue", "red")) + xlab(paste0("Region set rank")) + 
+    theme(legend.text = element_blank(), 
+          legend.title = element_blank(), 
+          legend.position = "none") +
+    scale_x_continuous(breaks = c(0, 1000, 2000), 
+                       labels= c("0", "1000", "2000"), limits=c(-25, nrow(rsScores) + 25)) +
+    ylab("Odds ratio")
 
+myPlot
 
-########################################################################
+ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", "LOLA", "_", .analysisID, ".svg"), 
+       plot = myPlot, device = "svg", width = plotWidth * .8, height = plotHeight * .8, units = plotUnits)
+#######################################################################
 
 
 ##########################################################################
