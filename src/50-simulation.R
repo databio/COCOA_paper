@@ -189,6 +189,34 @@ bothLPCA = prcomp(t(bothLow))$x
 wRes = sapply(X = paste0("PC", 1:10), FUN = function(x) wApplyFun(x, bothLPCA))
 wRes
 
+######################################################
+# targetVar = bothLPCA[, paste0("PC", 1:10)]
+# 
+# nreps = 10000
+# m = replicate(nreps, sample(seq_len(nrow(targetVar))))
+# 
+# targetVar
+# targetVar[m[,1],]
+# 
+# mt = matrix(targetVar[m], nrow=nrow(targetVar))
+# mt
+# dim(mt)
+# colnames(mt) = paste0("rep", seq_len(nreps))
+# 
+# dim(bothLow)
+# 
+# res = cor(t(brcaMethylData1), mt)
+# dim(res)
+# res
+# 
+#############
+
+# a = findOverlaps(query = myGR, mixedGRList[[10]])
+# 
+
+
+######################################################
+
 ###################################
 # compare empirical p-value to gamma pval after adding noise
 
@@ -228,17 +256,62 @@ loadPermCaches = function(n, cacheDir, cacheString, assignToVariable) {
     }
     assign(x =assignToVariable, value = rsPermScores, envir = parent.frame(n=1))
 }
-loadPermCaches(n=1:5538, paste0(getCacheDir(), "/gammaSimulations/rsPermScores_20000Perm_cov_simWithNoise05/"), 
-               cacheString = "rsPermScores_20000Perm_cov_simWithNoise05_Cache", 
-               assignToVariable = "rsPermScores")
-nullDist = COCOA::convertToFromNullDist(rsPermScores)
-hist(nullDist[[26]]$PC1)
-rsPVals <- COCOA:::getPermStat(rsScores=smallChange, nullDistList=nullDist,
-                       signalCol=signalCol, whichMetric = "pval",
-                       testType="greater")
-View(rsPVals)
-length(rsPVals)
-hist(nullDist[[26]]$PC1)
+# loadPermCaches(n=1:100000, paste0(getCacheDir(), "/gammaSimulations/rsPermScores_20000Perm_cov_simWithNoise05/"), 
+#                cacheString = "rsPermScores_20000Perm_cov_simWithNoise05_Cache", 
+#                assignToVariable = "rsPermScores")
+# nullDist = COCOA::convertToFromNullDist(rsPermScores)
+# hist(nullDist[[26]]$PC1)
+# rsPVals <- COCOA:::getPermStat(rsScores=smallChange, nullDistList=nullDist,
+#                        signalCol=signalCol, whichMetric = "pval",
+#                        testType="greater")
+# View(rsPVals)
+# length(rsPVals)
+# hist(nullDist[[26]]$PC1)
+
+# for (i in 1:100000) {
+    # simpleCache(paste0("rsPermScores_1e+05Perm_cov_simWithNoise05_Cache", i),
+    #             cacheDir = paste0(subCache, "/", "rsPermScores_1e+05Perm_cov_simWithNoise05/"),
+    #             assignToVariable = "tmp")
+#     tmp = tmp[, c("PC1", "PC2")]
+#     simpleCache(paste0("rsPermScores_1e+05Perm_cov_simWithNoise05_Cache", i), {
+#         tmp
+#     },
+#                  cacheDir = paste0(subCache, "/", "rsPermScores_1e+05Perm_cov_simWithNoise05/"), 
+#                  recreate=TRUE)
+# }
+
+# get histogram of p-values when sampling 300 permutations
+
+nullDistList = COCOA::convertToFromNullDist(a$permRSScores)
+gPValDF <- getGammaPVal(rsScores = smallChange[, signalCol], 
+                        nullDistList = nullDistList, 
+                        signalCol = signalCol, 
+                        method = "mme", 
+                        realScoreInDist = TRUE,
+                        force=FALSE)
+hist(nullDistList[[26]]$PC2)
+# gPValDF <- apply(X = gPValDF, MARGIN = 2, 
+#                 FUN = function(x) p.adjust(p = x, method = correctionMethod))
+gPValDF <- cbind(gPValDF, 
+                 rsScores[, colnames(rsScores)[!(colnames(rsScores) 
+                                                 %in% colsToAnnotate)]])
+set.seed(1000)
+gPValList = list()
+for (i in 1:10000) {
+    randInd = sample(x = 1:100000, size = 300, replace = FALSE)
+    myDistList = list(nullDistList[[20]][randInd, ])
+    gPValList[[i]] <- getGammaPVal(rsScores = smallChange[20, signalCol, drop=FALSE], 
+                                   nullDistList = myDistList, 
+                                   signalCol = signalCol, 
+                                   method = "mme", 
+                                   realScoreInDist = TRUE,
+                                   force=FALSE)
+}
+sampleP = rbindlist(gPValList)
+hist(sampleP$PC2)
+
+# sample, convert to list, plug into getGammaPVal, visualize distribution of gamma p-values
+
 
 ##############
 # #bumphunter and LOLA
@@ -274,20 +347,20 @@ simpleCache(paste0("lolaResults_", dataID, "_gauss05"), {
 
 # COCOA
 setLapplyAlias(6)
-simpleCache(paste0("cocoaRes_", dataID, "_gauss025"), {
+simpleCache(paste0("cocoaRes_", dataID, "_gauss025_absValT"), {
     smallChange = runCOCOA(genomicSignal = bothLow, signalCoord = signalCoord, GRList = GRList, 
                            signalCol = c("PC1", "PC2"), targetVar = bothLPCA, 
                            variationMetric = "cov", scoringMetric = "regionMean", 
-                           absVal = FALSE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
+                           absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
     smallChange = cbind(smallChange, rsName)
     smallChange
 }, assignToVariable = "rsScores025", recreate = FALSE)
 
-simpleCache(paste0("cocoaRes_", dataID, "_gauss05"), {
+simpleCache(paste0("cocoaRes_", dataID, "_gauss05_absValT"), {
 smallChange = runCOCOA(genomicSignal = bothHigh, signalCoord = signalCoord, GRList = GRList, 
                        signalCol = c("PC1", "PC2"), targetVar = bothHPCA, 
                        variationMetric = "cov", scoringMetric = "regionMean", 
-                       absVal = FALSE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
+                       absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
 smallChange = cbind(smallChange, rsName)
 smallChange
 }, assignToVariable = "rsScores05", recreate=FALSE)
@@ -339,7 +412,7 @@ loopNames = c("025", "05")
 for (j in seq_along(loopNames)) {
     
     rsScores = get(paste0("rsScores", loopNames[j]))
-    .analysisID = paste0(dataID, "_gauss", loopNames[j])
+    .analysisID = paste0(dataID, "_gauss", loopNames[j], "_absValT")
     
     # region score distribution
     for (i in paste0("PC", 1:2)) {

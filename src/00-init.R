@@ -261,7 +261,7 @@ formattedCOCOAScores  <- function(rawScores,
     }
     
     
-    return(topRSZAnnoList)
+    return(as.data.frame(topRSZAnnoList))
     
     # # p val cutoffs
     # sigCutoff = 0.05
