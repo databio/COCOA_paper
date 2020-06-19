@@ -203,6 +203,12 @@ a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i,
 ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_", .analysisID, "_withLegend.svg"), 
        plot = a, device = "svg", width = plotWidth, height = plotHeight, units = plotUnits)
 
+# get correlation between median and mean scoring methods
+# all(rsScores$rsName == rsScoresMed$rsName)
+cor.test(rsScores[, paste0("PC", 1:4)], y = rsScoresMed[ , paste0("PC", 1:4)], method="spearman")
+test = mapply(FUN = cor.test, x=rsScores[, paste0("PC", 1:4)], y = rsScoresMed[ , paste0("PC", 1:4)], method="spearman")
+test["p.value", ] # p-value for PC1-4 is 0 (just 0 no decimals)
+
 ###################
 # making a plot with just polycomb regions sets for supplement
 for (i in paste0("PC", 1:10)) {

@@ -189,7 +189,9 @@ bothLPCA = prcomp(t(bothLow))$x
 wRes = sapply(X = paste0("PC", 1:10), FUN = function(x) wApplyFun(x, bothLPCA))
 wRes
 
-######################################################
+
+
+t######################################################
 # targetVar = bothLPCA[, paste0("PC", 1:10)]
 # 
 # nreps = 10000
@@ -296,21 +298,79 @@ gPValDF <- cbind(gPValDF,
                  rsScores[, colnames(rsScores)[!(colnames(rsScores) 
                                                  %in% colsToAnnotate)]])
 set.seed(1000)
-gPValList = list()
-for (i in 1:10000) {
+crossSampleNumber = 500000
+gPValList = lapply(X = 1:crossSampleNumber, function(x) x)
+pValInd = 17:22
+subList = function(myList, innerInd) {
+    return(myList[innerInd, ])
+}
+
+for (i in 1:crossSampleNumber) {
     randInd = sample(x = 1:100000, size = 300, replace = FALSE)
-    myDistList = list(nullDistList[[20]][randInd, ])
-    gPValList[[i]] <- getGammaPVal(rsScores = smallChange[20, signalCol, drop=FALSE], 
+    myDistList = lapply(X = nullDistList[pValInd], FUN = function(x) subList(x, randInd))
+    gPValList[[i]] <- getGammaPVal(rsScores = smallChange[pValInd, signalCol, drop=FALSE], 
+                                   nullDistList = myDistList, 
+                                   signalCol = signalCol, 
+                                   method = "mme", 
+                                   realScoreInDist = TRUE,
+                                   force=FALSE)
+    gPValList[[i]]$rsID = 1:nrow(gPValList[[i]])
+}
+sampleP = rbindlist(gPValList[1:500000])
+# hist(filter(sampleP, rsID == 6)$PC2)
+simpleCache(paste0("gammaPSampling300_", i), {
+    sampleP
+}, assignToVariable = "sampleP")
+
+# 
+sP = pivot_longer(data=sampleP, cols=c("PC1", "PC2"), names_to="PC", values_to = "p_value")
+sP$rsID = as.factor(sP$rsID)
+empPVal = as.data.frame(a$empiricalPVals)[pValInd, signalCol]
+empPVal$rsID = as.factor(1:6)
+empPVal = pivot_longer(empPVal, cols=c("PC1", "PC2"), names_to = "PC", values_to = "p_value")
+tmp = ggplot(data = sP, mapping = aes(x=rsID, y=-log10(p_value))) + geom_boxplot(outlier.shape = NA) + facet_wrap(~PC) +
+    geom_crossbar(data=empPVal, 
+                  aes(ymin=-log10(p_value), ymax=-log10(p_value)), 
+                  fatten=2, color="red") + xlab("Region set") + ylab("Log10 p-value")
+tmp
+ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "gammaVsEmp300_", .analysisID, ".svg"), 
+       plot = tmp, device = "svg", width = plotWidth * .8, height = plotHeight * .8, units = plotUnits)
+
+######
+# try sampling 1000 instead of 300
+set.seed(1000)
+crossSampleNumber = 500000
+gPValList = lapply(X = 1:crossSampleNumber, function(x) x)
+subSmallChange = smallChange[pValInd, signalCol, drop=FALSE]
+a = replicate(crossSampleNumber, expr = sample(x = 1:100000, 
+                                               size = 1000, replace = FALSE))
+subDistList = nullDistList[pValInd]
+tmpFun = function(randInd) {
+    myDistList = lapply(X = subDistList, FUN = function(x) subList(x, randInd))
+    getGammaPVal(rsScores = subSmallChange, 
                                    nullDistList = myDistList, 
                                    signalCol = signalCol, 
                                    method = "mme", 
                                    realScoreInDist = TRUE,
                                    force=FALSE)
 }
-sampleP = rbindlist(gPValList)
-hist(sampleP$PC2)
 
-# sample, convert to list, plug into getGammaPVal, visualize distribution of gamma p-values
+gammaPValsAll = apply(X = a, MARGIN = 2, FUN = tmpFun)
+
+sampleP = rbindlist(gammaPValsAll)
+
+sP = pivot_longer(data=sampleP, cols=c("PC1", "PC2"), names_to="PC", values_to = "p_value")
+sP$rsID = as.factor(sP$rsID)
+empPVal = as.data.frame(a$empiricalPVals)[pValInd, signalCol]
+empPVal$rsID = as.factor(1:6)
+empPVal = pivot_longer(empPVal, cols=c("PC1", "PC2"), names_to = "PC", values_to = "p_value")
+tmp = ggplot(data = sP, mapping = aes(x=rsID, y=-log10(p_value))) + geom_boxplot(outlier.shape = NA) + facet_wrap(~PC) +
+    geom_crossbar(data=empPVal, 
+                  aes(ymin=-log10(p_value), ymax=-log10(p_value)), 
+                  fatten=2, color="red") + xlab("Region set") + ylab("Log10 p-value")
+tmp
+ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "gammaVsEmp300_", .analysisID, ".svg"), 
+       plot = tmp, device = "svg", width = plotWidth * .8, height = plotHeight * .8, units = plotUnits)
 
 
 ##############
@@ -324,12 +384,14 @@ simpleCache(paste0("tumorDMR_", dataID, "_gauss025"), {
                           pos=COCOA:::grToDt(signalCoord)$start, coef=2, cutoff = 0.05, B=1000)# , type="Beta")
     tumorDMRL
 }, assignToVariable = "tumorDMRL")
+sum(tumorDMRL$table$fwer <= 0.05)
 
 simpleCache(paste0("tumorDMR_", dataID, "_gauss05"), {
     tumorDMRH =bumphunter(object = bothHigh, design=designMat, chr=COCOA:::grToDt(signalCoord)$chr,
                           pos=COCOA:::grToDt(signalCoord)$start, coef=2, cutoff = 0.05, B=1000)# , type="Beta")
     tumorDMRH
 }, assignToVariable = "tumorDMRH")
+sum(tumorDMRH$table$fwer <= 0.05)
 
 simpleCache(paste0("lolaResults_", dataID, "_gauss025"), {
     lowResults = dmrLOLA(genomicSignal=bothLow, signalCoord=signalCoord,
