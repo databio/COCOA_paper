@@ -189,6 +189,28 @@ bothLPCA = prcomp(t(bothLow))$x
 wRes = sapply(X = paste0("PC", 1:10), FUN = function(x) wApplyFun(x, bothLPCA))
 wRes
 
+########### figure with samples ordered by PC score
+# order samples by PC score, color by ER status
+pcScores = bothHPCA
+erStatusDF = cbind(apply(X = pcScores[, paste0("PC", 1:2)], 
+                         MARGIN = 2, FUN = function(x) order(order(x, decreasing = FALSE))), 
+                   as.data.frame(patientMetadata[row.names(pcScores) , ])[, c("subject_ID", "ER_status")])
+erStatusDF = pivot_longer(erStatusDF, cols = c("PC1", "PC2", "PC3", "PC4"), names_to = "PC", values_to = "rank")    
+
+erStatusDF$barHeight = rep(1, nrow(erStatusDF))
+erStatusDF = arrange(erStatusDF, PC, rank) 
+
+erStatusPlot = ggplot(data = erStatusDF, mapping = aes(x=rank, y=barHeight, group=PC)) + 
+    geom_col(aes(col=ER_status)) + scale_color_discrete(breaks=c("Positive", "Negative")) +
+    xlab("Samples ordered by PC score") + theme(axis.text = element_blank(), axis.ticks = element_blank(),
+                                                axis.title.y = element_blank(), axis.line = element_blank())
+erStatusPlot
+
+ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/orderedERStatus.svg")), 
+                plot = erStatusPlot, device = "svg", height = plotHeight / 2, 
+                width = plotWidth, units = plotUnits)
+
+
 
 
 t######################################################
@@ -331,18 +353,20 @@ empPVal = pivot_longer(empPVal, cols=c("PC1", "PC2"), names_to = "PC", values_to
 tmp = ggplot(data = sP, mapping = aes(x=rsID, y=-log10(p_value))) + geom_boxplot(outlier.shape = NA) + facet_wrap(~PC) +
     geom_crossbar(data=empPVal, 
                   aes(ymin=-log10(p_value), ymax=-log10(p_value)), 
-                  fatten=2, color="red") + xlab("Region set") + ylab("Log10 p-value")
+                  fatten=0, color="red") + xlab("Region set") + ylab("Log10 p-value")
 tmp
+
 ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "gammaVsEmp300_", .analysisID, ".svg"), 
        plot = tmp, device = "svg", width = plotWidth * .8, height = plotHeight * .8, units = plotUnits)
 
 ######
 # try sampling 1000 instead of 300
+.analysisID = paste0(dataID, "_gauss05")
 set.seed(1000)
 crossSampleNumber = 500000
 gPValList = lapply(X = 1:crossSampleNumber, function(x) x)
 subSmallChange = smallChange[pValInd, signalCol, drop=FALSE]
-a = replicate(crossSampleNumber, expr = sample(x = 1:100000, 
+kSamp = replicate(crossSampleNumber, expr = sample(x = 1:100000, 
                                                size = 1000, replace = FALSE))
 subDistList = nullDistList[pValInd]
 tmpFun = function(randInd) {
@@ -355,9 +379,13 @@ tmpFun = function(randInd) {
                                    force=FALSE)
 }
 
-gammaPValsAll = apply(X = a, MARGIN = 2, FUN = tmpFun)
+gammaPValsAll = apply(X = kSamp, MARGIN = 2, FUN = tmpFun)
 
 sampleP = rbindlist(gammaPValsAll)
+sampleP$rsID = rep(1:6, nrow(sampleP) / length(pValInd))
+simpleCache(paste0("gammaPSampling1000_500000"), {
+    sampleP
+}, assignToVariable = "sampleP")
 
 sP = pivot_longer(data=sampleP, cols=c("PC1", "PC2"), names_to="PC", values_to = "p_value")
 sP$rsID = as.factor(sP$rsID)
@@ -367,9 +395,9 @@ empPVal = pivot_longer(empPVal, cols=c("PC1", "PC2"), names_to = "PC", values_to
 tmp = ggplot(data = sP, mapping = aes(x=rsID, y=-log10(p_value))) + geom_boxplot(outlier.shape = NA) + facet_wrap(~PC) +
     geom_crossbar(data=empPVal, 
                   aes(ymin=-log10(p_value), ymax=-log10(p_value)), 
-                  fatten=2, color="red") + xlab("Region set") + ylab("Log10 p-value")
+                  fatten=0, color="red") + xlab("Region set") + ylab("Log10 p-value")
 tmp
-ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "gammaVsEmp300_", .analysisID, ".svg"), 
+ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "gammaVsEmp1000_", .analysisID, ".svg"), 
        plot = tmp, device = "svg", width = plotWidth * .8, height = plotHeight * .8, units = plotUnits)
 
 
