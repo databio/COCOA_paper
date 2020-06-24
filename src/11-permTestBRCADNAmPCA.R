@@ -32,6 +32,29 @@ sampleLabels = pcScores
 # (assigns GRList, rsName, rsDescription, rsCollection to global environment)
 loadGRList(genomeV="hg38")
 
+##########################################################################
+# test loadings for reviewers
+simpleCache(paste0("rsScores_", dataID, "_loadings"), {
+actualResults = aggregateSignalGRList(signal = loadingMat[, colsToAnnotate], 
+                      signalCoord=signalCoord, 
+                      signalCoordType = "singleBase",
+                      GRList=GRList, 
+                      signalCol = colsToAnnotate,
+                      scoringMetric = "regionMean", verbose = TRUE, 
+                      absVal = TRUE, returnCovInfo = TRUE)
+actualResults = cbind(actualResults, rsName=rsName, 
+                      rsDescription=rsDescription, rsCollection=rsCollection)
+actualResults
+}, assignToVariable = "realRSScores")
+
+tmp = formattedCOCOAScores(rawScores = realRSScores, 
+                           colsToAnnotate = colsToAnnotate, 
+                           numTopRS = sum(realRSScores$regionSetCoverage >=100))
+
+write.csv(tmp, file = ffSheets(paste0("topRSScores","_", 
+                                      dataID, "_loadings.csv")), 
+          row.names = FALSE)
+
 
 ############################################################################
 # test median for reviewers
@@ -50,7 +73,7 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric, "_median"), {
 
 tmp = formattedCOCOAScores(rawScores = realRSScores, 
                            colsToAnnotate = colsToAnnotate, 
-                           numTopRS = nrow(realRSScores))
+                           numTopRS = sum(realRSScores$regionSetCoverage >=100))
 
 write.csv(tmp, file = ffSheets(paste0("topRSScores","_", 
                                       dataID, "_", variationMetric, "_regionMedian.csv")), 

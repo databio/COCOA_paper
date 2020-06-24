@@ -197,7 +197,18 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
 #' @return 
 formattedCOCOAScores  <- function(rawScores,
                                   colsToAnnotate=paste0("PC", 1:10), 
-                                  numTopRS=50, pVals=NULL, rankBy=c("rawScores", "pVals")) {
+                                  numTopRS=50, pVals=NULL, rankBy=c("rawScores", "pVals"),
+                                  covThresh=100) {
+    
+    if (!is.null(covThresh)) {
+        if (!is.null(pVals)) {
+            pVals = pVals[rawScores$regionSetCoverage >= covThresh, ]
+        }
+        
+        rawScores = rawScores[rawScores$regionSetCoverage >= covThresh, ]
+    }
+    
+    
     
     topRSN = numTopRS # this many top RS for each colsToAnnotate
     pRankedScores = rawScores

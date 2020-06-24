@@ -31,6 +31,8 @@ simpleCache(paste0("rsScores_", dataID, "_", variationMetric),
             assignToVariable = "rsScores")
 simpleCache(paste0("rsScores_", dataID, "_", variationMetric, "_median"), 
             assignToVariable="rsScoresMed")
+simpleCache(paste0("rsScores_", dataID, "_loadings"), 
+            assignToVariable = "rsScoresLoad")
 # screen out region sets with less than 100 RS regions covered
 keepInd = rsScores$regionSetCoverage >= 100
 
@@ -40,6 +42,7 @@ rsDescription = rsDescription[keepInd]
 rsCollection = rsCollection[keepInd]
 rsScores = rsScores[keepInd, ]
 rsScoresMed = rsScoresMed[rsScoresMed$regionSetCoverage >= 100, ]
+rsScoresLoad = rsScoresLoad[rsScoresLoad$regionSetCoverage >= 100, ]
 
 #################################################################
 
@@ -205,8 +208,10 @@ ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "
 
 # get correlation between median and mean scoring methods
 # all(rsScores$rsName == rsScoresMed$rsName)
-cor.test(rsScores[, paste0("PC", 1:4)], y = rsScoresMed[ , paste0("PC", 1:4)], method="spearman")
 test = mapply(FUN = cor.test, x=rsScores[, paste0("PC", 1:4)], y = rsScoresMed[ , paste0("PC", 1:4)], method="spearman")
+test["p.value", ] # p-value for PC1-4 is 0 (just 0 no decimalst)
+
+test = mapply(FUN = cor.test, x=rsScoresLoad[, paste0("PC", 1:4)], y = rsScores[ , paste0("PC", 1:4)], method="pearson")
 test["p.value", ] # p-value for PC1-4 is 0 (just 0 no decimalst)
 
 ###################
@@ -681,8 +686,8 @@ for (i in seq_along(topRSNames)) {
 
 ########################################################################################
 # for supplementary fig comparing mean to median scoring
-rsScores
-rsScoresMed
+# also for supplementary fig comparing scoring with loadings to using covariance values
+
 signalCol = paste0("PC", 1:10)
 
 # convert to long format
@@ -691,14 +696,17 @@ lRSScores = tidyr::pivot_longer(rsScores, cols = all_of(signalCol), names_to = "
 
 lRSScoresMed = tidyr::pivot_longer(rsScoresMed, cols = all_of(signalCol), names_to = "PC", values_to = "medianScore")
 # lRSScoresMed$scoringMetric = "median"
+lRSScoresLoad =  tidyr::pivot_longer(rsScoresLoad, cols = all_of(signalCol), names_to = "PC", values_to = "loadings")
 
 all(lRSScores$rsName == lRSScoresMed$rsName)
 
 
 lRSScoresBoth = inner_join(lRSScores, lRSScoresMed, by=c("rsName", "rsDescription", "PC"))
+lRSScoresBoth = inner_join(lRSScoresBoth, lRSScoresLoad, by=c("rsName", "rsDescription", "PC"))
 
 # annotation for color in plots
 lRSScoresBoth$rsGroup = NA
+
 
 myPattern = c("esr1|eralpha|eraa", "gata3|foxa1|h3r17", "ezh2|suz12")
 patternName = c("ER", "ER-related", "polycomb")
@@ -725,6 +733,19 @@ for (i in 1:4) {
     ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/median_mean_correlation_", signalCol[i], 
                                            ".svg")), plot = a, device = "svg",
                     width =  plotWidth/2, height = plotHeight/2, units = plotUnits)
+    
+    a = ggplot(data = filter(lRSScoresBoth, PC == paste0("PC", i)), mapping = aes(x=meanScore, y=loadings)) + 
+        geom_point(aes(col=rsGroup), alpha=0.75, shape=3) +
+        scale_color_manual(values = c("blue", "red", "orange"), na.value=alpha("gray", alpha = 0.0001)) + 
+        xlab("Using covariance") + ylab("Using loadings") +
+        theme(legend.text = element_blank(),
+              legend.title = element_blank(),
+              legend.position = "none")
+    
+    ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/cor_loadings_correlation_", signalCol[i], 
+                                           ".svg")), plot = a, device = "svg",
+                    width =  plotWidth/1.5, height = plotHeight/1.5, units = plotUnits)
+    
 
     
 }
