@@ -190,56 +190,32 @@ wRes = sapply(X = paste0("PC", 1:10), FUN = function(x) wApplyFun(x, bothLPCA))
 wRes
 
 ########### figure with samples ordered by PC score
-# # order samples by PC score, color by ER status
-# pcScores = bothHPCA
-# erStatusDF = cbind(apply(X = pcScores[, paste0("PC", 1:2)], 
-#                          MARGIN = 2, FUN = function(x) order(order(x, decreasing = FALSE))), 
-#                    as.data.frame(patientMetadata[row.names(pcScores) , ])[, c("subject_ID", "ER_status")])
-# erStatusDF = pivot_longer(erStatusDF, cols = c("PC1", "PC2", "PC3", "PC4"), names_to = "PC", values_to = "rank")    
-# 
-# erStatusDF$barHeight = rep(1, nrow(erStatusDF))
-# erStatusDF = arrange(erStatusDF, PC, rank) 
-# 
-# erStatusPlot = ggplot(data = erStatusDF, mapping = aes(x=rank, y=barHeight, group=PC)) + 
-#     geom_col(aes(col=ER_status)) + scale_color_discrete(breaks=c("Positive", "Negative")) +
-#     xlab("Samples ordered by PC score") + theme(axis.text = element_blank(), axis.ticks = element_blank(),
-#                                                 axis.title.y = element_blank(), axis.line = element_blank())
-# erStatusPlot
-# 
-# ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/orderedERStatus.svg")), 
-#                 plot = erStatusPlot, device = "svg", height = plotHeight / 2, 
-#                 width = plotWidth, units = plotUnits)
-
-
-
-
-t######################################################
-# targetVar = bothLPCA[, paste0("PC", 1:10)]
-# 
-# nreps = 10000
-# m = replicate(nreps, sample(seq_len(nrow(targetVar))))
-# 
-# targetVar
-# targetVar[m[,1],]
-# 
-# mt = matrix(targetVar[m], nrow=nrow(targetVar))
-# mt
-# dim(mt)
-# colnames(mt) = paste0("rep", seq_len(nreps))
-# 
-# dim(bothLow)
-# 
-# res = cor(t(brcaMethylData1), mt)
-# dim(res)
-# res
-# 
-#############
-
-# a = findOverlaps(query = myGR, mixedGRList[[10]])
-# 
-
-
-######################################################
+# order samples by PC score, color by ER status
+patientMetadata = data.frame(sampleID = row.names(bothHPCA), sampleType=as.numeric(grepl(pattern = "tumor", x = row.names(bothHPCA)))+1)
+row.names(patientMetadata) = patientMetadata$sampleID
+loopObj = c("bothLPCA", "bothHPCA")
+loopName =c("lowNoise", "highNoise")
+for (i in 1:2) {
+    pcScores = get(loopObj[i])
+    erStatusDF = cbind(apply(X = pcScores[, paste0("PC", 1:2)],
+                             MARGIN = 2, FUN = function(x) order(order(x, decreasing = FALSE))),
+                       as.data.frame(patientMetadata[row.names(pcScores) , ])[, c("sampleID", "sampleType")])
+    erStatusDF = pivot_longer(erStatusDF, cols = c("PC1", "PC2"), names_to = "PC", values_to = "rank")
+    
+    erStatusDF$barHeight = rep(1, nrow(erStatusDF))
+    erStatusDF = arrange(erStatusDF, PC, rank)
+    erStatusDF$sampleType = as.factor(erStatusDF$sampleType)
+    
+    erStatusPlot = ggplot(data = erStatusDF, mapping = aes(x=rank, y=barHeight, group=PC)) +
+        geom_col(aes(fill=sampleType)) + scale_color_discrete(breaks=c("1", "2")) +
+        xlab("Samples ordered by PC score") + theme(axis.text = element_blank(), axis.ticks = element_blank(),
+                                                    axis.title.y = element_blank(), axis.line = element_blank())
+    erStatusPlot
+    
+    ggplot2::ggsave(filename=ffPlot(paste0(plotSubdir,"/orderedSimSampleType_", loopName[i],".svg")),
+                    plot = erStatusPlot, device = "svg", height = plotHeight / 2,
+                    width = plotWidth, units = plotUnits)
+}
 
 ###################################
 # compare empirical p-value to gamma pval after adding noise
@@ -438,7 +414,8 @@ tmp = ggplot(data = sP, mapping = aes(x=rsID, y=-log10(p_value))) +
 tmp
 ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "gammaVsEmp10000_", .analysisID, ".svg"), 
        plot = tmp, device = "svg", width = plotWidth * .8, height = plotHeight * 1.6, units = plotUnits)
-##############
+###################################################
+####################################################
 # #bumphunter and LOLA
 sampleStatus = as.numeric(grepl(pattern = "tumor", 
                                 x = colnames(bothHigh), ignore.case = TRUE))
@@ -464,6 +441,10 @@ simpleCache(paste0("lolaResults_", dataID, "_gauss025"), {
                          dataID=paste0(dataID, "_gauss025"))
     lowResults
 }, assignToVariable = "lResults")
+
+lResults = arrange(lResults, desc(oddsRatio))
+write.csv(x = lResults, file = ffSheets(paste0("lolaResults_", dataID, "_gauss025.csv")), 
+          quote = TRUE, row.names = FALSE)
 
 simpleCache(paste0("lolaResults_", dataID, "_gauss05"), {
     hResults = dmrLOLA(genomicSignal=bothHigh, signalCoord=signalCoord,
@@ -494,13 +475,49 @@ smallChange
 
 # run permutations to get p-value
 nPerm = 300
+setLapplyAlias(6)
+set.seed(1234)
 simpleCache(paste0("cocoaPermRes_", dataID, "_gauss05_absValT"), {
-    runCOCOAPerm(genomicSignal = bothHigh, signalCoord = signalCoord, GRList = GRList, 
+    tmp=runCOCOAPerm(genomicSignal = bothHigh, signalCoord = signalCoord, GRList = GRList, 
                  signalCol = c("PC1", "PC2"), targetVar = bothHPCA, rsScores = rsScores05, 
                  variationMetric = "cov", useSimpleCache = TRUE,
-                 scoringMetric = "regionMean", 
-                 absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE, nPerm = 300)   
-})
+                 scoringMetric = "regionMean", dataID = "gauss05_absValT",
+                 absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE, 
+                 nPerm = 300, recreate=FALSE)   
+    tmp
+}, assignToVariable= "cocoaList", recreate=FALSE)
+
+corPVals = as.data.frame(apply(cocoaList$gammaPVal, MARGIN = 2, p.adjust, method="BH"))
+
+tmp = formattedCOCOAScores(rawScores=rsScores05, 
+                           colsToAnnotate=paste0("PC", 1:2), 
+                           numTopRS=sum(rsScores05$regionSetCoverage >= 100), 
+                           pVals=corPVals, rankBy=c("rawScores", "pVals"),
+                           covThresh=100)
+write.csv(x = tmp, file = ffSheets(paste0("COCOA_simulation_highNoise_", dataID, "_gauss05.csv")), 
+          quote = TRUE, row.names = FALSE)
+
+
+setLapplyAlias(6)
+set.seed(1234)
+simpleCache(paste0("cocoaPermRes_", dataID, "_gauss025_absValT"), {
+    tmp=runCOCOAPerm(genomicSignal = bothLow, signalCoord = signalCoord, GRList = GRList, 
+                     signalCol = c("PC1", "PC2"), targetVar = bothLPCA, rsScores = rsScores025, 
+                     variationMetric = "cov", useSimpleCache = TRUE,
+                     scoringMetric = "regionMean", dataID = "gauss025_absValT",
+                     absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE, 
+                     nPerm = 300, recreate=FALSE)   
+    tmp
+}, assignToVariable= "cocoaList", recreate=TRUE)
+corPVals = as.data.frame(apply(cocoaList$gammaPVal, MARGIN = 2, p.adjust, method="BH"))
+
+tmp2 = formattedCOCOAScores(rawScores=rsScores025, 
+                           colsToAnnotate=paste0("PC", 1:2), 
+                           numTopRS=sum(rsScores025$regionSetCoverage >= 100), 
+                           pVals=corPVals, rankBy=c("rawScores", "pVals"),
+                           covThresh=100)
+write.csv(x = tmp2, file = ffSheets(paste0("COCOA_simulation_lowNoise", dataID, "_gauss025.csv")), 
+          quote = TRUE, row.names = FALSE)
 
 
 ###################################
@@ -529,12 +546,6 @@ rsDescription = rsDescription[!belowCovInd]
 lResults = lResults[lResults$filename %in% rsName]
 
 myGR = GRList[["Human_MDA-MB-231-Cells_ESR1,-DBDmut_E2-45min_Katzenellenbogen.bed"]]
-
-# jacOL = sapply(X = GRList, FUN = function(x) getJaccard(rs1 = x, 
-#                                                         rs2 = myGR))
-# jacOL[jacOL > 1] = 0
-# hist(jacOL, breaks=seq(0, 1, 0.01))
-# head(names(sort(jacOL, decreasing = TRUE))[2:21])
 
 propOL = sapply(X = GRList, FUN = function(x) percentOL(query = myGR, subject = x))
 
@@ -616,6 +627,3 @@ myPlot
 ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", "LOLA", "_", .analysisID, ".svg"), 
        plot = myPlot, device = "svg", width = plotWidth * .8, height = plotHeight * .8, units = plotUnits)
 #######################################################################
-
-
-##########################################################################
