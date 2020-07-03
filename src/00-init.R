@@ -215,7 +215,7 @@ formattedCOCOAScores  <- function(rawScores,
     
     # combine
     if (!is.null(pVals)) {
-        if (pVals$rsName != rawScores$rsName) {
+        if (!all(pVals$rsName == rawScores$rsName)) {
             stop("rawScores and pVals must be in the same order and same length.")
         }
         if (is.data.table(pVals)) {
@@ -223,7 +223,7 @@ formattedCOCOAScores  <- function(rawScores,
         }
         
         pVals = pVals[, colsToAnnotate]
-        colnames(pVals) = paste0(colnames(pVals), "_pValue")
+        colnames(pVals) = paste0(colnames(pVals), "_PValue")
         
         pRankedScores = cbind(pRankedScores, pVals)
     }
@@ -259,12 +259,14 @@ formattedCOCOAScores  <- function(rawScores,
                                              desc(get(colsToAnnotate[i])))$index[1:topRSN]
             }
 
-            topRSZAnnoList[[i]] = data.frame(pRankedScores[theseTopInd, c("rsName", "rsDescription", colsToAnnotate[i], 
+            rsDescrCols1 = c("rsName", "rsDescription")
+            rsDescrCols1 = rsDescrCols1[rsDescrCols1 %in% colnames(pRankedScores)]
+            topRSZAnnoList[[i]] = data.frame(pRankedScores[theseTopInd, c(rsDescrCols1, colsToAnnotate[i], 
                                                                           paste0(colsToAnnotate[i], "_PValue"),
                                                                           "signalCoverage", "regionSetCoverage",
                                                                           "totalRegionNumber", "meanRegionSize")])
             
-            names(topRSZAnnoList[[i]]) <- paste0(colsToAnnotate[i], "_", c("rsName", "rsDescription", "rsScore",
+            names(topRSZAnnoList[[i]]) <- paste0(colsToAnnotate[i], "_", c(rsDescrCols1, "rsScore",
                                                                            "PValue",
                                                                            "signalCoverage", "regionSetCoverage",
                                                                            "totalRegionNumber", "meanRegionSize"))

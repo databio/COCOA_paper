@@ -461,6 +461,7 @@ simpleCache(paste0("cocoaRes_", dataID, "_gauss025_absValT"), {
                            variationMetric = "cov", scoringMetric = "regionMean", 
                            absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
     smallChange = cbind(smallChange, rsName)
+    smallChange = cbind(smallChange, rsDescription)
     smallChange
 }, assignToVariable = "rsScores025", recreate = FALSE)
 
@@ -470,6 +471,7 @@ smallChange = runCOCOA(genomicSignal = bothHigh, signalCoord = signalCoord, GRLi
                        variationMetric = "cov", scoringMetric = "regionMean", 
                        absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE)
 smallChange = cbind(smallChange, rsName)
+smallChange = cbind(smallChange, rsDescription)
 smallChange
 }, assignToVariable = "rsScores05", recreate=FALSE)
 
@@ -519,7 +521,16 @@ tmp2 = formattedCOCOAScores(rawScores=rsScores025,
 write.csv(x = tmp2, file = ffSheets(paste0("COCOA_simulation_lowNoise", dataID, "_gauss025.csv")), 
           quote = TRUE, row.names = FALSE)
 
-
+permRSScores05=a
+permRSScores05$gammaPVal$rsName = rsScores05$rsName
+permRSScores05$gammaPVal$rsDescription = rsScores05$rsDescription
+tmp = formattedCOCOAScores(rawScores=rsScores05, 
+                     colsToAnnotate=paste0("PC", 1:2), 
+                                  numTopRS=sum(rsScores05$regionSetCoverage >= 100), 
+                     pVals=permRSScores05$gammaPVal, rankBy=c("rawScores", "pVals"),
+                                  covThresh=100)
+length(permRSScores05$permRSScores)
+sum(sapply(permRSScores05$permRSScores, FUN = function(x) any(is.na(x$PC1))))
 ###################################
 # make plots comparing LOLA and COCOA
 
