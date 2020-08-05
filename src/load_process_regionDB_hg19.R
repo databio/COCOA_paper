@@ -6,7 +6,7 @@
 library(LOLA)
 library(data.table)
 library(GenomicRanges)
-source(paste0(Sys.getenv("CODE"), "/aml_e3999/src/00-genericFunctions.R"))
+source(paste0(Sys.getenv("CODE"), "/COCOA_paper/src/00-genericFunctions.R"))
 
 ########################################
 

@@ -2,7 +2,7 @@
 library(LOLA)
 library(GenomicRanges)
 library(data.table)
-source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R"))
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-genericFunctions.R"))
 
 # reading in the region sets
 # load LOLA database

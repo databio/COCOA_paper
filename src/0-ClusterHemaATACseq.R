@@ -22,10 +22,10 @@ library(cqn) # GC normalization
 library(preprocessCore) # quantile normalization
 
 # runs 00-init.R and sets up environment
-projectInit(codeDir = paste0(Sys.getenv("CODE"), "aml_e3999/"), procDir = paste0(Sys.getenv("PROCESSED"), "/aml_e3999/")) 
-source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-init.R"))
+# projectInit(codeDir = paste0(Sys.getenv("CODE"), "aml_e3999/"), procDir = paste0(Sys.getenv("PROCESSED"), "/aml_e3999/")) 
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 
-Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "aml_e3999/analysis/plots/"))
+Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "COCOA_paper/analysis/plots/"))
 plotSubdir = "0-hemaAtac/"
 Sys.setenv("PLOT.SUBDIR"=plotSubdir)
 scriptID = "0hemaAtac"
@@ -34,8 +34,11 @@ if (!dir.exists(paste0(Sys.getenv("PLOTS"), plotSubdir))) {
     dir.create(paste0(Sys.getenv("PLOTS"), plotSubdir), recursive = TRUE)
 }
 
-
-setwd(paste0(Sys.getenv("PROCESSED"), "/aml_e3999/prjResources/"))
+if (!dir.exists(paste0(Sys.getenv("PROCESSED"), "/COCOA_paper/prjResources/"))) {
+    dir.create(paste0(Sys.getenv("PROCESSED"), "/COCOA_paper/prjResources/"), 
+               recursive = TRUE)
+}
+setwd(paste0(Sys.getenv("PROCESSED"), "/COCOA_paper/prjResources/"))
 # setwd("C:/Users/John L/Dropbox/Research_Files/data/GEOdata")
 
 
@@ -582,194 +585,194 @@ dev.off()
 
 #################################################################################
 ############################################################################
-# a less supervised way of getting cell type specific regions
-
-
-
-# first take out special conditions that are not counted as normal cell types
-#' # Not in Figure1: pHSC (preleukemic HSC), Blast (leukemic blast), 
-#' # LSC (leukemia stem cell), CD34 Cord Blood, (CD34 Bone Marrow?)
-#' # for clustering analysis, taking out CD34 Cord Blood and Bone Marrow (low #
-#' # and not a single cell type)
-#' # also taking out leukemia related sets: pHSC, Blast, LSC
-mainCellCounts = cellTypeCounts[, !(colnames(cellTypeCounts) %in% c("CD34 Cord Blood", 
-                                                                    "CD34 Bone Marrow", "LSC", "Blast", "pHSC"))]
-
-if (!all(cellType == colnames(mainCellCounts))) {
-    warning()
-}
-
-cellType = colnames(mainCellCounts)
-ncol(mainCellCounts)
-
-pdf(file = paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCounts_hist_byCell.pdf"))
-for (i in seq_along(cellType)) {
-    hist(mainCellCounts[, cellType[i]], xlab = "Count", main=cellType[i]) 
-}
-dev.off()
-apply(X = mainCellCounts, 2, max)
-# a matrix defining ideal distribution, open in one cell type, closed in others
-# columns of cellRefMat are the cell types, each row is a reference vector
-cellRefMat = diag(length(cellType))
-cellRefMat = scale(cellRefMat, scale=FALSE)
-colnames(cellRefMat) <- cellType
-
-
-# each row corresponds to a region
-# for (i in 1:nrow(mainCellCounts)) {
-#     # each reference vector corresponds to a column in cellTypeCor
-#     for (j in 1:nrow(cellRefMat)) {
-#         cellTypeCor[i, j] = cor(mainCellCounts[i, ], cellRefMat[j, ])
-#     }
-# }
-
-# otherwise distributions with larger values and variance will have higher correlation
-mainCellCounts = scale(mainCellCounts)
-
-# same thing as above but with apply statements
-simpleCache("cellTypeCor", {
-    cellTypeCor = matrix(nrow=nrow(mainCellCounts), ncol=nrow(cellRefMat))
-    colnames(cellTypeCor) = cellType
-    for (i in 1:nrow(cellRefMat)) {
-        cellTypeCor[, i] = apply(X = mainCellCounts, MARGIN = 1, FUN = function(x) cor(x, cellRefMat[i, ]) )
-    }
-    cellTypeCor
-}, recreate=TRUE)
-ComplexHeatmap::Heatmap(cellTypeCor[1:50000, ], cluster_columns = FALSE, cluster_rows=FALSE)
-sum(colSums(cellTypeCor))
-
-
-#################### Visualize
-pdf(file = paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCor_hist.pdf"))
-hist(cellTypeCor)
-dev.off()
-
-pdf(file = paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCor_hist_byCell.pdf"))
-for (i in seq_along(cellType)) {
-    hist(cellTypeCor[, cellType[i]], xlab = "Correlation", main=cellType[i], ylim = c(0, 200000)) 
-}
-dev.off()
-
-# visualize the effect of different correlation cutoffs on how many cell type specific open 
-# chromatin regions there are per cell
-corCutoff = .7
-cellCorBin = t(apply(X = cellTypeCor, MARGIN = 1, function(x) as.numeric(x > corCutoff)))
-# cellCorBin = t(apply(X = cellTypeCor, MARGIN = 1, function(x) as.numeric(x < corCutoff & x > (corCutoff - 0.20))))
-# hist(cellCorBin[ ,18])$counts
-cellTypeF = factor(cellType, levels=cellType)
-pdf(file = paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCorCutoff.pdf"))
-cutoffVec = c(.5, .6, .7, .8, .9)
-for (i in seq_along(cutoffVec)) {
-    corCutoff = cutoffVec[i]
-    cellCorBin = t(apply(X = cellTypeCor, MARGIN = 1, function(x) as.numeric(x > corCutoff)))
-    numCellsOpen = rowSums(cellCorBin)
-    hist(numCellsOpen, main = paste0("Cutoff=", cutoffVec[i]))
-    plot(cellTypeF, colSums(cellCorBin), 
-         main = paste0("Cutoff=", cutoffVec[i]), 
-         xlab = "Cell Type", 
-         ylab="Number of Cell Type Specific Regions")
-    legend("topleft", cellType)
-    
-}
-dev.off()
-numCellsOpen = rowSums(cellCorBin)
-hist(numCellsOpen)$counts
-colSums(cellCorBin)
-
-closeTogether = rep(0, length(cutoffVec))
-closeTogetherP = rep(0, length(cutoffVec))
-rangeVec = c(.1, .2, .3, .4)
-closeTogetherDF = data.frame("0.1"=closeTogether, "0.2"=closeTogether, "0.3"=closeTogether, "0.4"=closeTogether)
-closeTogetherPDF = data.frame("0.1"=closeTogether, "0.2"=closeTogether, "0.3"=closeTogether, "0.4"=closeTogether)
-# pdf(file = paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCor_Cutoff_robustness.pdf"))
-for (iOuter in seq_along(rangeVec)) {
-    
-    for (i in seq_along(cutoffVec)) {
-        corCutoff = cutoffVec[i]
-        cellCorBin = t(apply(X = cellTypeCor, MARGIN = 1, function(x) as.numeric(x < corCutoff & x > (corCutoff - rangeVec[iOuter]))))
-        numCellsOpen = rowSums(cellCorBin)
-        closeTogether[i] = sum(numCellsOpen > 1)
-        # proportion
-        cellCorBin = t(apply(X = cellTypeCor, MARGIN = 1, function(x) as.numeric(x > corCutoff & x > (corCutoff - rangeVec[iOuter]))))
-        numCellsOpen = rowSums(cellCorBin)
-        closeTogetherP[i] = sum(numCellsOpen > 1) / sum(numCellsOpen > 0)
-    }
-    closeTogetherDF[, iOuter] = closeTogether
-    closeTogetherPDF[, iOuter] = closeTogetherP
-}
-closeTogetherDF = cbind(closeTogetherDF, corThreshold=cutoffVec)
-closeTogetherDF = tidyr::gather(data = closeTogetherDF, key=rangeThreshold, value=numRegions, -corThreshold)
-
-threshRobustPlot = ggplot(data = closeTogetherDF, aes(x = corThreshold, y=numRegions)) + geom_line(aes(col=rangeThreshold))
-ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCor_Cutoff_robustness.pdf"), plot = threshRobustPlot)
-
-# are most of the regions normally distributed in terms of correlation values?
-pdf(file=paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCorCutoff.pdf"))
-for (i in 1:1000) {
-    hist(cellTypeCor[i, ], main = "Hist of individual region",
-         xlab = "Correlation", 
-         ylab="Number of Cell Types")
-}
-dev.off()
-
-###########################
-# using two threshold: must be above a certain correlation and the next highest cell type
-# must below the correlation of the highest by a certain amount
-corThresh = 0.5
-diffThresh = 0.3 # difference of at least x
-maxRegionCor = apply(X = cellTypeCor, 1, max) # cellTypeCor[, "max"]
-secondHighest = apply(X = cellTypeCor, 1, function(x) sort(x, decreasing=TRUE)[2])
-aboveDiffVec = (maxRegionCor - secondHighest) >= diffThresh
-sum(aboveDiffVec)
-
-cellCorBin = cellTypeCor > corThresh
-# hist(rowSums(cellCorBin))
-# what we define as cell type specific regions
-cellCorBin = cellCorBin & aboveDiffVec
-colSums(cellCorBin)
-# plot(colSums(cellCorBin))
-# get regions for each cell type (column)
-hist(cellTypeCor[cellCorBin[, 13], 13])
-
-# plot(cutoffVec, closeTogether, 
-#      ylab = "Number of regions with at least 2 correlations within 0.2 of each other", main="Cutoff Robustness", xlab="Threshold")
-# dev.off()
-cellTypeSpecificGRList = GRangesList()
-# make region sets
-for (i in 1:ncol(cellCorBin)) {
-    cellTypeSpecificGRList[[i]] = regionStringToGR(regionString[cellCorBin[, i]])
-}
-names(cellTypeSpecificGRList) = colnames(cellCorBin)
-
-testInd = grep(pattern = "chr1_2076559_2077059", x = regionString)
-cellCorBin[testInd, ]
-cellTypeCor[testInd, ]
-
-# also calculate correlation between cell type vector for more than one cell type and region
-# columns of cellRefMat are the cell types, each row is a reference vector
-# for all combinations up to ??
-# all combinations of 2
-cellRefMat = cellRefMat
-
-# all combinations of 3
-
-# all combinations of 4
-
-##############
-corThresh = 0.5
-diffThresh = .3
-# cell type specific closed chromatin
-minRegionCor = apply(X = cellTypeCor, 1, min) # cellTypeCor[, "max"]
-secondLowest = apply(X = cellTypeCor, 1, function(x) sort(x, decreasing=FALSE)[2])
-belowDiffVec = (secondLowest - minRegionCor) >= diffThresh
-sum(belowDiffVec)
-
-cellCorBin = cellTypeCor < -corThresh
-# hist(rowSums(cellCorBin))
-# what we define as cell type specific regions
-cellCorBin = cellCorBin & belowDiffVec
-colSums(cellCorBin)
-
+#' # a less supervised way of getting cell type specific regions
+#' 
+#' 
+#' 
+#' # first take out special conditions that are not counted as normal cell types
+#' #' # Not in Figure1: pHSC (preleukemic HSC), Blast (leukemic blast), 
+#' #' # LSC (leukemia stem cell), CD34 Cord Blood, (CD34 Bone Marrow?)
+#' #' # for clustering analysis, taking out CD34 Cord Blood and Bone Marrow (low #
+#' #' # and not a single cell type)
+#' #' # also taking out leukemia related sets: pHSC, Blast, LSC
+#' mainCellCounts = cellTypeCounts[, !(colnames(cellTypeCounts) %in% c("CD34 Cord Blood", 
+#'                                                                     "CD34 Bone Marrow", "LSC", "Blast", "pHSC"))]
+#' 
+#' if (!all(cellType == colnames(mainCellCounts))) {
+#'     warning()
+#' }
+#' 
+#' cellType = colnames(mainCellCounts)
+#' ncol(mainCellCounts)
+#' 
+#' pdf(file = paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCounts_hist_byCell.pdf"))
+#' for (i in seq_along(cellType)) {
+#'     hist(mainCellCounts[, cellType[i]], xlab = "Count", main=cellType[i]) 
+#' }
+#' dev.off()
+#' apply(X = mainCellCounts, 2, max)
+#' # a matrix defining ideal distribution, open in one cell type, closed in others
+#' # columns of cellRefMat are the cell types, each row is a reference vector
+#' cellRefMat = diag(length(cellType))
+#' cellRefMat = scale(cellRefMat, scale=FALSE)
+#' colnames(cellRefMat) <- cellType
+#' 
+#' 
+#' # each row corresponds to a region
+#' # for (i in 1:nrow(mainCellCounts)) {
+#' #     # each reference vector corresponds to a column in cellTypeCor
+#' #     for (j in 1:nrow(cellRefMat)) {
+#' #         cellTypeCor[i, j] = cor(mainCellCounts[i, ], cellRefMat[j, ])
+#' #     }
+#' # }
+#' 
+#' # otherwise distributions with larger values and variance will have higher correlation
+#' mainCellCounts = scale(mainCellCounts)
+#' 
+#' # same thing as above but with apply statements
+#' simpleCache("cellTypeCor", {
+#'     cellTypeCor = matrix(nrow=nrow(mainCellCounts), ncol=nrow(cellRefMat))
+#'     colnames(cellTypeCor) = cellType
+#'     for (i in 1:nrow(cellRefMat)) {
+#'         cellTypeCor[, i] = apply(X = mainCellCounts, MARGIN = 1, FUN = function(x) cor(x, cellRefMat[i, ]) )
+#'     }
+#'     cellTypeCor
+#' }, recreate=TRUE)
+#' ComplexHeatmap::Heatmap(cellTypeCor[1:50000, ], cluster_columns = FALSE, cluster_rows=FALSE)
+#' sum(colSums(cellTypeCor))
+#' 
+#' 
+#' #################### Visualize
+#' pdf(file = paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCor_hist.pdf"))
+#' hist(cellTypeCor)
+#' dev.off()
+#' 
+#' pdf(file = paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCor_hist_byCell.pdf"))
+#' for (i in seq_along(cellType)) {
+#'     hist(cellTypeCor[, cellType[i]], xlab = "Correlation", main=cellType[i], ylim = c(0, 200000)) 
+#' }
+#' dev.off()
+#' 
+#' # visualize the effect of different correlation cutoffs on how many cell type specific open 
+#' # chromatin regions there are per cell
+#' corCutoff = .7
+#' cellCorBin = t(apply(X = cellTypeCor, MARGIN = 1, function(x) as.numeric(x > corCutoff)))
+#' # cellCorBin = t(apply(X = cellTypeCor, MARGIN = 1, function(x) as.numeric(x < corCutoff & x > (corCutoff - 0.20))))
+#' # hist(cellCorBin[ ,18])$counts
+#' cellTypeF = factor(cellType, levels=cellType)
+#' pdf(file = paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCorCutoff.pdf"))
+#' cutoffVec = c(.5, .6, .7, .8, .9)
+#' for (i in seq_along(cutoffVec)) {
+#'     corCutoff = cutoffVec[i]
+#'     cellCorBin = t(apply(X = cellTypeCor, MARGIN = 1, function(x) as.numeric(x > corCutoff)))
+#'     numCellsOpen = rowSums(cellCorBin)
+#'     hist(numCellsOpen, main = paste0("Cutoff=", cutoffVec[i]))
+#'     plot(cellTypeF, colSums(cellCorBin), 
+#'          main = paste0("Cutoff=", cutoffVec[i]), 
+#'          xlab = "Cell Type", 
+#'          ylab="Number of Cell Type Specific Regions")
+#'     legend("topleft", cellType)
+#'     
+#' }
+#' dev.off()
+#' numCellsOpen = rowSums(cellCorBin)
+#' hist(numCellsOpen)$counts
+#' colSums(cellCorBin)
+#' 
+#' closeTogether = rep(0, length(cutoffVec))
+#' closeTogetherP = rep(0, length(cutoffVec))
+#' rangeVec = c(.1, .2, .3, .4)
+#' closeTogetherDF = data.frame("0.1"=closeTogether, "0.2"=closeTogether, "0.3"=closeTogether, "0.4"=closeTogether)
+#' closeTogetherPDF = data.frame("0.1"=closeTogether, "0.2"=closeTogether, "0.3"=closeTogether, "0.4"=closeTogether)
+#' # pdf(file = paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCor_Cutoff_robustness.pdf"))
+#' for (iOuter in seq_along(rangeVec)) {
+#'     
+#'     for (i in seq_along(cutoffVec)) {
+#'         corCutoff = cutoffVec[i]
+#'         cellCorBin = t(apply(X = cellTypeCor, MARGIN = 1, function(x) as.numeric(x < corCutoff & x > (corCutoff - rangeVec[iOuter]))))
+#'         numCellsOpen = rowSums(cellCorBin)
+#'         closeTogether[i] = sum(numCellsOpen > 1)
+#'         # proportion
+#'         cellCorBin = t(apply(X = cellTypeCor, MARGIN = 1, function(x) as.numeric(x > corCutoff & x > (corCutoff - rangeVec[iOuter]))))
+#'         numCellsOpen = rowSums(cellCorBin)
+#'         closeTogetherP[i] = sum(numCellsOpen > 1) / sum(numCellsOpen > 0)
+#'     }
+#'     closeTogetherDF[, iOuter] = closeTogether
+#'     closeTogetherPDF[, iOuter] = closeTogetherP
+#' }
+#' closeTogetherDF = cbind(closeTogetherDF, corThreshold=cutoffVec)
+#' closeTogetherDF = tidyr::gather(data = closeTogetherDF, key=rangeThreshold, value=numRegions, -corThreshold)
+#' 
+#' threshRobustPlot = ggplot(data = closeTogetherDF, aes(x = corThreshold, y=numRegions)) + geom_line(aes(col=rangeThreshold))
+#' ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCor_Cutoff_robustness.pdf"), plot = threshRobustPlot)
+#' 
+#' # are most of the regions normally distributed in terms of correlation values?
+#' pdf(file=paste0(Sys.getenv("PLOTS"), plotSubdir, "cellTypeCorCutoff.pdf"))
+#' for (i in 1:1000) {
+#'     hist(cellTypeCor[i, ], main = "Hist of individual region",
+#'          xlab = "Correlation", 
+#'          ylab="Number of Cell Types")
+#' }
+#' dev.off()
+#' 
+#' ###########################
+#' # using two threshold: must be above a certain correlation and the next highest cell type
+#' # must below the correlation of the highest by a certain amount
+#' corThresh = 0.5
+#' diffThresh = 0.3 # difference of at least x
+#' maxRegionCor = apply(X = cellTypeCor, 1, max) # cellTypeCor[, "max"]
+#' secondHighest = apply(X = cellTypeCor, 1, function(x) sort(x, decreasing=TRUE)[2])
+#' aboveDiffVec = (maxRegionCor - secondHighest) >= diffThresh
+#' sum(aboveDiffVec)
+#' 
+#' cellCorBin = cellTypeCor > corThresh
+#' # hist(rowSums(cellCorBin))
+#' # what we define as cell type specific regions
+#' cellCorBin = cellCorBin & aboveDiffVec
+#' colSums(cellCorBin)
+#' # plot(colSums(cellCorBin))
+#' # get regions for each cell type (column)
+#' hist(cellTypeCor[cellCorBin[, 13], 13])
+#' 
+#' # plot(cutoffVec, closeTogether, 
+#' #      ylab = "Number of regions with at least 2 correlations within 0.2 of each other", main="Cutoff Robustness", xlab="Threshold")
+#' # dev.off()
+#' cellTypeSpecificGRList = GRangesList()
+#' # make region sets
+#' for (i in 1:ncol(cellCorBin)) {
+#'     cellTypeSpecificGRList[[i]] = regionStringToGR(regionString[cellCorBin[, i]])
+#' }
+#' names(cellTypeSpecificGRList) = colnames(cellCorBin)
+#' 
+#' testInd = grep(pattern = "chr1_2076559_2077059", x = regionString)
+#' cellCorBin[testInd, ]
+#' cellTypeCor[testInd, ]
+#' 
+#' # also calculate correlation between cell type vector for more than one cell type and region
+#' # columns of cellRefMat are the cell types, each row is a reference vector
+#' # for all combinations up to ??
+#' # all combinations of 2
+#' cellRefMat = cellRefMat
+#' 
+#' # all combinations of 3
+#' 
+#' # all combinations of 4
+#' 
+#' ##############
+#' corThresh = 0.5
+#' diffThresh = .3
+#' # cell type specific closed chromatin
+#' minRegionCor = apply(X = cellTypeCor, 1, min) # cellTypeCor[, "max"]
+#' secondLowest = apply(X = cellTypeCor, 1, function(x) sort(x, decreasing=FALSE)[2])
+#' belowDiffVec = (secondLowest - minRegionCor) >= diffThresh
+#' sum(belowDiffVec)
+#' 
+#' cellCorBin = cellTypeCor < -corThresh
+#' # hist(rowSums(cellCorBin))
+#' # what we define as cell type specific regions
+#' cellCorBin = cellCorBin & belowDiffVec
+#' colSums(cellCorBin)
+#' 
 
 
 #################### Notes on the dataset

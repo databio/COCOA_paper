@@ -795,7 +795,7 @@ cocoaMultiVis <- function(sortedRSIndDF, GRList, coordinateDT, loadingMat, rsSco
                           PCsToAnnotate_mrLP = PCSTOANNOTATE,
                           makePairwisePCPlots=FALSE) {
     
-    source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-genericFunctions.R"))
+    source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-genericFunctions.R"))
     source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_extra/R/visualization.R"))
     source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/COCOA_extra/R/analysis.R"))
     require(grid)
