@@ -707,9 +707,19 @@ plotAnnoScoreDist2 <- function(rsScores, colsToPlot, pattern, patternName=patter
 
 #' Plot region set scores and rank, annotating groups of interest
 #' 
+#' @param rsScores data.frame. Each row should be a region set. 
+#' Columns should include score columns and columns that contain a description
+#' of each region set.
 #' @param colsToPlot character. Name of the column to plot. ###update: only one can be used
 #' @param pattern character. Multiple patterns can be given as character objects in a vector.
 #' Regular expressions can be used (ignore.case=TRUE though)
+#' @param patternName 
+#' @param alpha character. Transparency of points. See ggplot documentation for
+#' further details.
+#' @param shape character. Shape of the points. 
+#' See ggplot documentation for options.
+#' 
+#' @param 
 #' @examples 
 #' data(rsScores)
 #' rsScores$rsName <- c("ER", "GATA3", "ER", "GATA3", "AP1") 

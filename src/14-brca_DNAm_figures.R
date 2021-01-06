@@ -215,6 +215,42 @@ test = mapply(FUN = cor.test, x=rsScoresLoad[, paste0("PC", 1:4)], y = rsScores[
 test["p.value", ] # p-value for PC1-4 is 0 (just 0 no decimalst)
 
 ###################
+# rsScore distribution for COCOA poster
+for (i in paste0("PC", 1:4)) {
+    
+    a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
+                          pattern = c("esr1|eralpha|eraa", "gata3|foxa1|h3r17"), 
+                          patternName = c("ER", "ER-related")) +
+        theme(legend.position = c(0.15, 0.15)) +
+        scale_color_manual(values = c("blue", "red", "gray")) + 
+        xlab(paste0("Region set rank (", i, ")")) + 
+        theme(axis.title.y = element_blank(), 
+              legend.text = element_blank(), 
+              legend.title = element_blank(), 
+              legend.position = "none") +
+        scale_x_continuous(breaks = c(0, 1000, 2000), 
+                           labels= c("0", "1000", "2000"), limits=c(-25, nrow(rsScores) + 25))
+    
+    a 
+    ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_Poster_", .analysisID, ".svg"), 
+           plot = a, device = "svg", width = plotWidth/2, height = plotHeight/2, units = plotUnits)
+}
+
+i="PC1"
+a = plotAnnoScoreDist(rsScores = rsScores, colsToPlot = i, 
+                      pattern = c("esr1|eralpha", "gata3|foxa1|h3r17"), 
+                      patternName = c("ER", "ER-related")) +
+    theme(legend.position = c(0.15, 0.15)) +
+    scale_color_manual(values = c("blue", "red", "gray")) + 
+    xlab(paste0("Region set rank (", i, ")"))
+
+a 
+ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir, "annoScoreDist_", i, "_Poster_", .analysisID, "_withLegend.svg"), 
+       plot = a, device = "svg", width = plotWidth, height = plotHeight, units = plotUnits)
+
+
+
+###################
 # making a plot with just polycomb regions sets for supplement
 for (i in paste0("PC", 1:10)) {
     
