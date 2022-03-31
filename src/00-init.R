@@ -198,7 +198,11 @@ plotRSConcentration <- function(rsScores, scoreColName="PC1",
 formattedCOCOAScores  <- function(rawScores,
                                   colsToAnnotate=paste0("PC", 1:10), 
                                   numTopRS=50, pVals=NULL, rankBy=c("rawScores", "pVals"),
-                                  covThresh=100) {
+                                  covThresh=100, decreasing=c(TRUE, FALSE)) {
+    
+    if (length(decreasing) == 1) {
+        decreasing = c(decreasing, decreasing)
+    }
     
     if (!is.null(covThresh)) {
         if (!is.null(pVals)) {
@@ -237,10 +241,10 @@ formattedCOCOAScores  <- function(rawScores,
         
         if (is.null(pVals)) {
             
-            theseTopInd = dplyr::arrange(pRankedScores,
-                                         desc(get(colsToAnnotate[i])))$index[1:topRSN]
-            # thesePValRanks = order(pRankedScores[, paste0(colsToAnnotate[i])], decreasing = FALSE)
-            # pRankedScores$index[thesePValRanks]
+            theseTopInd = pRankedScores[order(pRankedScores[, colsToAnnotate[i]], 
+                                              decreasing=decreasing[1]),]$index[1:topRSN]
+            # theseTopInd = dplyr::arrange(pRankedScores,
+            #                              desc(get(colsToAnnotate[i])))$index[1:topRSN]
             
             topRSZAnnoList[[i]] = data.frame(pRankedScores[theseTopInd, c("rsName", "rsDescription", colsToAnnotate[i],
                                                                           "signalCoverage", "regionSetCoverage",
@@ -251,12 +255,27 @@ formattedCOCOAScores  <- function(rawScores,
                                                                            "totalRegionNumber", "meanRegionSize"))
         } else {
             if (rankBy == "pVals") {
+                
+                if (decreasing[1]) {
+                    sortFun1 <- dplyr::desc
+                } else {
+                    # arrange() sorts in increasing order by default
+                    sortFun1 <- function(x) {return(x)}
+                }
+                if (decreasing[2]) {
+                    sortFun2 <- dplyr::desc
+                } else {
+                    sortFun2 <- function(x) {return(x)}
+                }
+                
                 theseTopInd = dplyr::arrange(pRankedScores, 
-                                             desc(get(paste0(colsToAnnotate[i], "_PValue"))), 
-                                             desc(get(colsToAnnotate[i])))$index[1:topRSN]
+                                             sortFun1(get(paste0(colsToAnnotate[i], "_PValue"))), 
+                                             sortFun2(get(colsToAnnotate[i])))$index[1:topRSN]
             } else {
-                theseTopInd = dplyr::arrange(pRankedScores, 
-                                             desc(get(colsToAnnotate[i])))$index[1:topRSN]
+                theseTopInd = pRankedScores[order(pRankedScores[, colsToAnnotate[i]], 
+                                                  decreasing=decreasing[2]),]$index[1:topRSN]
+                # theseTopInd = dplyr::arrange(pRankedScores, 
+                #                              desc(get(colsToAnnotate[i])))$index[1:topRSN]
             }
 
             rsDescrCols1 = c("rsName", "rsDescription")

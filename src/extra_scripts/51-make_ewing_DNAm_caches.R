@@ -2,7 +2,7 @@
 # processing DNA methylation data and making caches
 
 # loads libraries and scripts
-source(paste0(Sys.getenv("CODE"), "pcrsa_method_paper/src/00-init.R"))
+source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
 
 # setting environment
 setwd(paste0(Sys.getenv("PROCESSED"), "ews_patients/"))
